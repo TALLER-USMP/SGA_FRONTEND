@@ -1,0 +1,24 @@
+{
+  "name": "taller_frontend",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "build:login": "npm run build --workspace=login",
+    "build:dashboard": "npm run build --workspace=dashboard",
+    "preview:login": "npm run preview --workspace=login",
+    "preview:dashboard": "npm run preview --workspace=dashboard",
+    "dev:host": "npm run dev --workspace=host",
+    "dev:all": "concurrently -n build:login,build:dashboard,preview:login,preview:dashboard,host -c yellow,cyan,magenta,green,blue \"npm run build:login && npm run preview:login\" \"npm run build:dashboard && npm run preview:dashboard\" \"npm run dev:host\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
