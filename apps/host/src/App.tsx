@@ -6,7 +6,6 @@ const LoginApp = lazy(() => import("login/LoginApp"));
 const DashboardApp = lazy(() => import("dashboard/DashboardApp"));
 
 function App() {
-
   return (
     <>
       <h1>Host app</h1>
