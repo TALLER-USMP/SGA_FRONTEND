@@ -2,6 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import federation from '@originjs/vite-plugin-federation'
 import tailwindcss from '@tailwindcss/vite'
+import path from "path"
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -17,6 +18,11 @@ export default defineConfig({
       shared: ['react', 'react-dom']
     })
   ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
   build: {
     modulePreload: false,
     target: "esnext",
