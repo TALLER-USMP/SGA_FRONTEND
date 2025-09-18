@@ -1,7 +1,13 @@
 import Sidebar from "./Sidebar";
 import Header from "./Header";
 
-export default function Layout({ children, title }: { children: React.ReactNode, title: string }) {
+export default function Layout({
+  children,
+  title,
+}: {
+  children: React.ReactNode;
+  title: string;
+}) {
   return (
     <div className="flex">
       <Sidebar />

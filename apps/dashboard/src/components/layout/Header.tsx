@@ -1,4 +1,4 @@
-export default function Header({ title }: { title: string }) {
+export default function Header({}: { title: string }) {
   return (
     <header className="w-full bg-red-700 text-white flex justify-end items-center px-6 py-3">
       {/* <h1 className="text-lg font-semibold">{title}</h1> */}

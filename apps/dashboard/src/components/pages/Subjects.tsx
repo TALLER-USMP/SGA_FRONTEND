@@ -7,10 +7,12 @@ export default function Subjects() {
           <span className="w-3 h-3 rounded-full bg-green-600"></span> Validado
         </span>
         <span className="flex items-center gap-1 text-gray-600">
-          <span className="w-3 h-3 rounded-full border border-gray-600"></span> Pendiente
+          <span className="w-3 h-3 rounded-full border border-gray-600"></span>{" "}
+          Pendiente
         </span>
         <span className="flex items-center gap-1 text-yellow-500">
-          <span className="w-3 h-3 rounded-full bg-yellow-500"></span> Analizando
+          <span className="w-3 h-3 rounded-full bg-yellow-500"></span>{" "}
+          Analizando
         </span>
         <span className="flex items-center gap-1 text-red-600">
           <span className="w-3 h-3 rounded-full bg-red-600"></span> Desaprobado
@@ -20,7 +22,9 @@ export default function Subjects() {
       {/* Cards */}
       <div className="space-y-4">
         <div className="border rounded-lg p-4 flex justify-between items-center shadow">
-          <span className="font-medium">Investigación en Sistemas de Información</span>
+          <span className="font-medium">
+            Investigación en Sistemas de Información
+          </span>
           <span className="w-4 h-4 rounded-full bg-green-600"></span>
         </div>
 
