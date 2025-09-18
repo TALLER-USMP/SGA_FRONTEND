@@ -14,13 +14,26 @@
     "dev:host": "npm run dev --workspace=host",
     "dev:login": "npm run dev --workspace=login",
     "dev:dashboard": "npm run dev --workspace=dashboard",
-    "dev:all": "concurrently -n build:login,build:dashboard,preview:login,preview:dashboard,host -c yellow,cyan,magenta,green,blue \"npm run build:login && npm run preview:login\" \"npm run build:dashboard && npm run preview:dashboard\" \"npm run dev:host\""
+    "dev:all": "concurrently -n build:login,build:dashboard,preview:login,preview:dashboard,host -c yellow,cyan,magenta,green,blue \"npm run build:login && npm run preview:login\" \"npm run build:dashboard && npm run preview:dashboard\" \"npm run dev:host\"",
+    "prepare": "husky",
+    "format:write": "npx prettier . --write",
+    "format:check": "npx prettier . --check"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
+    "concurrently": "^9.2.1",
+    "husky": "^9.1.7",
+    "prettier": "^3.6.2"
+  },
+  "lint-staged": {
+    "apps/*/src/**/*.{ts,tsx,js,jsx,json,css,md}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }

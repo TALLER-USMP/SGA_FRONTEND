@@ -1,6 +1,4 @@
-import { lazy, Suspense } from "react"
-
-
+import { lazy, Suspense } from "react";
 
 const LoginApp = lazy(() => import("login/LoginApp"));
 const DashboardApp = lazy(() => import("dashboard/DashboardApp"));
@@ -18,7 +16,7 @@ function App() {
         </Suspense>
       </div>
     </>
-  )
+  );
 }
 
-export default App
+export default App;

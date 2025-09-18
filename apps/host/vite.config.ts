@@ -1,7 +1,7 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import federation from '@originjs/vite-plugin-federation'
-import tailwindcss from '@tailwindcss/vite'
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import federation from "@originjs/vite-plugin-federation";
+import tailwindcss from "@tailwindcss/vite";
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,11 +11,11 @@ export default defineConfig({
       name: "app",
       remotes: {
         login: "http://localhost:5001/assets/remoteEntry.js",
-        dashboard: "http://localhost:5002/assets/remoteEntry.js"
+        dashboard: "http://localhost:5002/assets/remoteEntry.js",
       },
-      shared: ['react', 'react-dom']
+      shared: ["react", "react-dom"],
     }),
-    tailwindcss()
+    tailwindcss(),
   ],
-  server: { port: 5000 }
-})
+  server: { port: 5000 },
+});
