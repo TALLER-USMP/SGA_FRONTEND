@@ -1,0 +1,58 @@
+name: "Historia de Usuario"
+description: "Plantilla para registrar historias de usuario en el tablero del proyecto"
+title: "HU.X.X - [Título de la historia]"
+labels: ["user-story", "backlog"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 📌 Historia de Usuario
+        **Como** [rol del usuario]  
+        **Quiero** [acción a realizar]  
+        **Para** [beneficio/valor esperado]  
+
+  - type: textarea
+    id: criterios
+    attributes:
+      label: 🎯 Criterios de Aceptación
+      description: Escribe los criterios usando DADO / CUANDO / ENTONCES
+      placeholder: |
+        - Escenario 1: ...
+        - Escenario 2: ...
+
+  - type: textarea
+    id: detalles
+    attributes:
+      label: 💬 Detalles de Conversación
+      description: Notas adicionales
+      placeholder: |
+        - Nota 1
+        - Nota 2
+
+  - type: dropdown
+    id: prioridad
+    attributes:
+      label: 🚦 Prioridad
+      options:
+        - CRÍTICA
+        - ALTA
+        - MEDIA
+        - BAJA
+
+  - type: input
+    id: storypoints
+    attributes:
+      label: 🧮 Story Points
+      description: Indica el esfuerzo estimado
+      placeholder: "Ejemplo: 3 | 5 | 8"
+
+  - type: textarea
+    id: tareas
+    attributes:
+      label: ✅ Tareas
+      description: Lista de subtareas
+      placeholder: |
+        - [ ] Subtarea 1
+        - [ ] Subtarea 2
