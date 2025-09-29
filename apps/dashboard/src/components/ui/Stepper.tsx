@@ -24,7 +24,7 @@ export default function Stepper({
                 ? "bg-red-500 text-white"
                 : step < currentStep
                   ? "bg-gray-400 text-white"
-                  : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                  : "bg-gray-200 text-gray-600 hover:bg-gray-300",
             )}
             onClick={() => onStepClick?.(step)}
           >
@@ -34,7 +34,7 @@ export default function Stepper({
             <div
               className={cn(
                 "w-8 h-1 mx-2",
-                step < currentStep ? "bg-gray-400" : "bg-gray-200"
+                step < currentStep ? "bg-gray-400" : "bg-gray-200",
               )}
             />
           )}

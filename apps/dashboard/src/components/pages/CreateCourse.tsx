@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Stepper from "../ui/Stepper";
 import { Button } from "../ui/button";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
@@ -23,7 +23,13 @@ interface CourseFormData {
 const TOTAL_STEPS = 9;
 
 export default function CreateCourse() {
-  const [currentStep, setCurrentStep] = useState(9); // Empezamos en paso 9 como muestra la imagen
+  const [currentStep, setCurrentStep] = useState(1); // Empezamos en paso 1
+  const [forceRender, setForceRender] = useState(0);
+
+  // Forzar re-render cuando cambie el paso
+  useEffect(() => {
+    setForceRender((prev) => prev + 1);
+  }, [currentStep]);
   const [formData, setFormData] = useState<CourseFormData>({
     generalData: {
       courseCode: "09013707052",
@@ -50,18 +56,28 @@ export default function CreateCourse() {
 
   const handleNext = () => {
     if (currentStep < TOTAL_STEPS) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      setCurrentStep(nextStep);
+      // Forzar re-render
+      setTimeout(() => setForceRender((prev) => prev + 1), 0);
     }
   };
 
   const handlePrevious = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
+      const prevStep = currentStep - 1;
+      setCurrentStep(prevStep);
+      // Forzar re-render
+      setTimeout(() => setForceRender((prev) => prev + 1), 0);
     }
   };
 
   const handleStepClick = (step: number) => {
-    setCurrentStep(step);
+    if (step >= 1 && step <= TOTAL_STEPS) {
+      setCurrentStep(step);
+      // Forzar re-render
+      setTimeout(() => setForceRender((prev) => prev + 1), 0);
+    }
   };
 
   const addSource = () => {
@@ -90,7 +106,7 @@ export default function CreateCourse() {
       consultationSources: {
         ...prev.consultationSources,
         sources: prev.consultationSources.sources.map((source, i) =>
-          i === index ? value : source
+          i === index ? value : source,
         ),
       },
     }));
@@ -112,7 +128,7 @@ export default function CreateCourse() {
       contributions: {
         ...prev.contributions,
         contributionsList: prev.contributions.contributionsList.filter(
-          (_, i) => i !== index
+          (_, i) => i !== index,
         ),
       },
     }));
@@ -124,7 +140,7 @@ export default function CreateCourse() {
       contributions: {
         ...prev.contributions,
         contributionsList: prev.contributions.contributionsList.map(
-          (contribution, i) => (i === index ? value : contribution)
+          (contribution, i) => (i === index ? value : contribution),
         ),
       },
     }));
@@ -274,14 +290,14 @@ export default function CreateCourse() {
 
       case 9:
         return (
-          <div className="space-y-6">
+          <div className="space-y-4 w-full">
             <div className="text-lg font-semibold">
               9. Aportes de la asignatura al logro de resultados
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
               {/* Lado izquierdo */}
-              <div className="space-y-6">
+              <div className="space-y-4 lg:col-span-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Bibliografia
@@ -298,7 +314,7 @@ export default function CreateCourse() {
                           },
                         }))
                       }
-                      className="w-full h-40 p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       placeholder="Analizar un sistema complejo de computacion y aplicar principios de computacion y otras disciplinas relevantes para identificar soluciones"
                     />
                     <div className="absolute bottom-2 right-2 text-xs text-gray-500">
@@ -345,11 +361,11 @@ export default function CreateCourse() {
               </div>
 
               {/* Lado derecho */}
-              <div>
+              <div className="lg:col-span-8">
                 <label className="block text-sm font-medium mb-2">
                   Lista de Aportes de la Asignatura
                 </label>
-                <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
                   {formData.contributions.contributionsList.map(
                     (contribution, index) => (
                       <div key={index} className="flex items-start gap-2">
@@ -358,7 +374,7 @@ export default function CreateCourse() {
                           onChange={(e) =>
                             updateContribution(index, e.target.value)
                           }
-                          className="flex-1 p-3 bg-gray-200 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[60px]"
+                          className="flex-1 p-2 bg-gray-200 rounded-lg border-none focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none min-h-[50px] text-sm"
                           placeholder="Analizar un sistema complejo de computacion y aplicar principios de computacion y otras disciplinas relevantes para identificar soluciones"
                         />
                         <div className="flex flex-col items-center gap-1 pt-2">
@@ -374,7 +390,7 @@ export default function CreateCourse() {
                           </button>
                         </div>
                       </div>
-                    )
+                    ),
                   )}
 
                   <button
@@ -403,16 +419,20 @@ export default function CreateCourse() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6">
+    <div className="w-full px-4 py-6">
       <h1 className="text-3xl font-bold mb-8">Crear nuevo curso</h1>
 
       <Stepper
+        key={`stepper-${currentStep}-${forceRender}`}
         currentStep={currentStep}
         totalSteps={TOTAL_STEPS}
         onStepClick={handleStepClick}
       />
 
-      <div className="bg-white rounded-lg shadow-sm border p-8 mb-8">
+      <div
+        key={`step-${currentStep}-${forceRender}`}
+        className="bg-white rounded-lg shadow-sm border p-6 mb-6 w-full"
+      >
         {renderStepContent()}
       </div>
 
