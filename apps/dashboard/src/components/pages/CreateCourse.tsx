@@ -2,12 +2,23 @@ import { useState } from "react";
 import LayoutStep from "../layout/LayoutStep";
 import Step7 from "./Step7";
 import Step9 from "./Step9";
+import Step5 from "./Step5";
 
 // Interfaces para los datos de cada paso
 interface ConsultationSourcesData {
   week: string;
   didacticResources: string;
   sources: string[];
+}
+interface DidacticResource {
+  id: number;
+  name: string;
+  type: string;
+}
+
+interface MethodologyData {
+  strategies: string; // Estrategias metodológicas
+  resources: DidacticResource[]; // Recursos didácticos
 }
 
 interface ContributionsData {
@@ -23,6 +34,11 @@ interface CourseFormData {
   };
   consultationSources: ConsultationSourcesData;
   contributions: ContributionsData;
+  methodologyData: MethodologyData; // Step5
+  didacticResources: {
+    resources: string;
+    resourceType: string;
+  };
 }
 
 const TOTAL_STEPS = 9;
@@ -38,6 +54,15 @@ export default function CreateCourse() {
       week: "Semana 1",
       didacticResources: "",
       sources: ["", "", ""],
+    },
+
+    methodologyData: {
+      strategies: "",
+      resources: [{ id: 1, name: "Computadora", type: "Equipo" }],
+    },
+    didacticResources: {
+      resources: "",
+      resourceType: "",
     },
     contributions: {
       bibliography:
@@ -67,6 +92,12 @@ export default function CreateCourse() {
   const handleStepClick = (step: number) => {
     setCurrentStep(step);
   };
+  const handleStep5Change = (data: MethodologyData) => {
+    setFormData((prev) => ({
+      ...prev,
+      methodologyData: data,
+    }));
+  };
 
   // Handlers para actualizar datos de cada paso
   const handleStep7Change = (data: ConsultationSourcesData) => {
@@ -86,6 +117,11 @@ export default function CreateCourse() {
   // Renderizar el contenido de cada paso
   const renderStepContent = () => {
     switch (currentStep) {
+      case 5:
+        return (
+          <Step5 data={formData.methodologyData} onChange={handleStep5Change} />
+        );
+
       case 7:
         return (
           <Step7
