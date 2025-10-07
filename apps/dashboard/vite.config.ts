@@ -15,7 +15,7 @@ export default defineConfig({
       exposes: {
         "./DashboardApp": "./src/App.tsx",
       },
-      shared: ["react", "react-dom"],
+      shared: ["react", "react-dom","react-router-dom","@azure/msal-react"],
     }),
   ],
   resolve: {

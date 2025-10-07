@@ -9,9 +9,6 @@ export default defineConfig({
     react(),
     federation({
       name: "login",
-      remotes: {
-        dashboard: "http://localhost:5002/assets/remoteEntry.js",
-      },
       filename: "remoteEntry.js",
       exposes: {
         "./LoginApp": "./src/App.tsx",

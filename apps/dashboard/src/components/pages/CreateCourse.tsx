@@ -2,6 +2,7 @@ import { useState } from "react";
 import LayoutStep from "../layout/LayoutStep";
 import Step7 from "./Step7";
 import Step9 from "./Step9";
+import Step4 from "./Step4";
 
 // Interfaces para los datos de cada paso
 interface ConsultationSourcesData {
@@ -16,6 +17,21 @@ interface ContributionsData {
   contributionsList: string[];
 }
 
+interface LearningActivity {
+  name: string;
+  hours: number;
+}
+export interface WeekData {
+  week: string;
+  conceptual: string;
+  procedural: string;
+  activities: LearningActivity[];
+}
+interface DidacticResources {
+  resources: string;
+  resourceType: string;
+}
+
 interface CourseFormData {
   generalData: {
     courseCode: string;
@@ -23,6 +39,8 @@ interface CourseFormData {
   };
   consultationSources: ConsultationSourcesData;
   contributions: ContributionsData;
+  methodologicalStrategy: WeekData;
+  didacticResources: DidacticResources;
 }
 
 const TOTAL_STEPS = 9;
@@ -38,6 +56,18 @@ export default function CreateCourse() {
       week: "Semana 1",
       didacticResources: "",
       sources: ["", "", ""],
+    },
+    methodologicalStrategy: {
+      week: "Semana 1",
+      conceptual: "",
+      procedural: "",
+      activities: [
+        // { name: "Trabajo grupal en el proyecto", hours: 2 },
+      ],
+    },
+    didacticResources: {
+      resources: "",
+      resourceType: "",
     },
     contributions: {
       bibliography:
@@ -68,6 +98,13 @@ export default function CreateCourse() {
     setCurrentStep(step);
   };
 
+  const handleStep4Change = (data: WeekData) => {
+    setFormData((prev) => ({
+      ...prev,
+      methodologicalStrategy: data,
+    }));
+  };
+
   // Handlers para actualizar datos de cada paso
   const handleStep7Change = (data: ConsultationSourcesData) => {
     setFormData((prev) => ({
@@ -86,6 +123,13 @@ export default function CreateCourse() {
   // Renderizar el contenido de cada paso
   const renderStepContent = () => {
     switch (currentStep) {
+      case 4:
+        return (
+          <Step4
+            data={formData.methodologicalStrategy}
+            onChange={handleStep4Change}
+          />
+        );
       case 7:
         return (
           <Step7
@@ -113,7 +157,7 @@ export default function CreateCourse() {
 
   // DEBUG: Log current values
   console.log(
-    `DEBUG CreateCourse: currentStep=${currentStep}, TOTAL_STEPS=${TOTAL_STEPS}`,
+    `DEBUG CreateCourse: currentStep=${currentStep}, TOTAL_STEPS=${TOTAL_STEPS}`
   );
 
   return (
