@@ -1,67 +1,47 @@
 import { useMsal } from "@azure/msal-react";
-import { loginRequest } from "../../authConfig";
-import { useNavigate } from "react-router-dom";
+import { loginRequest, loginRequestBack } from "../../authConfig";
 import { LogIn } from "lucide-react";
+import { useCreateSession } from "../../hooks/useSession";
+import type { AuthenticationResult } from "@azure/msal-browser";
 
 export default function Login() {
   const { instance } = useMsal();
-  const navigate = useNavigate();
+  const createSession = useCreateSession();
 
   const handleLogin = async () => {
     try {
-      const response = await instance.loginPopup(loginRequest);
+      // poput del login de microsoft
+      const response: AuthenticationResult = await instance.loginPopup(loginRequest);
+      if (!response?.account) return;
 
-      if (response && response.account) {
-        instance.setActiveAccount(response.account);
-        console.log("✅ Usuario autenticado:", response.account);
+      instance.setActiveAccount(response.account);
+      console.log("✅ Usuario autenticado:", response.account);
 
-        // 1. Token para Microsoft Graph
-        const graphToken = await instance.acquireTokenSilent({
-          scopes: ["User.Read", "Mail.Read", "Calendars.Read"],
-          account: response.account,
-        });
-        console.log("🔑 Graph Token:", graphToken.accessToken);
+      //permite acceder a datos del usuario en graph api
+      const graphToken = await instance.acquireTokenSilent({
+        ...loginRequest,
+        account: response.account,
+      });
 
-        // 2. Token para tu API protegida
-        const apiToken = await instance.acquireTokenSilent({
-          scopes: ["api://3d7c6395-07ae-461b-82fb-4776ba1af653/access"],
-          account: response.account,
-        });
-        console.log("🔒 API Token:", apiToken.accessToken);
+      // jwt oficial de microsoft
+      const apiToken = await instance.acquireTokenSilent({
+        ...loginRequestBack,
+        account: response.account,
+      });
 
-        const baseUrl =
-          import.meta.env.VITE_API_BASE_URL || "http://localhost:7071/api";
+      const baseUrl =
+        import.meta.env.VITE_API_BASE_URL || "http://localhost:7071/api";
 
-        // 3. Crear sesión en backend y recibir cookie
-        const responseLogin = await fetch(`${baseUrl}/session/create`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiToken.accessToken}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ graphToken: graphToken.accessToken }),
-          credentials: "include", // 🔑 para que la cookie se guarde
-        });
-        if (!responseLogin.ok) {
-          console.error("❌ Error creating session:", responseLogin.statusText);
-        }
-        // 4. Verificar sesión usando la cookie
-        const verifySession = await fetch(`${baseUrl}/session/me`, {
-          method: "GET",
-          credentials: "include", // 🔑 para enviar la cookie
-        });
+      // Crear sesión en tu backend (cookie)
+      await createSession.mutateAsync({
+        baseUrl,
+        apiToken: apiToken.accessToken,
+        graphToken: graphToken.accessToken,
+      });
 
-        if (verifySession.ok) {
-          const data = await verifySession.json();
-          console.log("👤 Sesión verificada:", data.user);
-          navigate("/dashboard");
-        } else {
-          console.error(
-            "⚠️ No se pudo verificar la sesión:",
-            verifySession.statusText,
-          );
-        }
-      }
+      // Redirigir al dashboard (microfrontend remoto)
+      window.location.href = import.meta.env.VITE_DASHBOARD_URL || "http://localhost:5002";
+
     } catch (error) {
       console.error("❌ Error al iniciar sesión:", error);
     }
@@ -74,20 +54,23 @@ export default function Login() {
           <div className="h-16 w-16 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full mx-auto flex items-center justify-center shadow-md">
             <span className="text-white font-bold text-xl">MS</span>
           </div>
-          <h1 className="text-2xl font-bold text-gray-800 mt-4">
-            Iniciar Sesión
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Accede con tu cuenta Microsoft
-          </p>
+          <h1 className="text-2xl font-bold text-gray-800 mt-4">Iniciar Sesión</h1>
+          <p className="text-gray-500 text-sm">Accede con tu cuenta Microsoft</p>
         </div>
 
         <button
           onClick={handleLogin}
+          disabled={createSession.isPending}
           className="w-full flex items-center justify-center py-3 px-4 bg-gradient-to-r from-indigo-600 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white font-semibold rounded-xl transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 shadow-lg"
         >
-          <LogIn className="w-5 h-5 mr-2" />
-          Iniciar sesión con Microsoft
+          {createSession.isPending ? (
+            "Iniciando..."
+          ) : (
+            <>
+              <LogIn className="w-5 h-5 mr-2" />
+              Iniciar sesión con Microsoft
+            </>
+          )}
         </button>
       </div>
     </div>
