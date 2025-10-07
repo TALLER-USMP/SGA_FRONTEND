@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Eye, X, Pencil, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import silaboImg from "../../assets/silabo1.png"; // Importación la imagen del sílabo
+import silaboImg from "../../assets/silaboDIS.png"; // Importación la imagen del sílabo
 
 type Status = "green" | "red" | "yellow";
 
@@ -44,7 +44,7 @@ export default function Subjects() {
 
       try {
         const response = await fetch(
-          `http://localhost:7071/api/docente/${currentTeacherId}/asignaturas`,
+          `http://localhost:7071/api/docente/${currentTeacherId}/asignaturas`
         );
 
         if (!response.ok)
@@ -71,7 +71,7 @@ export default function Subjects() {
         }));
 
         const uniqueSubjects = Array.from(
-          new Map(formattedSubjects.map((s) => [s.id, s])).values(),
+          new Map(formattedSubjects.map((s) => [s.id, s])).values()
         );
 
         setSubjects(uniqueSubjects);
@@ -87,7 +87,7 @@ export default function Subjects() {
   }, [currentTeacherId]);
 
   const filteredSubjects = subjects.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()),
+    s.name.toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -136,7 +136,7 @@ export default function Subjects() {
                   <button
                     onClick={() =>
                       navigate(
-                        `/create-course?subject=${encodeURIComponent(subject.name)}`,
+                        `/create-course?subject=${encodeURIComponent(subject.name)}`
                       )
                     }
                     aria-label="Editar sílabo"
