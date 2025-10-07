@@ -1,4 +1,3 @@
-// src/pages/Subjects.tsx
 import { useState, useEffect, useRef } from "react";
 import { Eye, X, Pencil, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -11,94 +10,91 @@ interface Subject {
   name: string;
   status: Status;
   thumbnail: string;
-  note: string;
-  ciclo: string;
   semestre: string;
 }
 
-type ModalState = { open: false } | { open: true; subject: Subject };
+// 🧩 MOCKS — asignaturas adicionales para mostrar filtrado
+const mockSubjects: Subject[] = [
+  {
+    id: 2,
+    name: "Arquitectura de Software",
+    status: "red",
+    thumbnail: silaboImg,
+    semestre: "2025-II",
+  },
+  {
+    id: 3,
+    name: "Gestión de Recursos de TI",
+    status: "green",
+    thumbnail: silaboImg,
+    semestre: "2025-II",
+  },
+];
 
 const statusMap: Record<Status, { color: string; label: string }> = {
   green: { color: "bg-green-500", label: "Aprobado" },
-  red: { color: "bg-red-500", label: "Modificaciones pendientes" },
-  yellow: { color: "bg-yellow-400", label: "Pendiente de aprobación" },
+  red: { color: "bg-red-500", label: "Con observaciones" },
+  yellow: { color: "bg-yellow-400", label: "Pendiente" },
 };
 
 export default function Subjects() {
   const [search, setSearch] = useState("");
   const [selectedCycle, setSelectedCycle] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
-  const [modal, setModal] = useState<ModalState>({ open: false });
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [modal, setModal] = useState<{ open: boolean; subject?: Subject }>({
+    open: false,
+  });
   const navigate = useNavigate();
   const didFetchRef = useRef(false);
 
-  const currentTeacherId = "1";
+  // Filtrado local (nombre, semestre, estado)
+  const applyFilters = (data: Subject[]) => {
+    return data.filter((subject) => {
+      const matchesSearch = subject.name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+      const matchesSemestre =
+        !selectedCycle ||
+        subject.semestre.toLowerCase() === selectedCycle.toLowerCase();
+      const matchesStatus =
+        !selectedStatus || subject.status === selectedStatus;
+      return matchesSearch && matchesSemestre && matchesStatus;
+    });
+  };
 
-  // 🔹 Cargar asignaturas del docente (única fuente real)
+  // ✅ API real del docente con ID=1 + mocks adicionales
   const fetchSubjects = async () => {
     setLoading(true);
-    setError(null);
-
     try {
-      const url = `http://localhost:7071/api/docente/${currentTeacherId}/asignaturas`;
-      const response = await fetch(url);
+      const res = await fetch(
+        "http://localhost:7071/api/docente/1/asignaturas",
+      );
+      if (!res.ok) throw new Error("Error en la API de asignaturas");
+      const apiData = await res.json();
 
-      if (!response.ok) throw new Error(`Error en la API: ${response.status}`);
-
-      const json = await response.json();
-      const backendRaw = json?.data ?? [];
-
-      if (!Array.isArray(backendRaw) || backendRaw.length === 0) {
-        setSubjects([]);
-        setError("No se encontraron asignaturas");
-        return;
-      }
-
-      // 🟢 Simulamos estado (ya que backend no lo tiene aún)
-      let formattedSubjects: Subject[] = backendRaw.map((item: any) => {
-        const semestreActual = "2025-II";
-        const status: Status =
-          item.semestreAcademico === semestreActual ? "yellow" : "green";
-
-        return {
-          id: Number(item.idSilabo),
-          name: item.cursoNombre ?? "Sin nombre",
-          status,
+      const apiSubjects: Subject[] =
+        apiData?.data?.map((item: any) => ({
+          id: item.idSilabo,
+          name: item.cursoNombre,
+          status: "yellow",
           thumbnail: silaboImg,
-          ciclo: item.ciclo ?? "-",
-          semestre: item.semestreAcademico ?? "-",
-          note: `${item.docentesText ?? "Docente(s)"} • Ciclo: ${
-            item.ciclo ?? "-"
-          } • Código: ${item.cursoCodigo ?? "-"}`,
-        };
-      });
+          semestre: item.semestreAcademico || "2025-II",
+        })) || [];
 
-      // 🔎 Filtros locales
-      if (search) {
-        formattedSubjects = formattedSubjects.filter((s) =>
-          s.name.toLowerCase().includes(search.toLowerCase()),
-        );
-      }
+      const combined = [
+        ...apiSubjects,
+        ...mockSubjects.filter((m) => !apiSubjects.some((a) => a.id === m.id)),
+      ];
 
-      if (selectedCycle) {
-        formattedSubjects = formattedSubjects.filter(
-          (s) => s.semestre === selectedCycle,
-        );
-      }
-
-      if (selectedStatus) {
-        formattedSubjects = formattedSubjects.filter(
-          (s) => s.status === selectedStatus,
-        );
-      }
-
-      setSubjects(formattedSubjects);
-    } catch (err: any) {
-      console.error("Error al cargar asignaturas:", err);
-      setError("Error al cargar asignaturas");
+      setSubjects(applyFilters(combined));
+    } catch (error) {
+      console.error(
+        "⚠️ Error al cargar desde backend, usando solo mocks:",
+        error,
+      );
+      setSubjects(applyFilters(mockSubjects));
     } finally {
       setLoading(false);
     }
@@ -108,18 +104,17 @@ export default function Subjects() {
     if (didFetchRef.current) return;
     didFetchRef.current = true;
     fetchSubjects();
-  }, [currentTeacherId]);
+  }, []);
 
-  // Refrescar cuando cambian filtros
   useEffect(() => {
-    if (didFetchRef.current) fetchSubjects();
+    fetchSubjects();
   }, [search, selectedCycle, selectedStatus]);
 
   return (
     <div className="max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold mb-8">Mis Asignaciones</h1>
 
-      {/* 🔍 Buscador y filtros */}
+      {/* Buscador y filtros */}
       <div className="mb-8 flex items-center gap-2 flex-wrap">
         <div className="relative w-80">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
@@ -134,19 +129,17 @@ export default function Subjects() {
           />
         </div>
 
-        {/* Filtro por semestre */}
         <select
           className="border border-gray-300 rounded px-3 py-2"
           value={selectedCycle}
           onChange={(e) => setSelectedCycle(e.target.value)}
         >
           <option value="">Todos los semestres</option>
-          <option value="2025-II">2025-II</option>
-          <option value="2025-I">2025-I</option>
           <option value="2024-II">2024-II</option>
+          <option value="2025-I">2025-I</option>
+          <option value="2025-II">2025-II</option>
         </select>
 
-        {/* Filtro por estado */}
         <select
           className="border border-gray-300 rounded px-3 py-2"
           value={selectedStatus}
@@ -159,28 +152,24 @@ export default function Subjects() {
         </select>
       </div>
 
-      {loading && (
+      {/* Lista de asignaturas */}
+      {loading ? (
         <div className="text-center py-8">Cargando asignaturas...</div>
-      )}
-      {error && (
-        <div className="text-center text-red-500 py-8">Error: {error}</div>
-      )}
-
-      {/* 📚 Lista */}
-      <div className="space-y-5">
-        {subjects.length === 0 && !loading ? (
-          <div className="text-center py-8 text-gray-500">
-            No se encontraron asignaturas
-          </div>
-        ) : (
-          subjects.map((subject) => (
+      ) : subjects.length === 0 ? (
+        <div className="text-center text-gray-500 py-8">
+          No se encontraron asignaturas
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {subjects.map((subject) => (
             <div
               key={subject.id}
-              className="flex items-center justify-between px-7 py-5 bg-white border border-gray-300 rounded-2xl transition"
+              className="flex items-center justify-between px-6 py-4 bg-white border border-gray-300 rounded-2xl shadow-sm hover:shadow-md transition"
             >
-              <span className="text-base font-semibold text-gray-800">
+              <div className="text-base font-semibold text-gray-800">
                 {subject.name}
-              </span>
+              </div>
+
               <div className="flex items-center gap-4">
                 {(subject.status === "red" || subject.status === "yellow") && (
                   <button
@@ -209,12 +198,12 @@ export default function Subjects() {
                 </button>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {/* 🪟 Modal */}
-      {modal.open && (
+      {/* Modal */}
+      {modal.open && modal.subject && (
         <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-xl p-6 relative w-full max-w-lg text-center shadow-lg">
             <button
@@ -235,59 +224,21 @@ export default function Subjects() {
               />
 
               {modal.subject.status === "green" && (
-                <div className="flex flex-col items-center gap-3">
-                  <p className="text-sm text-gray-600">
-                    El sílabo está aprobado. Puede descargar la versión oficial.
-                  </p>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await fetch(modal.subject.thumbnail);
-                        if (!res.ok) throw new Error("Error al descargar");
-                        const blob = await res.blob();
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = `${modal.subject.name.replace(/\s+/g, "_")}_silabo`;
-                        document.body.appendChild(a);
-                        a.click();
-                        a.remove();
-                        URL.revokeObjectURL(url);
-                      } catch (e) {
-                        console.error("Descarga fallida:", e);
-                      }
-                    }}
-                    className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600"
-                  >
-                    Descargar
-                  </button>
-                </div>
-              )}
-
-              {modal.subject.status === "red" && (
-                <div className="text-left w-full">
-                  <div className="mb-3">
-                    <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700 text-sm font-medium">
-                      Solicita modificaciones
-                    </span>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-700">
-                    <strong>Observaciones:</strong>
-                    <p className="mt-2">
-                      {modal.subject.note ||
-                        "El docente debe revisar las observaciones solicitadas."}
-                    </p>
-                  </div>
-                </div>
+                <p className="text-sm text-gray-600">
+                  El sílabo está aprobado. Puede descargar la versión oficial.
+                </p>
               )}
 
               {modal.subject.status === "yellow" && (
-                <div>
-                  <p className="text-sm text-gray-600">
-                    El sílabo está pendiente de aprobación por la autoridad
-                    pertinente.
-                  </p>
-                </div>
+                <p className="text-sm text-gray-600">
+                  El sílabo está pendiente de aprobación.
+                </p>
+              )}
+
+              {modal.subject.status === "red" && (
+                <p className="text-sm text-gray-600">
+                  El sílabo requiere modificaciones antes de su aprobación.
+                </p>
               )}
             </div>
           </div>
