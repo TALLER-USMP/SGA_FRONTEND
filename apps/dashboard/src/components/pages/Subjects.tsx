@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Eye, X, Pencil, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import silaboImg from "../../assets/silaboDIS.png"; // Importación la imagen del sílabo
+import silaboImg from "../../assets/SILABO_DIS.png"; // Importación la imagen del sílabo
 
 type Status = "green" | "red" | "yellow";
 
