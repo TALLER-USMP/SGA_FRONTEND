@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { WeekData } from "./CreateCourse";
 
 interface LearningActivity {
@@ -19,31 +19,54 @@ interface Step4Props {
 
 export default function Step4({ data, onChange }: Step4Props) {
   const [semanaSeleccionada, setSemanaSeleccionada] = useState("Semana 1");
-  const [actividades, setActividades] = useState<LearningActivity[]>([
-    { id: 1, nombre: "Nueva actividad", horas: 2 },
-  ]);
-
-  // 🔹 Unidades
+  const [actividades, setActividades] = useState<LearningActivity[]>([]);
+  const [unidades, setUnidades] = useState<Unidad[]>([]);
   const [showUnidades, setShowUnidades] = useState(false);
-  const [unidadSeleccionada, setUnidadSeleccionada] = useState<Unidad>({
-    id: 1,
-    texto: "Unidad I: Diseño de Soluciones Innovadoras",
-  });
-  const unidades: Unidad[] = [
-    { id: 1, texto: "Unidad I: Diseño de Soluciones Innovadoras" },
-    { id: 2, texto: "Unidad II: Gestión de Proyectos" },
-    { id: 3, texto: "Unidad III: Evaluación y Mejora Continua" },
-  ];
+  const [unidadSeleccionada, setUnidadSeleccionada] = useState<Unidad | null>(
+    null,
+  );
+  const [horaActiva, setHoraActiva] = useState<number | null>(null);
 
   const semanas = ["Semana 1", "Semana 2", "Semana 3"];
 
+  // ⚠️ MOCK TEMPORAL
+  useEffect(() => {
+    const mockUnidades: Unidad[] = [
+      { id: 1, texto: "Unidad I: Diseño de Soluciones Innovadoras" },
+      { id: 2, texto: "Unidad II: Gestión de Proyectos" },
+      { id: 3, texto: "Unidad III: Evaluación y Mejora Continua" },
+    ];
+
+    const mockActividades: LearningActivity[] = [
+      { id: 1, nombre: "Análisis de casos", horas: 2 },
+      { id: 2, nombre: "Desarrollo de proyecto grupal", horas: 4 },
+      { id: 3, nombre: "Exposición individual", horas: 1 },
+    ];
+
+    const mockContenidos = {
+      conceptual: "Principios básicos de diseño e innovación.",
+      procedural: "Aplicación práctica de metodologías ágiles.",
+    };
+
+    const fetchMockData = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      setUnidades(mockUnidades);
+      setUnidadSeleccionada(mockUnidades[0]);
+      setActividades(mockActividades);
+      onChange({ ...data, ...mockContenidos });
+    };
+
+    fetchMockData();
+  }, []); // 👈 dependencias añadidas
+
+  // 🧩 Funciones
   const handleActividadChange = (
     id: number,
     field: keyof LearningActivity,
-    value: string | number
+    value: string | number,
   ) => {
     setActividades((prev) =>
-      prev.map((act) => (act.id === id ? { ...act, [field]: value } : act))
+      prev.map((act) => (act.id === id ? { ...act, [field]: value } : act)),
     );
   };
 
@@ -69,13 +92,12 @@ export default function Step4({ data, onChange }: Step4Props) {
         <div className="relative ml-4">
           <input
             type="text"
-            value={unidadSeleccionada.texto}
+            value={unidadSeleccionada ? unidadSeleccionada.texto : ""}
             readOnly
             className="w-full p-4 ml-1 pr-12 rounded-lg border text-lg bg-gray-100 cursor-pointer"
             onClick={() => setShowUnidades((show) => !show)}
             style={{ userSelect: "none" }}
           />
-          {/* Icono de flecha */}
           <span
             className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer"
             onClick={() => setShowUnidades((show) => !show)}
@@ -92,14 +114,13 @@ export default function Step4({ data, onChange }: Step4Props) {
             </svg>
           </span>
 
-          {/* Dropdown */}
           {showUnidades && (
             <div className="absolute left-0 top-full w-full bg-white border rounded-lg shadow-lg mt-2 z-10">
               {unidades.map((u) => (
                 <div
                   key={u.id}
                   className={`px-4 py-2 cursor-pointer hover:bg-red-50 ${
-                    u.id === unidadSeleccionada.id ? "bg-red-100" : ""
+                    unidadSeleccionada?.id === u.id ? "bg-red-100" : ""
                   }`}
                   onClick={() => {
                     setUnidadSeleccionada(u);
@@ -141,7 +162,6 @@ export default function Step4({ data, onChange }: Step4Props) {
 
       {/* Contenidos */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 ml-6">
-        {/* Conceptuales */}
         <div className="bg-white border rounded-2xl shadow p-4 relative">
           <h3 className="font-medium mb-2">Contenidos Conceptuales</h3>
           <textarea
@@ -153,11 +173,10 @@ export default function Step4({ data, onChange }: Step4Props) {
             maxLength={400}
           />
           <p className="text-xs text-gray-500 text-right">
-            {data.procedural.length}/400
+            {data.conceptual.length}/400
           </p>
         </div>
 
-        {/* Procedimentales */}
         <div className="bg-white border rounded-2xl shadow p-4 relative">
           <h3 className="font-medium mb-2">Contenidos Procedimentales</h3>
           <textarea
@@ -176,7 +195,7 @@ export default function Step4({ data, onChange }: Step4Props) {
 
       {/* 4.2 Actividades */}
       <div>
-        <h4 className="font-bold mb-4 ">4.2. Actividades de Aprendizaje</h4>
+        <h4 className="font-bold mb-4">4.2. Actividades de Aprendizaje</h4>
         <div className="bg-white border rounded-2xl shadow p-6 ml-7 relative">
           <div className="pt-2 flex flex-col items-center">
             <div className="grid grid-cols-[1fr_auto_auto] gap-x-8 w-full max-w-2xl">
@@ -190,31 +209,63 @@ export default function Step4({ data, onChange }: Step4Props) {
                       handleActividadChange(
                         actividad.id,
                         "nombre",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     className="bg-gray-200 rounded-lg px-3 py-2 text-base w-full outline-none my-2"
                   />
+
                   {/* Selector de horas */}
-                  <div className="flex items-center bg-gray-300 rounded-lg px-7 py-2 font-normal text-base text-gray-800 min-w-[80px] justify-between my-2">
-                    <span>{actividad.horas} - h</span>
-                    <span className="ml-2">
-                      <svg
-                        width="16"
-                        height="16"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          d="M6 9l6 6 6-6"
-                          stroke="#999"
-                          strokeWidth={2}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </span>
+                  <div className="relative my-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setHoraActiva(
+                          horaActiva === actividad.id ? null : actividad.id,
+                        )
+                      }
+                      className="flex items-center bg-gray-300 rounded-lg px-7 py-2 font-normal text-base text-gray-800 min-w-[80px] justify-between w-full"
+                    >
+                      <span>{actividad.horas} - h</span>
+                      <span>
+                        <svg
+                          width="16"
+                          height="16"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M6 9l6 6 6-6"
+                            stroke="#555"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </span>
+                    </button>
+
+                    {/* Desplegable de horas */}
+                    {horaActiva === actividad.id && (
+                      <div className="absolute left-0 top-full mt-1 bg-white border rounded-lg shadow-md z-10 w-full">
+                        {[1, 2, 3, 4].map((h) => (
+                          <div
+                            key={h}
+                            className={`px-4 py-2 cursor-pointer hover:bg-gray-100 ${
+                              actividad.horas === h ? "bg-gray-200" : ""
+                            }`}
+                            onClick={() => {
+                              handleActividadChange(actividad.id, "horas", h);
+                              setHoraActiva(null);
+                            }}
+                          >
+                            {h} hora{h > 1 ? "s" : ""}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
+
                   {/* Botón eliminar */}
                   <div className="flex items-center justify-center my-2">
                     <button
@@ -227,6 +278,7 @@ export default function Step4({ data, onChange }: Step4Props) {
                   </div>
                 </div>
               ))}
+
               {/* Botón agregar */}
               <div></div>
               <div></div>
