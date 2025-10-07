@@ -9,14 +9,26 @@ export default defineConfig({
     react(),
     federation({
       name: "login",
+      remotes: {
+        dashboard: "http://localhost:5002/assets/remoteEntry.js",
+      },
       filename: "remoteEntry.js",
       exposes: {
         "./LoginApp": "./src/App.tsx",
       },
-      shared: ["react", "react-dom"],
+      shared: ["react", "react-dom", "react-router-dom", "@azure/msal-react"],
     }),
     tailwindcss(),
   ],
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:7071", //modificar en produccion con el link de azure nube
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
   build: {
     modulePreload: false,
     target: "esnext",
