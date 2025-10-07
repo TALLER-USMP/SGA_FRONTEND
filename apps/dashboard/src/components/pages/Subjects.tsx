@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Eye, X, Pencil, Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import silaboImg from "../../assets/silabo1.png"; // Importación la imagen del sílabo
 
 type Status = "green" | "red" | "yellow";
 
@@ -62,7 +63,8 @@ export default function Subjects() {
           id: Number(item.idSilabo),
           name: item.cursoNombre ?? "Sin nombre",
           status: item.semestreAcademico === "2025-II" ? "yellow" : "green",
-          thumbnail: "/sylabus-default.png",
+          thumbnail: silaboImg,
+          /*thumbnail: "/sylabus-default.png",*/
           note: `${item.docentesText ?? "Docente(s)"} • Ciclo: ${
             item.ciclo ?? "-"
           } • Código: ${item.cursoCodigo ?? "-"}`,
@@ -180,6 +182,88 @@ export default function Subjects() {
               className="mx-auto mb-4 border shadow max-h-64"
             />
             <p className="text-gray-600 mt-4">{modal.subject.note}</p>
+          </div>
+        </div>
+      )}
+      {modal.open && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-xl p-6 relative w-full max-w-lg text-center shadow-lg">
+            <button
+              className="absolute top-3 right-3 p-1 bg-gray-800 text-white rounded"
+              onClick={() => setModal({ open: false })}
+              aria-label="Cerrar"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-xl font-semibold mb-4">{modal.subject.name}</h2>
+
+            <div className="flex flex-col items-center gap-4">
+              <img
+                src={modal.subject.thumbnail}
+                alt="Miniatura del sílabo"
+                className="mx-auto mb-2 border shadow max-h-72 object-contain w-48"
+              />
+
+              {/* Estado: verde -> descargar, rojo -> mostrar nota de modificación, amarillo -> info */}
+              {modal.subject.status === "green" && (
+                <div className="flex flex-col items-center gap-3">
+                  <p className="text-sm text-gray-600">
+                    El sílabo está aprobado. Puede descargar la versión oficial.
+                  </p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        // Intentamos descargar la miniatura / archivo remoto.
+                        const res = await fetch(modal.subject.thumbnail);
+                        if (!res.ok) throw new Error("Error al descargar");
+                        const blob = await res.blob();
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        // Nombre de archivo legible
+                        a.download = `${modal.subject.name.replace(/\s+/g, "_")}_silabo`;
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        URL.revokeObjectURL(url);
+                      } catch (e) {
+                        console.error("Descarga fallida:", e);
+                      }
+                    }}
+                    className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600"
+                  >
+                    Descargar
+                  </button>
+                </div>
+              )}
+
+              {modal.subject.status === "red" && (
+                <div className="text-left w-full">
+                  <div className="mb-3">
+                    <span className="inline-block px-2 py-1 rounded bg-red-100 text-red-700 text-sm font-medium">
+                      Solicita modificaciones
+                    </span>
+                  </div>
+                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 text-sm text-gray-700">
+                    <strong>Observaciones:</strong>
+                    <p className="mt-2">
+                      {modal.subject.note ||
+                        "El docente debe revisar las observaciones solicitadas."}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {modal.subject.status === "yellow" && (
+                <div>
+                  <p className="text-sm text-gray-600">
+                    El sílabo está pendiente de aprobación por la autoridad
+                    pertinente.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
