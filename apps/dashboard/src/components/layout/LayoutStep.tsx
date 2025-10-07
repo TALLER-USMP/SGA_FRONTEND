@@ -1,68 +1,67 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Stepper from "../ui/Stepper";
 import { Button } from "../ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import StepWeeks from "../steps/StepWeeks"; // <-- Paso 2 (maquetado)
 
 interface LayoutStepProps {
-  currentStep: number;
-  totalSteps: number;
-  title: string;
-  children: ReactNode;
+  // Los dejo opcionales para que no te rompa el tipado si otro sitio lo usa
+  currentStep?: number;
+  title?: string;
+  children?: ReactNode; // no lo usamos aquí; se renderizan los steps internos
   onNext?: () => void;
   onPrevious?: () => void;
   onStepClick?: (step: number) => void;
 }
 
 export default function LayoutStep({
-  currentStep,
-  totalSteps,
-  title,
-  children,
+  currentStep: currentStepProp,
+  title = "Editar Sílabos",
   onNext,
   onPrevious,
   onStepClick,
 }: LayoutStepProps) {
-  const [forceRender, setForceRender] = useState(0);
+  // Define aquí los pasos que muestra el wizard
+  const steps: ReactNode[] = [
+    <div key="1" />, // placeholder del Paso 1 (pon tu StepSumilla cuando lo tengas)
+    <StepWeeks key="2" />, // <-- TU PASO 2 (maquetado)
+    <div key="3" />, // placeholder del Paso 3 (pon el real cuando exista)
+  ];
 
-  // Forzar re-render cuando cambie el paso
-  useEffect(() => {
-    setForceRender((prev) => {
-      console.log(
-        `DEBUG useEffect: Step changed to ${currentStep}, forceRender: ${prev + 1}`,
-      );
-      return prev + 1;
-    });
-  }, [currentStep]);
+  // Si viene currentStep por props, lo respetamos; si no, arrancamos en 2 para ver tu maquetado
+  const [internalStep, setInternalStep] = useState<number>(
+    currentStepProp ?? 2,
+  );
 
-  // Force additional re-render for last step
   useEffect(() => {
-    if (currentStep === totalSteps) {
-      console.log(
-        `DEBUG: Reached final step ${currentStep}, forcing additional render`,
-      );
-      setTimeout(() => setForceRender((prev) => prev + 1), 10);
+    if (typeof currentStepProp === "number") {
+      setInternalStep(currentStepProp);
     }
-  }, [currentStep, totalSteps]);
+  }, [currentStepProp]);
 
-  const handleNext = () => {
-    if (currentStep < totalSteps && onNext) {
-      onNext();
-      setTimeout(() => setForceRender((prev) => prev + 1), 0);
+  const totalSteps = steps.length;
+
+  const goPrev = () => {
+    if (internalStep > 1) {
+      const next = internalStep - 1;
+      setInternalStep(next);
+      onPrevious?.();
+      onStepClick?.(next);
     }
   };
 
-  const handlePrevious = () => {
-    if (currentStep > 1 && onPrevious) {
-      onPrevious();
-      setTimeout(() => setForceRender((prev) => prev + 1), 0);
+  const goNext = () => {
+    if (internalStep < totalSteps) {
+      const next = internalStep + 1;
+      setInternalStep(next);
+      onNext?.();
+      onStepClick?.(next);
     }
   };
 
-  const handleStepClick = (step: number) => {
-    if (onStepClick) {
-      onStepClick(step);
-      setTimeout(() => setForceRender((prev) => prev + 1), 0);
-    }
+  const handleStepClick = (s: number) => {
+    setInternalStep(s);
+    onStepClick?.(s);
   };
 
   return (
@@ -70,25 +69,20 @@ export default function LayoutStep({
       <h1 className="text-3xl font-bold mb-8">{title}</h1>
 
       <Stepper
-        key={`stepper-${currentStep}-${forceRender}`}
-        currentStep={currentStep}
+        currentStep={internalStep}
         totalSteps={totalSteps}
         onStepClick={handleStepClick}
       />
 
-      <div
-        key={`step-${currentStep}-${forceRender}`}
-        className="bg-white rounded-lg shadow-sm border p-6 mb-6 w-full"
-      >
-        {children}
+      <div className="bg-white rounded-lg shadow-sm border p-6 mb-6 w-full">
+        {steps[internalStep - 1]}
       </div>
 
-      {/* Botones de navegación */}
       <div className="flex justify-between items-center">
         <Button
           variant="outline"
-          onClick={handlePrevious}
-          disabled={currentStep === 1}
+          onClick={goPrev}
+          disabled={internalStep === 1}
           className="flex items-center gap-2"
         >
           <ChevronLeft className="w-4 h-4" />
@@ -96,25 +90,15 @@ export default function LayoutStep({
         </Button>
 
         <span className="text-sm text-gray-600">
-          Paso {currentStep} de {totalSteps}
+          Paso {internalStep} de {totalSteps}
         </span>
 
         <Button
-          onClick={handleNext}
-          disabled={currentStep === totalSteps}
+          onClick={goNext}
+          disabled={internalStep === totalSteps}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700"
-          key={`btn-${currentStep}-${forceRender}`} // Force re-render
         >
-          {/* DEBUG: currentStep={currentStep}, totalSteps={totalSteps} */}
-          {(() => {
-            let buttonText;
-            if (currentStep === 9) {
-              buttonText = "Finalizar";
-            } else {
-              buttonText = "Siguiente";
-            }
-            return buttonText;
-          })()}
+          {internalStep === totalSteps ? "Finalizar" : "Siguiente"}
           <ChevronRight className="w-4 h-4" />
         </Button>
       </div>
