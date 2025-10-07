@@ -5,10 +5,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import StepWeeks from "../steps/StepWeeks"; // <-- Paso 2 (maquetado)
 
 interface LayoutStepProps {
-  // Los dejo opcionales para que no te rompa el tipado si otro sitio lo usa
-  currentStep?: number;
+  currentStep?: number; // si CreateCourse controla el paso actual
+  totalSteps?: number; // si CreateCourse define el total de pasos (p. ej. 9)
   title?: string;
-  children?: ReactNode; // no lo usamos aquí; se renderizan los steps internos
+  children?: ReactNode; // contenido del paso (de tus compas)
   onNext?: () => void;
   onPrevious?: () => void;
   onStepClick?: (step: number) => void;
@@ -16,21 +16,19 @@ interface LayoutStepProps {
 
 export default function LayoutStep({
   currentStep: currentStepProp,
+  totalSteps: totalStepsProp,
   title = "Editar Sílabos",
+  children,
   onNext,
   onPrevious,
   onStepClick,
 }: LayoutStepProps) {
-  // Define aquí los pasos que muestra el wizard
-  const steps: ReactNode[] = [
-    <div key="1" />, // placeholder del Paso 1 (pon tu StepSumilla cuando lo tengas)
-    <StepWeeks key="2" />, // <-- TU PASO 2 (maquetado)
-    <div key="3" />, // placeholder del Paso 3 (pon el real cuando exista)
-  ];
+  // Total de pasos: usa el que venga de arriba; si no, por defecto 9 (flujo del equipo)
+  const totalSteps = typeof totalStepsProp === "number" ? totalStepsProp : 9;
 
-  // Si viene currentStep por props, lo respetamos; si no, arrancamos en 2 para ver tu maquetado
+  // Paso actual: respeta el que venga; si no, arranca en 2 para ver tu maquetado
   const [internalStep, setInternalStep] = useState<number>(
-    currentStepProp ?? 2,
+    typeof currentStepProp === "number" ? currentStepProp : 2,
   );
 
   useEffect(() => {
@@ -39,7 +37,8 @@ export default function LayoutStep({
     }
   }, [currentStepProp]);
 
-  const totalSteps = steps.length;
+  // Contenido: en el paso 2 muestra tu StepWeeks; en los demás muestra lo que ya tenían (children)
+  const content: ReactNode = internalStep === 2 ? <StepWeeks /> : children;
 
   const goPrev = () => {
     if (internalStep > 1) {
@@ -75,7 +74,7 @@ export default function LayoutStep({
       />
 
       <div className="bg-white rounded-lg shadow-sm border p-6 mb-6 w-full">
-        {steps[internalStep - 1]}
+        {content}
       </div>
 
       <div className="flex justify-between items-center">
