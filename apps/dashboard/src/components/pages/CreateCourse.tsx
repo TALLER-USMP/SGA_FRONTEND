@@ -1,8 +1,9 @@
 import { useState } from "react";
 import LayoutStep from "../layout/LayoutStep";
+import Step4 from "./Step4";
+import Step5 from "./Step5";
 import Step7 from "./Step7";
 import Step9 from "./Step9";
-import Step5 from "./Step5";
 
 // Interfaces para los datos de cada paso
 interface ConsultationSourcesData {
@@ -27,6 +28,16 @@ interface ContributionsData {
   contributionsList: string[];
 }
 
+interface LearningActivity {
+  name: string;
+  hours: number;
+}
+export interface WeekData {
+  week: string;
+  conceptual: string;
+  procedural: string;
+  activities: LearningActivity[];
+}
 interface CourseFormData {
   generalData: {
     courseCode: string;
@@ -35,6 +46,7 @@ interface CourseFormData {
   consultationSources: ConsultationSourcesData;
   contributions: ContributionsData;
   methodologyData: MethodologyData; // Step5
+  methodologicalStrategy: WeekData; // Step4
   didacticResources: {
     resources: string;
     resourceType: string;
@@ -55,10 +67,16 @@ export default function CreateCourse() {
       didacticResources: "",
       sources: ["", "", ""],
     },
-
     methodologyData: {
       strategies: "",
-      resources: [{ id: 1, name: "Computadora", type: "Equipo" }],
+      resources: [{ id: 1, name: "Computadora", type: "Equipos" }],
+    },
+
+    methodologicalStrategy: {
+      week: "Semana 1",
+      conceptual: "",
+      procedural: "",
+      activities: [],
     },
     didacticResources: {
       resources: "",
@@ -92,6 +110,14 @@ export default function CreateCourse() {
   const handleStepClick = (step: number) => {
     setCurrentStep(step);
   };
+
+  const handleStep4Change = (data: WeekData) => {
+    setFormData((prev) => ({
+      ...prev,
+      methodologicalStrategy: data,
+    }));
+  };
+
   const handleStep5Change = (data: MethodologyData) => {
     setFormData((prev) => ({
       ...prev,
@@ -99,7 +125,6 @@ export default function CreateCourse() {
     }));
   };
 
-  // Handlers para actualizar datos de cada paso
   const handleStep7Change = (data: ConsultationSourcesData) => {
     setFormData((prev) => ({
       ...prev,
@@ -117,11 +142,17 @@ export default function CreateCourse() {
   // Renderizar el contenido de cada paso
   const renderStepContent = () => {
     switch (currentStep) {
+      case 4:
+        return (
+          <Step4
+            data={formData.methodologicalStrategy}
+            onChange={handleStep4Change}
+          />
+        );
       case 5:
         return (
           <Step5 data={formData.methodologyData} onChange={handleStep5Change} />
         );
-
       case 7:
         return (
           <Step7
