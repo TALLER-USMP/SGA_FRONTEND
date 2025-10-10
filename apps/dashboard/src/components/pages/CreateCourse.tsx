@@ -1,14 +1,25 @@
 import { useState } from "react";
 import LayoutStep from "../layout/LayoutStep";
+import Step4 from "./Step4";
+import Step5 from "./Step5";
 import Step7 from "./Step7";
 import Step9 from "./Step9";
-import Step4 from "./Step4";
 
 // Interfaces para los datos de cada paso
 interface ConsultationSourcesData {
   week: string;
   didacticResources: string;
   sources: string[];
+}
+interface DidacticResource {
+  id: number;
+  name: string;
+  type: string;
+}
+
+interface MethodologyData {
+  strategies: string; // Estrategias metodológicas
+  resources: DidacticResource[]; // Recursos didácticos
 }
 
 interface ContributionsData {
@@ -27,11 +38,6 @@ export interface WeekData {
   procedural: string;
   activities: LearningActivity[];
 }
-interface DidacticResources {
-  resources: string;
-  resourceType: string;
-}
-
 interface CourseFormData {
   generalData: {
     courseCode: string;
@@ -39,8 +45,12 @@ interface CourseFormData {
   };
   consultationSources: ConsultationSourcesData;
   contributions: ContributionsData;
-  methodologicalStrategy: WeekData;
-  didacticResources: DidacticResources;
+  methodologyData: MethodologyData; // Step5
+  methodologicalStrategy: WeekData; // Step4
+  didacticResources: {
+    resources: string;
+    resourceType: string;
+  };
 }
 
 const TOTAL_STEPS = 9;
@@ -57,13 +67,16 @@ export default function CreateCourse() {
       didacticResources: "",
       sources: ["", "", ""],
     },
+    methodologyData: {
+      strategies: "",
+      resources: [{ id: 1, name: "Computadora", type: "Equipos" }],
+    },
+
     methodologicalStrategy: {
       week: "Semana 1",
       conceptual: "",
       procedural: "",
-      activities: [
-        // { name: "Trabajo grupal en el proyecto", hours: 2 },
-      ],
+      activities: [],
     },
     didacticResources: {
       resources: "",
@@ -105,7 +118,13 @@ export default function CreateCourse() {
     }));
   };
 
-  // Handlers para actualizar datos de cada paso
+  const handleStep5Change = (data: MethodologyData) => {
+    setFormData((prev) => ({
+      ...prev,
+      methodologyData: data,
+    }));
+  };
+
   const handleStep7Change = (data: ConsultationSourcesData) => {
     setFormData((prev) => ({
       ...prev,
@@ -129,6 +148,10 @@ export default function CreateCourse() {
             data={formData.methodologicalStrategy}
             onChange={handleStep4Change}
           />
+        );
+      case 5:
+        return (
+          <Step5 data={formData.methodologyData} onChange={handleStep5Change} />
         );
       case 7:
         return (
@@ -157,7 +180,7 @@ export default function CreateCourse() {
 
   // DEBUG: Log current values
   console.log(
-    `DEBUG CreateCourse: currentStep=${currentStep}, TOTAL_STEPS=${TOTAL_STEPS}`
+    `DEBUG CreateCourse: currentStep=${currentStep}, TOTAL_STEPS=${TOTAL_STEPS}`,
   );
 
   return (
