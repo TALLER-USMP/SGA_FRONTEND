@@ -56,30 +56,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Prepare reports folder
+        run: mkdir -p zap-reports
+
       - name: Run OWASP ZAP Baseline Scan on Dashboard
         run: |
           docker pull ghcr.io/zaproxy/zaproxy:stable
-          docker run -v $(pwd):/zap/wrk/:rw \
+          docker run -v $(pwd)/zap-reports:/zap/wrk/:rw \
             -t ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t https://zealous-forest-09c221e0f.2.azurestaticapps.net/ \
             -r zap_dashboard.html \
             -I
 
-      # Escanear módulo de autenticación (si aplica)
       - name: Run OWASP ZAP Scan on Auth Module
         run: |
-          docker run -v $(pwd):/zap/wrk/:rw \
+          docker run -v $(pwd)/zap-reports:/zap/wrk/:rw \
             -t ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t https://zealous-forest-09c221e0f.2.azurestaticapps.net/auth \
             -r zap_auth.html \
             -I
 
-      # Escanear módulo de inventario (si aplica)
       - name: Run OWASP ZAP Scan on Inventario Module
         run: |
-          docker run -v $(pwd):/zap/wrk/:rw \
+          docker run -v $(pwd)/zap-reports:/zap/wrk/:rw \
             -t ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py \
             -t https://zealous-forest-09c221e0f.2.azurestaticapps.net/inventario \
@@ -91,10 +92,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: zap-security-reports
-          path: |
-            zap_dashboard.html
-            zap_auth.html
-            zap_inventario.html
+          path: zap-reports/
+
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -106,3 +105,4 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: "close"
+
