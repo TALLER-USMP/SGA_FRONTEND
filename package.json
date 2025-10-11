@@ -11,10 +11,9 @@
     "build:dashboard": "npm run build --workspace=dashboard",
     "preview:login": "npm run preview --workspace=login",
     "preview:dashboard": "npm run preview --workspace=dashboard",
-    "dev:host": "npm run dev --workspace=host",
     "dev:login": "npm run dev --workspace=login",
     "dev:dashboard": "npm run dev --workspace=dashboard",
-    "dev:all": "concurrently -n build:login,build:dashboard,preview:login,preview:dashboard,host -c yellow,cyan,magenta,green,blue \"npm run build:login && npm run preview:login\" \"npm run build:dashboard && npm run preview:dashboard\" \"npm run dev:host\"",
+    "dev:all": "concurrently -n build:login,build:dashboard,preview:login,preview:dashboard -c yellow,cyan,magenta,green \"npm run build:login && npm run preview:login\" \"npm run build:dashboard && npm run preview:dashboard\"",
     "prepare": "husky",
     "format:write": "npx prettier . --write",
     "format:check": "npx prettier . --check"
@@ -26,9 +25,16 @@
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
+    "@eslint/js": "^9.37.0",
     "concurrently": "^9.2.1",
+    "eslint": "^9.37.0",
+    "eslint-plugin-react": "^7.37.5",
+    "globals": "^16.4.0",
     "husky": "^9.1.7",
-    "prettier": "^3.6.2"
+    "jiti": "^2.6.1",
+    "lint-staged": "^16.2.3",
+    "prettier": "^3.6.2",
+    "typescript-eslint": "^8.46.0"
   },
   "lint-staged": {
     "apps/*/src/**/*.{ts,tsx,js,jsx,json,css,md}": [

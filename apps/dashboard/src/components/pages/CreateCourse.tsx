@@ -157,7 +157,7 @@ export default function CreateCourse() {
 
   // DEBUG: Log current values
   console.log(
-    `DEBUG CreateCourse: currentStep=${currentStep}, TOTAL_STEPS=${TOTAL_STEPS}`
+    `DEBUG CreateCourse: currentStep=${currentStep}, TOTAL_STEPS=${TOTAL_STEPS}`,
   );
 
   return (
