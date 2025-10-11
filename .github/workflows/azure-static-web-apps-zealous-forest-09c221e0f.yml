@@ -1,4 +1,4 @@
-name: Azure Static Web Apps CI/CD
+name: Azure Static Web Apps CI/CD + DAST
 
 on:
   push:
@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     name: Build and Deploy Job
     permissions:
-       id-token: write
-       contents: read
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v3
         with:
@@ -30,10 +30,10 @@ jobs:
         uses: actions/github-script@v6
         id: idtoken
         with:
-           script: |
-               const coredemo = require('@actions/core')
-               return await coredemo.getIDToken()
-           result-encoding: string
+          script: |
+            const coredemo = require('@actions/core')
+            return await coredemo.getIDToken()
+          result-encoding: string
 
       - name: Build And Deploy
         id: builddeploy
@@ -53,25 +53,41 @@ jobs:
     runs-on: ubuntu-latest
     needs: build_and_deploy_job
     steps:
-      - name: Install OWASP ZAP
+      - name: Install Java and dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y openjdk-11-jre-headless wget
-          wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2_14_0_unix.sh -O zap.sh
-          chmod +x zap.sh
-          ./zap.sh -q -dir $HOME/zap -silent
-          echo "ZAP installed at $HOME/zap"
+          sudo apt-get install -y openjdk-11-jre-headless wget unzip
 
-      - name: Run ZAP Baseline Scan
+      - name: Download and Extract OWASP ZAP
         run: |
-          $HOME/zap/zap.sh -cmd -quickurl https://zealous-forest-09c221e0f.2.azurestaticapps.net/ -quickout zap_report.html -quickprogress
+          wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2_14_0_Linux.zip -O zap.zip
+          unzip zap.zip -d $HOME/zap
+          echo "ZAP installed in $HOME/zap"
 
-      - name: Upload ZAP HTML Report
+      - name: Run ZAP Baseline Scan on Root App (Dashboard)
+        run: |
+          echo "Running OWASP ZAP baseline scan on Dashboard..."
+          java -jar $HOME/zap/ZAP_2_14_0/zap.jar -cmd -quickurl https://zealous-forest-09c221e0f.2.azurestaticapps.net/ -quickout zap_dashboard.html -quickprogress
+
+      # (Opcional) Escanear otros microfrontends si los tienes desplegados:
+      # - name: Run ZAP Scan on Auth Microfrontend
+      #   run: |
+      #     echo "Running OWASP ZAP scan on Auth module..."
+      #     java -jar $HOME/zap/ZAP_2_14_0/zap.jar -cmd -quickurl https://zealous-forest-09c221e0f.2.azurestaticapps.net/auth -quickout zap_auth.html -quickprogress
+      #
+      # - name: Run ZAP Scan on Inventario Microfrontend
+      #   run: |
+      #     echo "Running OWASP ZAP scan on Inventario module..."
+      #     java -jar $HOME/zap/ZAP_2_14_0/zap.jar -cmd -quickurl https://zealous-forest-09c221e0f.2.azurestaticapps.net/inventario -quickout zap_inventario.html -quickprogress
+
+      - name: Upload ZAP HTML Reports
         uses: actions/upload-artifact@v4
         with:
-          name: zap-report
-          path: zap_report.html
-
+          name: zap-reports
+          path: |
+            zap_dashboard.html
+            zap_auth.html
+            zap_inventario.html
 
   close_pull_request_job:
     if: github.event_name == 'pull_request' && github.event.action == 'closed'
@@ -83,4 +99,3 @@ jobs:
         uses: Azure/static-web-apps-deploy@v1
         with:
           action: "close"
-
