@@ -1,6 +1,6 @@
 import { Home, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
-import usmpLogo from "../../assets/Logo_FIA.png";
+import usmpLogo from "../assets/Logo_FIA.png";
 
 export default function Sidebar() {
   return (
