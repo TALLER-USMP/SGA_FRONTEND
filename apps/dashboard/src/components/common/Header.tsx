@@ -1,5 +1,4 @@
-// eslint-disable-next-line no-empty-pattern
-export default function Header({}: { title: string }) {
+export default function Header() {
   return (
     <header className="w-full bg-red-700 text-white flex justify-end items-center px-6 py-3">
       {/* <h1 className="text-lg font-semibold">{title}</h1> */}
