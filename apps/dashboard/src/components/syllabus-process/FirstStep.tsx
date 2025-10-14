@@ -15,14 +15,65 @@ type Hours = {
 
 export default function FirstStep() {
   const { nextStep } = useSteps();
+  // Controlled form state
+  type FormState = {
+    nombreAsignatura: string;
+    departamentoAcademico: string;
+    escuelaProfesional: string;
+    programaAcademico: string;
+    semestreAcademico: string;
+    tipoAsignatura: string;
+    tipoEstudios: string | ("general" | "especifica" | "especialidad");
+    modalidad: string | ("presencial" | "semipresencial" | "aDistancia");
+    codigoAsignatura: string;
+    ciclo: string;
+    requisitos: string;
+    creditosTeoria: string;
+    creditosPractica: string;
+    creditosTotal: string;
+    docentes: string;
+    [key: string]:
+      | string
+      | ("general" | "especifica" | "especialidad")
+      | ("presencial" | "semipresencial" | "aDistancia");
+  };
 
-  // exclusive selections
-  const [tipoEstudiosSelected, setTipoEstudiosSelected] = useState<
-    "general" | "especifica" | "especialidad" | null
-  >(null);
-  const [modalidadSelected, setModalidadSelected] = useState<
-    "presencial" | "semipresencial" | "aDistancia" | null
-  >(null);
+  const [form, setForm] = useState<FormState>({
+    nombreAsignatura: "",
+    departamentoAcademico: "",
+    escuelaProfesional: "",
+    programaAcademico: "",
+    semestreAcademico: "",
+    tipoAsignatura: "",
+    tipoEstudios: "",
+    modalidad: "",
+    codigoAsignatura: "",
+    ciclo: "",
+    requisitos: "",
+    creditosTeoria: "",
+    creditosPractica: "",
+    creditosTotal: "",
+    docentes: "",
+  });
+
+  // hours state (kept as before)
+  const [confirmedHours, setConfirmedHours] = useState<Hours>({
+    theoryLectivePresencial: 0,
+    theoryLectiveDistancia: 0,
+    theoryNoLectivePresencial: 0,
+    theoryNoLectiveDistancia: 0,
+    practiceLectivePresencial: 0,
+    practiceLectiveDistancia: 0,
+    practiceNoLectivePresencial: 0,
+    practiceNoLectiveDistancia: 0,
+  });
+  const [draftHours, setDraftHours] = useState<Hours>(confirmedHours);
+  const setDraftHour = (key: keyof Hours, value: number) =>
+    setDraftHours((s) => ({ ...s, [key]: value }));
+  const [hoursOpen, setHoursOpen] = useState(false);
+
+  // validation errors
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fields: Array<[string, string]> = [
     ["Departamento Académico", "departamentoAcademico"],
@@ -40,26 +91,62 @@ export default function FirstStep() {
     ["Docente(s)", "docentes"],
   ];
 
-  // confirmed (accepted) hours
-  const [confirmedHours, setConfirmedHours] = useState<Hours>({
-    theoryLectivePresencial: 0,
-    theoryLectiveDistancia: 0,
-    theoryNoLectivePresencial: 0,
-    theoryNoLectiveDistancia: 0,
-    practiceLectivePresencial: 0,
-    practiceLectiveDistancia: 0,
-    practiceNoLectivePresencial: 0,
-    practiceNoLectiveDistancia: 0,
-  });
+  const onChange = (name: string, value: string) =>
+    setForm((s) => ({ ...s, [name]: value }));
 
-  // draft hours while the panel is open (edits are confirmed with Aceptar)
-  const [draftHours, setDraftHours] = useState<Hours>(confirmedHours);
+  const validate = () => {
+    const e: Record<string, string> = {};
+    // required basic fields (typed)
+    const required: Array<keyof FormState> = [
+      "nombreAsignatura",
+      "departamentoAcademico",
+      "escuelaProfesional",
+      "programaAcademico",
+      "semestreAcademico",
+      "tipoAsignatura",
+      "tipoEstudios",
+      "modalidad",
+      "codigoAsignatura",
+      "ciclo",
+      "creditosTotal",
+      "docentes",
+    ];
+    for (const k of required) {
+      if (!String(form[k] ?? "").trim()) e[String(k)] = "Campo obligatorio";
+    }
 
-  const setDraftHour = (key: keyof Hours, value: number) => {
-    setDraftHours((s) => ({ ...s, [key]: value }));
+    // creditos must be numeric
+    const numericFields: Array<keyof FormState> = [
+      "creditosTeoria",
+      "creditosPractica",
+      "creditosTotal",
+    ];
+    for (const k of numericFields) {
+      const v = String(form[k] ?? "").trim();
+      if (v && isNaN(Number(v))) e[String(k)] = "Debe ser un número";
+    }
+
+    // at least one tipoEstudios / modalidad selection
+    if (!form.tipoEstudios)
+      e.tipoEstudios = e.tipoEstudios ?? "Selecciona un tipo de estudios";
+    if (!form.modalidad) e.modalidad = e.modalidad ?? "Selecciona modalidad";
+
+    setErrors(e);
+    return e;
   };
 
-  const [hoursOpen, setHoursOpen] = useState(false);
+  const validateAndNext = () => {
+    const e = validate();
+    if (Object.keys(e).length === 0) nextStep();
+    else {
+      // focus first error field
+      const firstKey = Object.keys(e)[0];
+      const el = document.querySelector(
+        `[name="${firstKey}"]`,
+      ) as HTMLElement | null;
+      if (el && typeof el.focus === "function") el.focus();
+    }
+  };
 
   const theoryTotal =
     confirmedHours.theoryLectivePresencial +
@@ -80,7 +167,7 @@ export default function FirstStep() {
   );
 
   return (
-    <Step step={1} onNextStep={() => nextStep()}>
+    <Step step={1} onNextStep={validateAndNext}>
       <div className="p-6 bg-white rounded-md">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">1. Datos Generales</h2>
@@ -90,9 +177,15 @@ export default function FirstStep() {
           <input
             name="nombreAsignatura"
             placeholder="TALLER DE PROYECTOS"
-            defaultValue={""}
-            className="w-full h-12 rounded-md border border-gray-300 bg-white px-3 text-lg"
+            value={form.nombreAsignatura}
+            onChange={(e) => onChange("nombreAsignatura", e.target.value)}
+            className={`w-full h-12 rounded-md px-3 text-lg bg-white ${errors["nombreAsignatura"] ? "border-red-500" : "border border-gray-300"}`}
           />
+          {errors["nombreAsignatura"] && (
+            <div className="text-red-600 text-sm mt-1">
+              {errors["nombreAsignatura"]}
+            </div>
+          )}
         </div>
 
         <div className="grid gap-4">
@@ -107,26 +200,45 @@ export default function FirstStep() {
                 {name === "requisitos" ? (
                   <textarea
                     name={name}
+                    value={String(form[name] ?? "")}
+                    onChange={(e) => onChange(name, e.target.value)}
                     rows={1}
-                    className="w-full h-12 rounded-md border border-gray-300 px-3 py-2"
+                    className={`w-full h-12 rounded-md px-3 py-2 ${errors[name] ? "border-red-500" : "border border-gray-300"}`}
                   />
                 ) : name === "creditos" ? (
                   <div className="flex gap-2">
                     <input
                       name="creditosTeoria"
+                      value={form.creditosTeoria}
+                      onChange={(e) =>
+                        onChange("creditosTeoria", e.target.value)
+                      }
                       placeholder="Teoría"
-                      className="w-24 h-10 rounded-md border border-gray-300 px-2 text-center"
+                      className={`w-24 h-10 rounded-md px-2 text-center ${errors["creditosTeoria"] ? "border-red-500" : "border border-gray-300"}`}
                     />
                     <input
                       name="creditosPractica"
+                      value={form.creditosPractica}
+                      onChange={(e) =>
+                        onChange("creditosPractica", e.target.value)
+                      }
                       placeholder="Práctica"
-                      className="w-24 h-10 rounded-md border border-gray-300 px-2 text-center"
+                      className={`w-24 h-10 rounded-md px-2 text-center ${errors["creditosPractica"] ? "border-red-500" : "border border-gray-300"}`}
                     />
                     <input
                       name="creditosTotal"
+                      value={form.creditosTotal}
+                      onChange={(e) =>
+                        onChange("creditosTotal", e.target.value)
+                      }
                       placeholder="Total"
-                      className="w-24 h-10 rounded-md border border-gray-300 px-2 text-center"
+                      className={`w-24 h-10 rounded-md px-2 text-center ${errors["creditosTotal"] ? "border-red-500" : "border border-gray-300"}`}
                     />
+                    {errors["creditosTotal"] && (
+                      <div className="text-red-600 text-sm mt-1">
+                        {errors["creditosTotal"]}
+                      </div>
+                    )}
                   </div>
                 ) : name === "horas" ? (
                   <div className="relative">
@@ -351,77 +463,93 @@ export default function FirstStep() {
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => setTipoEstudiosSelected("general")}
-                        className={`px-3 py-1 border rounded ${tipoEstudiosSelected === "general" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
+                        onClick={() => onChange("tipoEstudios", "general")}
+                        className={`px-3 py-1 border rounded ${form.tipoEstudios === "general" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
                       >
                         General{" "}
-                        {tipoEstudiosSelected === "general" ? "(X)" : "( )"}
+                        {form.tipoEstudios === "general" ? "(X)" : "( )"}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setTipoEstudiosSelected("especifica")}
-                        className={`px-3 py-1 border rounded ${tipoEstudiosSelected === "especifica" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
+                        onClick={() => onChange("tipoEstudios", "especifica")}
+                        className={`px-3 py-1 border rounded ${form.tipoEstudios === "especifica" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
                       >
                         Especifica{" "}
-                        {tipoEstudiosSelected === "especifica" ? "(X)" : "( )"}
+                        {form.tipoEstudios === "especifica" ? "(X)" : "( )"}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setTipoEstudiosSelected("especialidad")}
-                        className={`px-3 py-1 border rounded ${tipoEstudiosSelected === "especialidad" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
+                        onClick={() => onChange("tipoEstudios", "especialidad")}
+                        className={`px-3 py-1 border rounded ${form.tipoEstudios === "especialidad" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
                       >
                         Especialidad{" "}
-                        {tipoEstudiosSelected === "especialidad"
-                          ? "(X)"
-                          : "( )"}
+                        {form.tipoEstudios === "especialidad" ? "(X)" : "( )"}
                       </button>
                     </div>
                     <input
                       type="hidden"
                       name="tipoEstudios"
-                      value={tipoEstudiosSelected ?? ""}
+                      value={String(form.tipoEstudios ?? "")}
                     />
+                    {errors["tipoEstudios"] && (
+                      <div className="text-red-600 text-sm mt-1">
+                        {errors["tipoEstudios"]}
+                      </div>
+                    )}
                   </div>
                 ) : name === "modalidad" ? (
                   <div>
                     <div className="flex gap-2">
                       <button
                         type="button"
-                        onClick={() => setModalidadSelected("presencial")}
-                        className={`px-3 py-1 border rounded ${modalidadSelected === "presencial" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
+                        onClick={() => onChange("modalidad", "presencial")}
+                        className={`px-3 py-1 border rounded ${form.modalidad === "presencial" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
                       >
                         Presencial{" "}
-                        {modalidadSelected === "presencial" ? "(X)" : "( )"}
+                        {form.modalidad === "presencial" ? "(X)" : "( )"}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setModalidadSelected("semipresencial")}
-                        className={`px-3 py-1 border rounded ${modalidadSelected === "semipresencial" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
+                        onClick={() => onChange("modalidad", "semipresencial")}
+                        className={`px-3 py-1 border rounded ${form.modalidad === "semipresencial" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
                       >
                         Semipresencial{" "}
-                        {modalidadSelected === "semipresencial" ? "(X)" : "( )"}
+                        {form.modalidad === "semipresencial" ? "(X)" : "( )"}
                       </button>
                       <button
                         type="button"
-                        onClick={() => setModalidadSelected("aDistancia")}
-                        className={`px-3 py-1 border rounded ${modalidadSelected === "aDistancia" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
+                        onClick={() => onChange("modalidad", "aDistancia")}
+                        className={`px-3 py-1 border rounded ${form.modalidad === "aDistancia" ? "bg-blue-600 text-white" : "bg-white text-gray-700"}`}
                       >
                         A distancia{" "}
-                        {modalidadSelected === "aDistancia" ? "(X)" : "( )"}
+                        {form.modalidad === "aDistancia" ? "(X)" : "( )"}
                       </button>
                     </div>
                     <input
                       type="hidden"
                       name="modalidad"
-                      value={modalidadSelected ?? ""}
+                      value={String(form.modalidad ?? "")}
                     />
+                    {errors["modalidad"] && (
+                      <div className="text-red-600 text-sm mt-1">
+                        {errors["modalidad"]}
+                      </div>
+                    )}
                   </div>
                 ) : (
-                  <input
-                    name={name}
-                    defaultValue={""}
-                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-2"
-                  />
+                  <>
+                    <input
+                      name={name}
+                      value={String(form[name] ?? "")}
+                      onChange={(e) => onChange(name, e.target.value)}
+                      className={`w-full rounded-md px-3 py-2 bg-white ${errors[name] ? "border-red-500" : "border border-gray-300"}`}
+                    />
+                    {errors[name] && (
+                      <div className="text-red-600 text-sm mt-1">
+                        {errors[name]}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
