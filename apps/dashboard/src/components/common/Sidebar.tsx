@@ -23,7 +23,7 @@ export default function Sidebar() {
           </li>
           <li>
             <Link
-              to="/subjects"
+              to="/syllabus"
               className="flex items-center gap-3 p-2 rounded hover:bg-gray-700"
             >
               <BookOpen size={18} /> Asignaturas
