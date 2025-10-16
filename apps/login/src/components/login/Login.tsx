@@ -10,11 +10,12 @@ function Login() {
   const handleLoginMicrosoft = async () => {
     try {
       const loginRequest = {
-        scopes: ["user.read", import.meta.env.VITE_AZURE_API_SCOPE ?? "openid"],
+        scopes: [import.meta.env.VITE_AZURE_API_SCOPE],
       };
 
       const response = await instance.loginPopup(loginRequest);
       const microsoftToken = response.accessToken;
+      console.log("Token de Microsoft obtenido:", microsoftToken);
 
       if (!microsoftToken) {
         throw new Error("No se obtuvo token de Microsoft");
@@ -25,7 +26,7 @@ function Login() {
         {
           onSuccess: () => {
             // ✅ Redirigir si el backend responde correctamente
-            window.location.href = "http://localhost:5174/";
+            window.location.href = import.meta.env.VITE_REDIRECT_URI;
           },
           onError: (error: unknown) => {
             const message =
