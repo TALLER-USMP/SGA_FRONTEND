@@ -10,7 +10,7 @@ function Login() {
   const handleLoginMicrosoft = async () => {
     try {
       const loginRequest = {
-        scopes: ["user.read", import.meta.env.VITE_AZURE_API_SCOPE ?? "openid"],
+        scopes: [import.meta.env.VITE_AZURE_API_SCOPE],
       };
 
       const response = await instance.loginPopup(loginRequest);
