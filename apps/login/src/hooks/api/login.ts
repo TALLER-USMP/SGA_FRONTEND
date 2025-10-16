@@ -8,23 +8,25 @@ interface SendTokenParams {
 async function sendTokenToBackend({
   baseUrl,
   microsoftToken,
-}: SendTokenParams): Promise<void> {
+}: SendTokenParams): Promise<{ url: string }> {
   const res = await fetch(`${baseUrl}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ microsoftToken }),
   });
+  const data = await res.json();
 
   if (!res.ok) {
-    const errorData = await res.json().catch(() => ({}));
     const message =
-      (errorData && (errorData.message || JSON.stringify(errorData))) ||
+      (data && (data.message || JSON.stringify(data))) ||
       "Fallo en la creación de la sesión interna.";
     throw new Error(message);
   }
+
+  return { url: data.url };
 }
 
 export const useSendTokenToBackend = () =>
-  useMutation<void, Error, SendTokenParams>({
+  useMutation<{ url: string }, Error, SendTokenParams>({
     mutationFn: sendTokenToBackend,
   });
