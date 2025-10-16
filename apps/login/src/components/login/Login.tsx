@@ -14,7 +14,7 @@ function Login() {
       };
 
       const response = await instance.loginPopup(loginRequest);
-      const microsoftToken = response.accessToken;
+      const microsoftToken = response.idToken;
 
       if (!microsoftToken) {
         throw new Error("No se obtuvo token de Microsoft");
@@ -23,9 +23,8 @@ function Login() {
       mutate(
         { baseUrl: BACKEND_URL, microsoftToken },
         {
-          onSuccess: () => {
-            // ✅ Redirigir si el backend responde correctamente
-            window.location.href = "http://localhost:5174/";
+          onSuccess: (data) => {
+            window.location.href = data.url;
           },
           onError: (error: unknown) => {
             const message =
