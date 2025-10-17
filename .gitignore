@@ -1,5 +1,6 @@
 /node_modules
 /dist
+.env
 
 # Adding CODEOWNERS file
 .github/CODEOWNERS
