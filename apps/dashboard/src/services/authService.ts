@@ -3,30 +3,22 @@ export const fetchSession = async () => {
   const tokenFromQuery = urlParams.get("token");
 
   if (tokenFromQuery) {
-    const res = await fetch(
-      `${import.meta.env.VITE_API_BASE_URL}/auth/set-cookie`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          token: tokenFromQuery,
-        }),
-        credentials: "include",
+    const meRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/me`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({
+        token: tokenFromQuery,
+        message: "Login via token in query params" + tokenFromQuery,
+      }),
+    });
 
-    if (!res.ok) throw new Error("No se pudo guardar la cookie");
-
+    if (!meRes.ok) throw new Error("Sesión no válida");
     const cleanUrl = window.location.origin + window.location.pathname;
     window.history.replaceState({}, document.title, cleanUrl);
+
+    return meRes.json();
   }
-
-  const meRes = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/me`, {
-    method: "GET",
-    credentials: "include",
-  });
-
-  if (!meRes.ok) throw new Error("Sesión no válida");
-
-  return meRes.json();
 };
