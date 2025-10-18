@@ -1,0 +1,164 @@
+name: Backup Infrastructure to GitHub Releases
+
+on:
+  schedule:
+    - cron: '0 2 */2 * *'  # Cada 2 días a las 2 AM (UTC)
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: write
+
+jobs:
+  # Job 1: Exportar infraestructura
+  export-azure-infrastructure:
+    name: Exportar Bicep desde Azure
+    runs-on: ubuntu-latest
+    
+    outputs:
+      backup-date: ${{ steps.export.outputs.backup_date }}
+      backup-file: ${{ steps.export.outputs.backup_file }}
+      resource-count: ${{ steps.export.outputs.resource_count }}
+    
+    steps:
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+      
+      - name: Exportar Infrastructure
+        id: export
+        run: |
+          DATE=$(date +%Y-%m-%d_%H%M%S)
+          echo "backup_date=$DATE" >> $GITHUB_OUTPUT
+          
+          echo "📦 Exportando Resource Group..."
+          
+          az group export \
+            --name "Sistema_de_Gestión_Académica_USMP" \
+            --include-parameter-default-value \
+            > azure-infrastructure-${DATE}.json
+          
+          az bicep decompile --file azure-infrastructure-${DATE}.json
+          
+          RESOURCE_COUNT=$(grep -c "^resource " azure-infrastructure-${DATE}.bicep || echo "0")
+          echo "resource_count=$RESOURCE_COUNT" >> $GITHUB_OUTPUT
+          
+          tar -czf azure-backup-${DATE}.tar.gz \
+            azure-infrastructure-${DATE}.bicep \
+            azure-infrastructure-${DATE}.json
+          
+          echo "backup_file=azure-backup-${DATE}.tar.gz" >> $GITHUB_OUTPUT
+          
+          FILE_SIZE=$(ls -lh azure-backup-${DATE}.tar.gz | awk '{print $5}')
+          echo "💾 Tamaño: $FILE_SIZE"
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: azure-infrastructure-backup
+          path: azure-backup-*.tar.gz
+          retention-days: 7
+
+  # Job 2: Limpiar releases antiguos
+  cleanup-old-releases:
+    name: Limpiar Backups Antiguos
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Eliminar Releases Mayores a 30 Días
+        uses: dev-drprasad/delete-older-releases@v0.3.4
+        with:
+          keep_latest: 15  # Mantener últimos 15 backups (~30 días)
+          delete_tags: true
+          delete_tag_pattern: backup-
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Job 3: Crear Release
+  create-github-release:
+    name: Crear Release con Backup
+    runs-on: ubuntu-latest
+    needs: [export-azure-infrastructure, cleanup-old-releases]
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: azure-infrastructure-backup
+      
+      - name: File Info
+        id: file-info
+        run: |
+          BACKUP_FILE="${{ needs.export-azure-infrastructure.outputs.backup-file }}"
+          FILE_SIZE=$(ls -lh ${BACKUP_FILE} | awk '{print $5}')
+          echo "file_size=$FILE_SIZE" >> $GITHUB_OUTPUT
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: backup-${{ needs.export-azure-infrastructure.outputs.backup-date }}
+          name: Backup ${{ needs.export-azure-infrastructure.outputs.backup-date }}
+          body: |
+            ## 📦 Infrastructure Backup
+            
+            | Info | Value |
+            |------|-------|
+            | 📅 Fecha | ${{ needs.export-azure-infrastructure.outputs.backup-date }} |
+            | 📊 Recursos | ${{ needs.export-azure-infrastructure.outputs.resource-count }} |
+            | 💾 Tamaño | ${{ steps.file-info.outputs.file_size }} |
+            | 🏷️ RG | Sistema_de_Gestión_Académica_USMP |
+            
+            ### 📥 Uso
+            
+            ```
+            # Extraer
+            tar -xzf ${{ needs.export-azure-infrastructure.outputs.backup-file }}
+            
+            # Validar
+            az deployment group validate \
+              --resource-group "Sistema_de_Gestión_Académica_USMP" \
+              --template-file azure-infrastructure-*.bicep
+            
+            # Restaurar
+            az deployment group create \
+              --resource-group "Sistema_de_Gestión_Académica_USMP" \
+              --template-file azure-infrastructure-*.bicep
+            ```
+            
+            ---
+            
+            ⏰ Próximo backup en 2 días | 🗑️ Se mantienen últimos 15 backups
+          files: ${{ needs.export-azure-infrastructure.outputs.backup-file }}
+          draft: false
+          prerelease: false
+
+  # Job 4: Resumen
+  generate-summary:
+    name: Resumen
+    runs-on: ubuntu-latest
+    needs: [export-azure-infrastructure, cleanup-old-releases, create-github-release]
+    if: always()
+    
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## 📊 Backup Completado" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| 📅 Fecha | ${{ needs.export-azure-infrastructure.outputs.backup-date }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📊 Recursos | ${{ needs.export-azure-infrastructure.outputs.resource-count }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚙️ Export | ${{ needs.export-azure-infrastructure.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🗑️ Cleanup | ${{ needs.cleanup-old-releases.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| 📤 Release | ${{ needs.create-github-release.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🔗 [Ver Release](https://github.com/${{ github.repository }}/releases/tag/backup-${{ needs.export-azure-infrastructure.outputs.backup-date }})" >> $GITHUB_STEP_SUMMARY
