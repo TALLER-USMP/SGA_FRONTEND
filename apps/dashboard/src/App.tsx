@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Layout from "./components/layout/Layout";
-import Home from "./components/pages/Home";
-import Subjects from "./components/pages/Subjects";
+import Layout from "./layouts/MainLayout";
+import Home from "./pages/Home";
+import MyAssignments from "./pages/MyAssignments";
+import CreateCourse from "./pages/SyllabusProcess";
 
 export default function App() {
   return (
@@ -16,10 +17,18 @@ export default function App() {
           }
         />
         <Route
-          path="/subjects"
+          path="/mis-asignaciones"
           element={
-            <Layout title="Asignaturas">
-              <Subjects />
+            <Layout title="Mis silabos">
+              <MyAssignments />
+            </Layout>
+          }
+        />
+        <Route
+          path="/syllabus"
+          element={
+            <Layout title="Crear nuevo curso">
+              <CreateCourse />
             </Layout>
           }
         />

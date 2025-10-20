@@ -11,7 +11,7 @@ body:
         ## 📌 Historia de Usuario
         **Como** [rol del usuario]  
         **Quiero** [acción a realizar]  
-        **Para** [beneficio/valor esperado]  
+        **Para** [beneficio/valor esperado]
 
   - type: textarea
     id: criterios
