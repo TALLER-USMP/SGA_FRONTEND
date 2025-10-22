@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSteps } from "../../contexts/StepsContext";
 import { Step } from "../common/Step";
+import { useSyllabusGeneral } from "../../hooks/api/FirstStepQuery";
+import type { SyllabusGeneral } from "../../hooks/api/FirstStepQuery";
 
 export default function FirstStep() {
   const { nextStep } = useSteps();
-  // Controlled form state
   type FormState = {
     nombreAsignatura: string;
     departamentoAcademico: string;
@@ -73,10 +74,8 @@ export default function FirstStep() {
     }
   });
 
-  const [loading, setLoading] = useState<boolean>(false);
   const [apiError, setApiError] = useState<string>("");
 
-  // Totals for display — initialized from localStorage
   const [theoryTotal, setTheoryTotal] = useState<number>(
     Number(localStorage.getItem("datos_theoryTotal") ?? 0),
   );
@@ -89,166 +88,135 @@ export default function FirstStep() {
     ),
   );
 
+  const syllabusId = localStorage.getItem("syllabusId");
+  const { data, isLoading, isError, error } = useSyllabusGeneral(syllabusId);
+
   useEffect(() => {
-    // Fetch datos generales from backend if syllabusId exists
-    const id = localStorage.getItem("syllabusId");
-    if (!id) return;
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setApiError("");
-      try {
-        const res = await fetch(
-          `http://localhost:7071/api/syllabus/7/datos-generales`,
-        );
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(`${res.status} ${txt}`);
-        }
-        const json = await res.json();
-        if (cancelled) return;
-        // Map backend JSON to form fields
-        setForm((s) => ({
-          ...s,
-          nombreAsignatura: json.nombreAsignatura ?? s.nombreAsignatura,
-          departamentoAcademico:
-            json.departamentoAcademico ?? s.departamentoAcademico,
-          escuelaProfesional: json.escuelaProfesional ?? s.escuelaProfesional,
-          programaAcademico: json.programaAcademico ?? s.programaAcademico,
-          semestreAcademico: json.semestreAcademico ?? s.semestreAcademico,
-          tipoAsignatura: json.tipoAsignatura ?? s.tipoAsignatura,
-          tipoEstudios: json.tipoEstudios ?? s.tipoEstudios,
-          modalidad: json.modalidad ?? s.modalidad,
-          codigoAsignatura: json.codigoAsignatura ?? s.codigoAsignatura,
-          ciclo: json.ciclo ?? s.ciclo,
-          requisitos: json.requisitos ?? s.requisitos,
-          creditosTeoria:
-            json.creditosTeoria != null
-              ? String(json.creditosTeoria)
-              : s.creditosTeoria,
-          creditosPractica:
-            json.creditosPractica != null
-              ? String(json.creditosPractica)
-              : s.creditosPractica,
-          creditosTotal:
-            json.creditosTotales != null
-              ? String(json.creditosTotales)
-              : s.creditosTotal,
-          docentes: json.docentes ?? s.docentes,
-        }));
+    if (isError) {
+      setApiError(error?.message ?? "Error fetching syllabus");
+      return;
+    }
+    if (!data) return;
 
-        // hours totals
-        const tTheory = Number(
-          json.horasTeoria ?? json.horasTeoriaLectivaPresencial ?? 0,
-        );
-        const tPractice = Number(
-          json.horasPractica ?? json.horasPracticaLectivaPresencial ?? 0,
-        );
-        const tTotal = Number(
-          json.horasTotales ?? json.horasTotales ?? tTheory + tPractice,
-        );
-        setTheoryTotal(tTheory);
-        setPracticeTotal(tPractice);
-        setTotalHours(tTotal);
+    const json: SyllabusGeneral = data;
+    setForm((s) => ({
+      ...s,
+      nombreAsignatura: json.nombreAsignatura ?? s.nombreAsignatura,
+      departamentoAcademico:
+        json.departamentoAcademico ?? s.departamentoAcademico,
+      escuelaProfesional: json.escuelaProfesional ?? s.escuelaProfesional,
+      programaAcademico: json.programaAcademico ?? s.programaAcademico,
+      semestreAcademico: json.semestreAcademico ?? s.semestreAcademico,
+      tipoAsignatura: json.tipoAsignatura ?? s.tipoAsignatura,
+      tipoEstudios: json.tipoEstudios ?? s.tipoEstudios,
+      modalidad: json.modalidad ?? s.modalidad,
+      codigoAsignatura: json.codigoAsignatura ?? s.codigoAsignatura,
+      ciclo: json.ciclo ?? s.ciclo,
+      requisitos: json.requisitos ?? s.requisitos,
+      creditosTeoria:
+        json.creditosTeoria != null
+          ? String(json.creditosTeoria)
+          : s.creditosTeoria,
+      creditosPractica:
+        json.creditosPractica != null
+          ? String(json.creditosPractica)
+          : s.creditosPractica,
+      creditosTotal:
+        json.creditosTotales != null
+          ? String(json.creditosTotales)
+          : s.creditosTotal,
+      docentes: json.docentes ?? s.docentes,
+    }));
 
-        // persist into localStorage for other steps
-        try {
-          const nameToStore =
-            json.nombreAsignatura ??
-            localStorage.getItem("syllabusNombre") ??
-            "";
-          localStorage.setItem("syllabusNombre", nameToStore);
-          localStorage.setItem(
-            "datos_departamentoAcademico",
-            json.departamentoAcademico ?? "",
-          );
-          localStorage.setItem(
-            "datos_escuelaProfesional",
-            json.escuelaProfesional ?? "",
-          );
-          localStorage.setItem(
-            "datos_programaAcademico",
-            json.programaAcademico ?? "",
-          );
-          localStorage.setItem(
-            "datos_semestreAcademico",
-            json.semestreAcademico ?? "",
-          );
-          localStorage.setItem(
-            "datos_tipoAsignatura",
-            json.tipoAsignatura ?? "",
-          );
-          localStorage.setItem("datos_tipoEstudios", json.tipoEstudios ?? "");
-          localStorage.setItem("datos_modalidad", json.modalidad ?? "");
-          localStorage.setItem(
-            "datos_codigoAsignatura",
-            json.codigoAsignatura ?? "",
-          );
-          localStorage.setItem("datos_ciclo", json.ciclo ?? "");
-          localStorage.setItem("datos_requisitos", json.requisitos ?? "");
-          localStorage.setItem(
-            "datos_creditosTeoria",
-            json.creditosTeoria != null ? String(json.creditosTeoria) : "",
-          );
-          localStorage.setItem(
-            "datos_creditosPractica",
-            json.creditosPractica != null ? String(json.creditosPractica) : "",
-          );
-          localStorage.setItem(
-            "datos_creditosTotal",
-            json.creditosTotales != null ? String(json.creditosTotales) : "",
-          );
-          localStorage.setItem("datos_docentes", json.docentes ?? "");
-          localStorage.setItem("datos_theoryTotal", String(tTheory));
-          localStorage.setItem("datos_practiceTotal", String(tPractice));
-          localStorage.setItem("datos_totalHours", String(tTotal));
-        } catch (e) {
-          void e;
-        }
-      } catch (err: unknown) {
-        if (err instanceof Error) setApiError(err.message);
-        else setApiError(String(err));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    const tTheory = Number(
+      json.horasTeoria ?? json.horasTeoriaLectivaPresencial ?? 0,
+    );
+    const tPractice = Number(
+      json.horasPractica ?? json.horasPracticaLectivaPresencial ?? 0,
+    );
+    const tTotal = Number(json.horasTotales ?? tTheory + tPractice);
+    setTheoryTotal(tTheory);
+    setPracticeTotal(tPractice);
+    setTotalHours(tTotal);
 
-  // Hours shown as read-only summary (sourced from localStorage if present)
+    try {
+      const nameToStore =
+        json.nombreAsignatura ?? localStorage.getItem("syllabusNombre") ?? "";
+      localStorage.setItem("syllabusNombre", nameToStore);
+      localStorage.setItem(
+        "datos_departamentoAcademico",
+        json.departamentoAcademico ?? "",
+      );
+      localStorage.setItem(
+        "datos_escuelaProfesional",
+        json.escuelaProfesional ?? "",
+      );
+      localStorage.setItem(
+        "datos_programaAcademico",
+        json.programaAcademico ?? "",
+      );
+      localStorage.setItem(
+        "datos_semestreAcademico",
+        json.semestreAcademico ?? "",
+      );
+      localStorage.setItem("datos_tipoAsignatura", json.tipoAsignatura ?? "");
+      localStorage.setItem("datos_tipoEstudios", json.tipoEstudios ?? "");
+      localStorage.setItem("datos_modalidad", json.modalidad ?? "");
+      localStorage.setItem(
+        "datos_codigoAsignatura",
+        json.codigoAsignatura ?? "",
+      );
+      localStorage.setItem("datos_ciclo", json.ciclo ?? "");
+      localStorage.setItem("datos_requisitos", json.requisitos ?? "");
+      localStorage.setItem(
+        "datos_creditosTeoria",
+        json.creditosTeoria != null ? String(json.creditosTeoria) : "",
+      );
+      localStorage.setItem(
+        "datos_creditosPractica",
+        json.creditosPractica != null ? String(json.creditosPractica) : "",
+      );
+      localStorage.setItem(
+        "datos_creditosTotal",
+        json.creditosTotales != null ? String(json.creditosTotales) : "",
+      );
+      localStorage.setItem("datos_docentes", json.docentes ?? "");
+      localStorage.setItem("datos_theoryTotal", String(tTheory));
+      localStorage.setItem("datos_practiceTotal", String(tPractice));
+      localStorage.setItem("datos_totalHours", String(tTotal));
+    } catch (e) {
+      void e;
+    }
+  }, [data, isError, error]);
 
-  // validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const fields: Array<[string, string]> = [
-    ["Departamento Académico", "departamentoAcademico"],
-    ["Escuela Profesional", "escuelaProfesional"],
-    ["Programa académico", "programaAcademico"],
-    ["Semestre Académico", "semestreAcademico"],
-    ["Tipo de asignatura", "tipoAsignatura"],
-    ["Tipo de estudios", "tipoEstudios"],
-    ["Modalidad de la asignatura", "modalidad"],
-    ["Código de la asignatura", "codigoAsignatura"],
-    ["Ciclo", "ciclo"],
-    ["Requisitos", "requisitos"],
-    ["Cantidad de horas", "horas"],
-    ["Cantidad de Créditos", "creditos"],
-    ["Docente(s)", "docentes"],
-  ];
-
-  // First step fields are read-only in the UI; form is hydrated from localStorage
+  const fields: Array<[string, string]> = useMemo(
+    () => [
+      ["Departamento Académico", "departamentoAcademico"],
+      ["Escuela Profesional", "escuelaProfesional"],
+      ["Programa académico", "programaAcademico"],
+      ["Semestre Académico", "semestreAcademico"],
+      ["Tipo de asignatura", "tipoAsignatura"],
+      ["Tipo de estudios", "tipoEstudios"],
+      ["Modalidad de la asignatura", "modalidad"],
+      ["Código de la asignatura", "codigoAsignatura"],
+      ["Ciclo", "ciclo"],
+      ["Requisitos", "requisitos"],
+      ["Cantidad de horas", "horas"],
+      ["Cantidad de Créditos", "creditos"],
+      ["Docente(s)", "docentes"],
+    ],
+    [],
+  );
 
   const validate = () => {
     const e: Record<string, string> = {};
-    // Note: Datos generales están bloqueados para el docente. Sólo validamos mínimamente.
     const required: Array<keyof FormState> = ["nombreAsignatura"];
     for (const k of required) {
       if (!String(form[k] ?? "").trim()) e[String(k)] = "Campo obligatorio";
     }
 
-    // creditos must be numeric
     const numericFields: Array<keyof FormState> = [
       "creditosTeoria",
       "creditosPractica",
@@ -259,7 +227,6 @@ export default function FirstStep() {
       if (v && isNaN(Number(v))) e[String(k)] = "Debe ser un número";
     }
 
-    // at least one tipoEstudios / modalidad selection
     if (!form.tipoEstudios)
       e.tipoEstudios = e.tipoEstudios ?? "Selecciona un tipo de estudios";
     if (!form.modalidad) e.modalidad = e.modalidad ?? "Selecciona modalidad";
@@ -269,7 +236,6 @@ export default function FirstStep() {
   };
 
   const validateAndNext = () => {
-    // Ejecutar validación mínima (por ejemplo, nombre)
     const e = validate();
     if (Object.keys(e).length > 0) {
       const firstKey = Object.keys(e)[0];
@@ -280,20 +246,16 @@ export default function FirstStep() {
       return;
     }
 
-    // Datos generales son de solo lectura. Aseguramos que exista un syllabusId y syllabusNombre
     try {
-      // ensure syllabusNombre is stored
       const name =
         String(form.nombreAsignatura ?? "").trim() || "TALLER DE PROYECTOS";
       localStorage.setItem("syllabusNombre", name);
-      // ensure syllabusId exists
       let id = localStorage.getItem("syllabusId");
       if (!id) {
-        // generate simple id (timestamp)
         id = `syllabus-${Date.now()}`;
         localStorage.setItem("syllabusId", id);
       }
-      // persist also the datos_ fields for possible later use
+
       try {
         localStorage.setItem(
           "datos_departamentoAcademico",
@@ -348,8 +310,6 @@ export default function FirstStep() {
     nextStep();
   };
 
-  // hour totals computed above
-
   return (
     <Step step={1} onNextStep={validateAndNext}>
       <div className="bg-white rounded-md overflow-visible shadow-sm">
@@ -365,7 +325,7 @@ export default function FirstStep() {
           </div>
         </div>
         <div className="p-6">
-          {loading && (
+          {isLoading && (
             <div className="mb-4 text-sm text-gray-700">
               Cargando datos generales...
             </div>
@@ -376,7 +336,6 @@ export default function FirstStep() {
             </div>
           )}
           <div className="mb-6">
-            {/* Nombre asignatura mostrado como texto plano en caja */}
             <div className="w-full h-12 rounded-md px-4 flex items-center text-lg bg-blue-50 border border-blue-100">
               {form.nombreAsignatura || "TALLER DE PROYECTOS"}
             </div>
