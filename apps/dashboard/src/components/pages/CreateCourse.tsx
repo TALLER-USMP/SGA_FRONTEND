@@ -1,5 +1,6 @@
 import { useState } from "react";
 import LayoutStep from "../layout/LayoutStep";
+import Step6 from "./Step6";
 import Step7 from "./Step7";
 import Step9 from "./Step9";
 
@@ -86,6 +87,9 @@ export default function CreateCourse() {
   // Renderizar el contenido de cada paso
   const renderStepContent = () => {
     switch (currentStep) {
+      case 6:
+        return <Step6 />;
+
       case 7:
         return (
           <Step7

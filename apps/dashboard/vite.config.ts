@@ -29,4 +29,14 @@ export default defineConfig({
     minify: false,
     cssCodeSplit: false,
   },
+
+  // ✅ Proxy correcto (no eliminar /api)
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:7071/",
+        changeOrigin: true,
+      },
+    },
+  },
 });
