@@ -1,0 +1,106 @@
+name: Frontend Security Scan
+
+on:
+  push:
+    branches:
+      - dev
+  pull_request:
+    branches:
+      - dev
+  schedule:
+    - cron: '0 2 * * 1' # Corre semanalmente los lunes
+  workflow_dispatch: # Ejecución manual si lo necesitas
+
+jobs:
+  eslint-check:
+    runs-on: ubuntu-latest
+    name: ESLint Code Quality
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies (monorepo)
+        run: npm ci
+
+      - name: Run ESLint on all apps
+        run: npm run lint --workspaces --if-present
+        continue-on-error: true
+
+      - name: Manual ESLint check for apps
+        run: npx eslint ./apps --ext .js,.jsx,.ts,.tsx
+        continue-on-error: true
+
+  codeql-analysis:
+    runs-on: ubuntu-latest
+    name: CodeQL Security Analysis
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          queries: security-and-quality
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies (monorepo)
+        run: npm ci
+
+      - name: Build all apps for analysis
+        run: npm run build --workspaces --if-present
+        continue-on-error: true
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript'
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: Dependency Vulnerabilities
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies (monorepo)
+        run: npm ci
+
+      - name: Audit root dependencies
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Audit workspace dependencies
+        run: npm audit --audit-level=moderate --workspaces
+        continue-on-error: true
+
+      - name: Check for outdated packages in root
+        run: npm outdated
+        continue-on-error: true
+
+      - name: Check for outdated packages in workspaces
+        run: npm outdated --workspaces
+        continue-on-error: true
