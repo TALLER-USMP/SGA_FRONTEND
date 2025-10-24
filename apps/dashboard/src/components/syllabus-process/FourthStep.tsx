@@ -1,10 +1,8 @@
-// src/components/syllabus-process/FourthStep.tsx
 import { useState, useEffect } from "react";
 import { Step } from "../common/Step";
 import { UnitSelector } from "../common/UnitSelector";
 import { WeekSelector } from "../common/WeekSelector";
-
-type Actividad = { nombre: string; horas: number };
+import { LearningActivities } from "../common/LearningActivities";
 
 export default function FourthStep() {
   const [unidadSeleccionada, setUnidadSeleccionada] = useState<number | "">("");
@@ -12,7 +10,6 @@ export default function FourthStep() {
   const [horasDisponibles, setHorasDisponibles] = useState<number>(0);
   const [conceptual, setConceptual] = useState("");
   const [procedimental, setProcedimental] = useState("");
-  const [actividades, setActividades] = useState<Actividad[]>([]);
 
   // Datos estáticos simulados (se reemplazarán por API más adelante)
   const unidades = [
@@ -59,13 +56,6 @@ export default function FourthStep() {
       setHorasDisponibles(0);
     }
   }, [semanaSeleccionada]);
-
-  // Manejo de actividades
-  const handleAddActividad = () =>
-    setActividades([...actividades, { nombre: "", horas: 1 }]);
-
-  const handleRemoveActividad = (index: number) =>
-    setActividades(actividades.filter((_, i) => i !== index));
 
   return (
     <Step step={4} onNextStep={() => console.log("Siguiente clickeado")}>
@@ -136,61 +126,11 @@ export default function FourthStep() {
         </div>
 
         {/* Actividades de Aprendizaje */}
-        <div className="mb-6 mt-6">
+        <div className="mt-6">
           <h2 className="text-lg font-bold mb-4 text-left">
             4.2 Actividades de Aprendizaje
           </h2>
-          <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 relative">
-            {actividades.map((act, i) => (
-              <div
-                key={i}
-                className="flex justify-between items-center bg-gray-200 rounded-full mb-2 p-2"
-              >
-                <input
-                  type="text"
-                  value={act.nombre}
-                  onChange={(e) => {
-                    const nuevas = [...actividades];
-                    nuevas[i].nombre = e.target.value;
-                    setActividades(nuevas);
-                  }}
-                  placeholder="Nombre de la actividad"
-                  className="bg-transparent flex-1 px-2 text-sm text-gray-800 outline-none"
-                />
-                <div className="flex items-center gap-2">
-                  <select
-                    value={act.horas}
-                    className="bg-gray-100 rounded-full text-sm font-semibold px-2 py-1"
-                    onChange={(e) => {
-                      const nuevas = [...actividades];
-                      nuevas[i].horas = Number(e.target.value);
-                      setActividades(nuevas);
-                    }}
-                  >
-                    {[1, 2, 3].map((h) => (
-                      <option key={h} value={h}>
-                        {h}h
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={() => handleRemoveActividad(i)}
-                    className="text-red-500 font-bold px-2"
-                  >
-                    X
-                  </button>
-                </div>
-              </div>
-            ))}
-            <div className="flex justify-end mt-4">
-              <button
-                onClick={handleAddActividad}
-                className="text-3xl text-gray-700 hover:text-black font-bold"
-              >
-                +
-              </button>
-            </div>
-          </div>
+          <LearningActivities />
         </div>
       </div>
     </Step>
