@@ -1,8 +1,7 @@
 import React from "react";
 import Sidebar from "../components/common/Sidebar";
 import Header from "../components/common/Header";
-import { useQuery } from "@tanstack/react-query";
-import { fetchSession } from "../services/authService";
+import { useSession } from "../contexts/useSession";
 
 export default function Layout({
   children,
@@ -10,11 +9,7 @@ export default function Layout({
   children: React.ReactNode;
   title: string;
 }) {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["session"],
-    queryFn: fetchSession,
-    retry: false,
-  });
+  const { user, isLoading, isError } = useSession();
 
   if (isLoading) {
     return (
@@ -40,9 +35,9 @@ export default function Layout({
 
   return (
     <div className="flex min-h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar user={user} />
       <div className="flex-1 flex flex-col max-h-screen">
-        <Header user={data?.user} />
+        <Header user={user} />
         <main className="p-6 bg-white flex-1 overflow-auto">{children}</main>
       </div>
     </div>
