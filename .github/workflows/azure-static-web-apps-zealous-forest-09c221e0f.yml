@@ -34,7 +34,7 @@ jobs:
            result-encoding: string
       - name: Inject enviroments 
         run: |
-          echo "VITE_AZURE_ID=${{ secrets.VITE_AZURE_ID }}" >> .env
+          echo "VITE_AZURE_CLIENT_ID=${{ secrets.VITE_AZURE_ID }}" >> .env
           echo "VITE_AZURE_AUTHORITY=${{ secrets.VITE_AZURE_AUTHORITY }}" >> .env
           echo "VITE_REDIRECT_URI=${{ secrets.VITE_REDIRECT_URI }}" >> .env
           echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" >> .env
