@@ -24,16 +24,14 @@ export default function Layout({
     );
   }
 
+  const redirectUrl = import.meta.env.VITE_REDIRECT_LOGIN as string;
   if (isError) {
     return (
       <div className="flex h-screen items-center justify-center flex-col gap-4">
         <h2 className="text-lg font-semibold text-gray-800">
           No has iniciado sesión
         </h2>
-        <a
-          href="http://localhost:5001"
-          className="text-blue-600 hover:underline"
-        >
+        <a href={redirectUrl} className="text-blue-600 hover:underline">
           Ir al inicio de sesión
         </a>
       </div>
