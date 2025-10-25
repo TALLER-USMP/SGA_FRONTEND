@@ -1,8 +1,7 @@
 import React from "react";
 import Sidebar from "../components/common/Sidebar";
 import Header from "../components/common/Header";
-import { useQuery } from "@tanstack/react-query";
-import { fetchSession } from "../services/authService";
+import { useSession } from "../contexts/useSession";
 
 export default function Layout({
   children,
@@ -10,11 +9,7 @@ export default function Layout({
   children: React.ReactNode;
   title: string;
 }) {
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["session"],
-    queryFn: fetchSession,
-    retry: false,
-  });
+  const { user, isLoading, isError } = useSession();
 
   if (isLoading) {
     return (
@@ -24,16 +19,14 @@ export default function Layout({
     );
   }
 
+  const redirectUrl = import.meta.env.VITE_REDIRECT_LOGIN as string;
   if (isError) {
     return (
       <div className="flex h-screen items-center justify-center flex-col gap-4">
         <h2 className="text-lg font-semibold text-gray-800">
           No has iniciado sesión
         </h2>
-        <a
-          href="http://localhost:5001"
-          className="text-blue-600 hover:underline"
-        >
+        <a href={redirectUrl} className="text-blue-600 hover:underline">
           Ir al inicio de sesión
         </a>
       </div>
@@ -42,9 +35,9 @@ export default function Layout({
 
   return (
     <div className="flex min-h-screen overflow-hidden">
-      <Sidebar />
+      <Sidebar user={user} />
       <div className="flex-1 flex flex-col max-h-screen">
-        <Header user={data?.user} />
+        <Header user={user} />
         <main className="p-6 bg-white flex-1 overflow-auto">{children}</main>
       </div>
     </div>
