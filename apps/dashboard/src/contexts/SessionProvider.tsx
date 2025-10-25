@@ -20,7 +20,7 @@ export const SessionProvider = ({
   return (
     <SessionContext.Provider
       value={{
-        user: undefined,
+        user: getSession.data.user,
         isLoading: getSession.isPending,
         isError: getSession.isError,
       }}
