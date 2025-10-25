@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import React from "react";
 import { authService } from "../services/authService";
 import { SessionContext } from "./SessionContext";
@@ -8,29 +8,32 @@ export const SessionProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const getSession = useMutation({
-    mutationKey: ["session"],
-    mutationFn: authService.fetchSession,
-  });
+  const [token, setToken] = React.useState<string | undefined>();
 
   React.useLayoutEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get("token") ?? undefined;
-    getSession.mutate(token, {
-      onSuccess: () => {
-        if (token) {
-          const clear = window.location.origin + window.location.pathname;
-          window.history.replaceState({}, document.title, clear);
-        }
-      },
-    });
+    const tokenFromUrl = urlParams.get("token");
+
+    if (tokenFromUrl) {
+      setToken(tokenFromUrl);
+      // Limpiar la URL
+      const clear = window.location.origin + window.location.pathname;
+      window.history.replaceState({}, document.title, clear);
+    }
   }, []);
+
+  const getSession = useQuery({
+    queryKey: ["session", token],
+    queryFn: () => authService.fetchSession(token),
+    retry: false,
+    staleTime: 5 * 60 * 1000, // 5 minutos
+  });
 
   return (
     <SessionContext.Provider
       value={{
         user: getSession.data?.user,
-        isLoading: getSession.isPending,
+        isLoading: getSession.isLoading,
         isError: getSession.isError,
       }}
     >
