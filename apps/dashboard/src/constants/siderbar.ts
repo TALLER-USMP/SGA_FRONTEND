@@ -2,6 +2,7 @@ export const sidebarMenusByRole = {
   docente: [
     { to: "/", label: "Inicio" },
     { to: "/MyAssignmentsTeacher", label: "Mis Asignaciones Docente" },
+    { to: "/SyllabusManagement", label: "Mis Silabos" },
   ],
   coordinadora_academica: [
     { to: "/", label: "Inicio" },
