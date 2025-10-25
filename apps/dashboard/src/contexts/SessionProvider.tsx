@@ -14,13 +14,22 @@ export const SessionProvider = ({
   });
 
   React.useLayoutEffect(() => {
-    getSession.mutate();
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("token") ?? undefined;
+    getSession.mutate(token, {
+      onSuccess: () => {
+        if (token) {
+          const clear = window.location.origin + window.location.pathname;
+          window.history.replaceState({}, document.title, clear);
+        }
+      },
+    });
   }, []);
 
   return (
     <SessionContext.Provider
       value={{
-        user: getSession.data.user,
+        user: getSession.data?.user,
         isLoading: getSession.isPending,
         isError: getSession.isError,
       }}
