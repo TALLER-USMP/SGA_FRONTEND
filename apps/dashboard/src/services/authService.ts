@@ -5,39 +5,24 @@ class AuthService {
     this.baseUrl = import.meta.env.VITE_API_BASE_URL;
   }
 
-  fetchSession = async () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenFromQuery = urlParams.get("token");
+  fetchSession = async (tokenFromQuery?: string) => {
+    const url = `${this.baseUrl}/auth/me`;
 
-    if (tokenFromQuery) {
-      const meRes = await fetch(`${this.baseUrl}/auth/me`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          token: tokenFromQuery,
-          message: "Login via token in query params" + tokenFromQuery,
-        }),
-      });
+    const body = tokenFromQuery
+      ? { token: tokenFromQuery, message: "Login via token in query params" }
+      : undefined;
 
-      if (!meRes.ok) throw new Error("Sesión no válida");
-
-      // Limpiar el token de la URL
-      const cleanUrl = window.location.origin + window.location.pathname;
-      window.history.replaceState({}, document.title, cleanUrl);
-
-      return meRes.json();
-    }
-
-    // Si no hay token en query, usar cookie
-    const res = await fetch(`${this.baseUrl}/auth/me`, {
-      method: "POST", // Cambiar a POST para consistencia
+    const res = await fetch(url, {
+      method: "POST",
       credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: body ? JSON.stringify(body) : undefined,
     });
 
     if (!res.ok) throw new Error("Sesión no válida");
+
     return res.json();
   };
 
@@ -45,15 +30,10 @@ class AuthService {
     const res = await fetch(`${this.baseUrl}/auth/logout`, {
       method: "POST",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
     });
 
-    if (!res.ok) {
-      throw new Error("Error al cerrar sesión");
-    }
-
+    if (!res.ok) throw new Error("Error al cerrar sesión");
     return res.json();
   };
 }

@@ -2,6 +2,7 @@ import React from "react";
 import Sidebar from "../components/common/Sidebar";
 import Header from "../components/common/Header";
 import { useSession } from "../contexts/useSession";
+import { getRoleName } from "../constants/roles";
 
 export default function Layout({
   children,
@@ -29,6 +30,19 @@ export default function Layout({
         <a href={redirectUrl} className="text-blue-600 hover:underline">
           Ir al inicio de sesión
         </a>
+      </div>
+    );
+  }
+
+  if (getRoleName(user?.role) === "indeterminado") {
+    return (
+      <div className="flex h-screen items-center justify-center flex-col gap-4">
+        <h2 className="text-lg font-semibold text-gray-800">
+          Acceso denegado, No tienes un rol permitido en el sistema.
+        </h2>
+        <h2 className="text-lg font-semibold text-gray-800">
+          Comunicarse con soporte.
+        </h2>
       </div>
     );
   }
