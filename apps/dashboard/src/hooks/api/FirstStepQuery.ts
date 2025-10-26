@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { UseQueryOptions } from "@tanstack/react-query";
 
 export interface SyllabusGeneral {
   nombreAsignatura?: string;
@@ -17,14 +16,9 @@ export interface SyllabusGeneral {
   creditosPractica?: number;
   creditosTotales?: number;
   docentes?: string;
-  // The backend may use different field names depending on source/version.
   horasTeoria?: number;
   horasPractica?: number;
   horasTotales?: number;
-  // Alternative names seen in some responses
-  horasTeoriaLectivaPresencial?: number;
-  horasPracticaLectivaPresencial?: number;
-  horasTotalesLectivaPresencial?: number;
 }
 
 class SyllabusManager {
@@ -46,15 +40,14 @@ class SyllabusManager {
 
 export const syllabusManager = new SyllabusManager();
 
-export const useSyllabusGeneral = (
-  syllabusId: string | null,
-  options?: UseQueryOptions<SyllabusGeneral, Error>,
-) => {
+export const useSyllabusGeneral = (syllabusId: string | null) => {
+  const normalizedId = (syllabusId ?? "").trim();
+  const isValidId = normalizedId !== "" && /^\d+$/.test(normalizedId);
+
   return useQuery<SyllabusGeneral, Error>({
-    queryKey: ["syllabus", syllabusId, "general"],
-    queryFn: () => syllabusManager.fetchGeneral(syllabusId ?? ""),
-    enabled: !!syllabusId,
+    queryKey: ["syllabus", isValidId ? normalizedId : null, "general"],
+    queryFn: () => syllabusManager.fetchGeneral(normalizedId),
+    enabled: isValidId,
     retry: false,
-    ...options,
   });
 };
