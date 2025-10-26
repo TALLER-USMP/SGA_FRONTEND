@@ -4,6 +4,7 @@ import SecondStep from "../components/syllabus-process/SecondStep";
 import ThirdStep from "../components/syllabus-process/ThirdStep";
 import FifthStep from "../components/syllabus-process/FifthStep";
 import SixthStep from "../components/syllabus-process/SixthStep";
+import SeventhStep from "../components/syllabus-process/SeventhStep";
 
 export default function SyllabusProcess() {
   return (
@@ -13,6 +14,7 @@ export default function SyllabusProcess() {
       <ThirdStep />
       <FifthStep />
       <SixthStep />
+      <SeventhStep />
     </StepsProvider>
   );
 }
