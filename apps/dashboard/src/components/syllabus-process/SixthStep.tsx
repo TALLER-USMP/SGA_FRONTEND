@@ -113,7 +113,7 @@ export default function SixthStep() {
               i
             </div>
           </div>
-          <div className="mt-2 w-full bg-blue-50 border border-blue-100 rounded-md px-4 py-2 text-center">
+          <div className="mt-2 w-full bg-blue-50 border border-blue-100 rounded-md px-4 py-2 text-left">
             {localStorage.getItem("syllabusNombre") || "TALLER DE PROYECTOS"}
           </div>
         </div>
