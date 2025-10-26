@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useSteps } from "../../contexts/StepsContext";
+import { useSyllabusContext } from "../../contexts/SyllabusContext";
 import { Step } from "../common/Step";
 import { X, Plus } from "lucide-react";
 
@@ -26,6 +27,8 @@ interface FormData {
 
 export default function ThirdStep() {
   const { nextStep } = useSteps();
+  const { syllabusId, courseName } = useSyllabusContext();
+  console.log("Syllabus ID in ThirdStep:", syllabusId, "Course:", courseName);
 
   const [formData, setFormData] = useState<FormData>({
     competencias: [
@@ -116,6 +119,20 @@ export default function ThirdStep() {
   return (
     <Step step={3} onNextStep={handleSubmit}>
       <div className="w-full p-6">
+        {/* Datos Generales (resumen) */}
+        <div className="mb-4">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="text-lg font-bold text-black">1.</div>
+            <h3 className="text-lg font-medium text-black">Datos Generales</h3>
+            <div className="ml-2 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+              i
+            </div>
+          </div>
+          <div className="w-full h-12 rounded-md px-4 flex items-center text-lg bg-blue-50 border border-blue-100">
+            {courseName || "TALLER DE PROYECTOS"}
+          </div>
+        </div>
+
         {/* 3.1 Competencia */}
         <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold mb-4 text-left">
