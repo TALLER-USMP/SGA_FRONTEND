@@ -1,8 +1,8 @@
 import { getRoleName } from "../constants/roles";
 import { useSession } from "../contexts/useSession";
-import CoordinatorHome from "./coordinator/CoordinatorHome";
-import DirectorHome from "./director/DirectorHome";
-import TeacherHome from "./teacher/TeacherHome";
+import CoordinatorHome from "./CoordinatorHome";
+import DirectorHome from "./DirectorHome";
+import TeacherHome from "./TeacherHome";
 
 export default function HomePage() {
   const { user } = useSession();
