@@ -70,8 +70,11 @@ export default function MyAssignments() {
     setSelectedAssignment(assignment);
   };
 
-  const handleEditAssignment = (codigo: string) => {
-    navigate(`/syllabus?codigo=${codigo}`);
+  const handleEditAssignment = (codigo: string, syllabusId?: number) => {
+    const url = syllabusId
+      ? `/syllabus?codigo=${codigo}&id=${syllabusId}`
+      : `/syllabus?codigo=${codigo}`;
+    navigate(url);
   };
 
   const closeModal = () => setSelectedAssignment(null);
@@ -205,7 +208,12 @@ export default function MyAssignments() {
                 {(assignment.estadoRevision === "DESAPROBADO" ||
                   assignment.estadoRevision === "ASIGNADO") && (
                   <button
-                    onClick={() => handleEditAssignment(assignment.cursoCodigo)}
+                    onClick={() =>
+                      handleEditAssignment(
+                        assignment.cursoCodigo,
+                        assignment.syllabusId,
+                      )
+                    }
                     className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
                   >
                     <Edit size={18} />

@@ -6,6 +6,7 @@ export interface Assignment {
   cursoNombre: string;
   estadoRevision: string;
   docenteId: number;
+  syllabusId?: number;
 }
 
 class AssignmentsManager {
