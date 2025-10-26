@@ -3,8 +3,6 @@ import { Search, Eye, Edit, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../contexts/useSession";
 import { useAssignments, type Assignment } from "../hooks/api/AssignmentsQuery";
-// Nota: el backend devuelve estadoRevision (e.g. "DESAPROBADO", "APROBADO"),
-// y campos cursoCodigo/cursoNombre.
 
 export default function MyAssignments() {
   const { user, isLoading: sessionLoading } = useSession();
@@ -19,11 +17,54 @@ export default function MyAssignments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
+  type AssignmentStatus =
+    | "APROBADO"
+    | "ANALIZANDO"
+    | "DESAPROBADO"
+    | "ASIGNADO";
+  type FilterStatus = "ALL" | AssignmentStatus;
+  const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("ALL");
   const navigate = useNavigate();
 
-  const filteredAssignments = assignments.filter((assignment: Assignment) =>
-    assignment.cursoNombre.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  // Config visual por estado
+  const statusConfig: Record<
+    AssignmentStatus,
+    { label: string; color: string; textColor: string; bgColor: string }
+  > = {
+    APROBADO: {
+      label: "Aprobado",
+      color: "bg-green-500",
+      textColor: "text-green-700",
+      bgColor: "bg-green-50",
+    },
+    ANALIZANDO: {
+      label: "Analizando",
+      color: "bg-yellow-500",
+      textColor: "text-yellow-700",
+      bgColor: "bg-yellow-50",
+    },
+    DESAPROBADO: {
+      label: "Desaprobado",
+      color: "bg-red-500",
+      textColor: "text-red-700",
+      bgColor: "bg-red-50",
+    },
+    ASIGNADO: {
+      label: "Asignado",
+      color: "bg-blue-500",
+      textColor: "text-blue-700",
+      bgColor: "bg-blue-50",
+    },
+  };
+
+  const filteredAssignments = assignments.filter((assignment: Assignment) => {
+    const matchesSearch = assignment.cursoNombre
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      selectedStatus === "ALL" || assignment.estadoRevision === selectedStatus;
+    return matchesSearch && matchesStatus;
+  });
 
   const handleViewAssignment = (assignment: Assignment) => {
     setSelectedAssignment(assignment);
@@ -73,6 +114,53 @@ export default function MyAssignments() {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
+
+        {/* Filtros por estado */}
+        <div className="flex gap-2 mb-6 flex-wrap">
+          {/* Todos */}
+          <button
+            onClick={() => setSelectedStatus("ALL")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              selectedStatus === "ALL"
+                ? "bg-blue-500 text-white shadow-md"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            <span className="text-sm">Todos</span>
+            <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full text-black">
+              {assignments.length}
+            </span>
+          </button>
+
+          {(Object.keys(statusConfig) as AssignmentStatus[]).map((key) => {
+            const cfg = statusConfig[key];
+            const count = assignments.filter(
+              (a) => a.estadoRevision === key,
+            ).length;
+            const isSelected = selectedStatus === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setSelectedStatus(key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  isSelected
+                    ? `${cfg.color} text-white shadow-md`
+                    : `${cfg.bgColor} ${cfg.textColor} hover:shadow-sm`
+                }`}
+              >
+                <div
+                  className={`w-3 h-3 rounded-full ${isSelected ? "bg-white bg-opacity-30" : cfg.color}`}
+                ></div>
+                <span className="text-sm">{cfg.label}</span>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full ${isSelected ? "bg-white bg-opacity-20" : "bg-white bg-opacity-60"}`}
+                >
+                  <span className="text-black">{count}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Assignments List */}
@@ -91,13 +179,31 @@ export default function MyAssignments() {
               </div>
 
               <div className="flex items-center gap-3">
-                {/* Estado */}
-                <span className="text-sm text-gray-600 font-semibold">
-                  {assignment.estadoRevision}
-                </span>
+                {/* Estado con badge coloreado */}
+                {(() => {
+                  const cfg = statusConfig[
+                    assignment.estadoRevision as AssignmentStatus
+                  ] ?? {
+                    label: assignment.estadoRevision,
+                    color: "bg-gray-400",
+                    textColor: "text-gray-700",
+                    bgColor: "bg-gray-100",
+                  };
+                  return (
+                    <div
+                      className={`flex items-center gap-2 px-2 py-1 rounded ${cfg.bgColor} ${cfg.textColor}`}
+                    >
+                      <div
+                        className={`w-3 h-3 rounded-full ${cfg.color}`}
+                      ></div>
+                      <span className="text-xs font-semibold">{cfg.label}</span>
+                    </div>
+                  );
+                })()}
 
-                {/* Editar */}
-                {assignment.estadoRevision === "DESAPROBADO" && (
+                {/* Editar solo si está desaprobado o asignado */}
+                {(assignment.estadoRevision === "DESAPROBADO" ||
+                  assignment.estadoRevision === "ASIGNADO") && (
                   <button
                     onClick={() => handleEditAssignment(assignment.cursoCodigo)}
                     className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
@@ -120,10 +226,8 @@ export default function MyAssignments() {
       </div>
 
       {filteredAssignments.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">
-            No se encontraron asignaciones que coincidan con tu búsqueda.
-          </p>
+        <div className="text-center py-12 text-gray-500">
+          No se encontraron asignaciones que coincidan con tu búsqueda.
         </div>
       )}
 
@@ -131,15 +235,12 @@ export default function MyAssignments() {
       {selectedAssignment && (
         <div className="fixed inset-0 bg-black/45 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl w-96 h-96 p-6 relative">
-            {/* Close Button */}
             <button
               onClick={closeModal}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition-colors"
             >
               <X size={24} />
             </button>
-
-            {/* Modal Content */}
             <div className="h-full flex flex-col">
               <h2 className="text-xl font-bold text-gray-800 mb-4">
                 {selectedAssignment.cursoNombre}
