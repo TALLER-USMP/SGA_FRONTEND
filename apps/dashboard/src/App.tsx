@@ -28,6 +28,15 @@ export default function App() {
             }
           />
           <Route
+            path="/MyAssignmentsTeacher"
+            element={
+              <Layout title="Mis sílabos">
+                <MyAssignments />
+              </Layout>
+            }
+          />
+
+          <Route
             path="/syllabus"
             element={
               <Layout title="Crear nuevo curso">
