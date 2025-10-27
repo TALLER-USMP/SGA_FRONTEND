@@ -1,8 +1,13 @@
-import { Home, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
 import usmpLogo from "../../assets/Logo_FIA.png";
+import type HeaderProps from "../../interfaces/headerProps";
+import { getRoleName } from "../../constants/roles";
+import { sidebarMenusByRole, type RoleKey } from "../../constants/siderbar";
 
-export default function Sidebar() {
+export default function Sidebar({ user }: HeaderProps) {
+  const menuItems =
+    sidebarMenusByRole[getRoleName(user?.role) as RoleKey] ?? [];
+
   return (
     <aside className="w-64 bg-[#111827] text-white h-screen flex flex-col">
       {/* Logo */}
@@ -13,22 +18,16 @@ export default function Sidebar() {
       {/* Menu options */}
       <nav className="flex-1 p-4">
         <ul className="space-y-3">
-          <li>
-            <Link
-              to="/"
-              className="flex items-center gap-3 p-2 rounded hover:bg-gray-700"
-            >
-              <Home size={18} /> Inicio
-            </Link>
-          </li>
-          <li>
-            <Link
-              to="/syllabus"
-              className="flex items-center gap-3 p-2 rounded hover:bg-gray-700"
-            >
-              <BookOpen size={18} /> Asignaturas
-            </Link>
-          </li>
+          {menuItems.map((item) => (
+            <li key={item.to}>
+              <Link
+                to={item.to}
+                className="block p-2 hover:bg-gray-700 rounded"
+              >
+                {item.label}
+              </Link>
+            </li>
+          ))}
         </ul>
       </nav>
     </aside>
