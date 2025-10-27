@@ -30,11 +30,19 @@ jobs:
         uses: actions/github-script@v6
         id: idtoken
         with:
-          script: |
-            const coredemo = require('@actions/core')
-            return await coredemo.getIDToken()
-          result-encoding: string
-
+           script: |
+               const coredemo = require('@actions/core')
+               return await coredemo.getIDToken()
+           result-encoding: string
+      - name: Inject enviroments 
+        run: |
+          echo "VITE_AZURE_CLIENT_ID=${{ secrets.VITE_AZURE_ID }}" >> .env
+          echo "VITE_AZURE_AUTHORITY=${{ secrets.VITE_AZURE_AUTHORITY }}" >> .env
+          echo "VITE_REDIRECT_URI=${{ secrets.VITE_REDIRECT_URI }}" >> .env
+          echo "VITE_API_BASE_URL=${{ secrets.VITE_API_BASE_URL }}" >> .env
+          echo "VITE_AZURE_API_SCOPE=${{ secrets.VITE_AZURE_API_SCOPE }}" >> .env
+          echo "VITE_REDIRECT_LOGIN=${{ secrets.VITE_REDIRECT_LOGIN }}" >> .env
+        working-directory: ./apps/dashboard
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
