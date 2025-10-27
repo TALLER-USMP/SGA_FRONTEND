@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useSaveSumilla, useSumilla } from "../../hooks/api/SecondStepQuery";
 import { useSteps } from "../../contexts/StepsContext";
+import { useSyllabusContext } from "../../contexts/SyllabusContext";
 import { Step } from "../common/Step";
 
 /**
@@ -8,114 +9,32 @@ import { Step } from "../common/Step";
  */
 export default function SecondStep() {
   const { nextStep } = useSteps();
-  const [courseName] = useState<string>(() => {
-    try {
-      return localStorage.getItem("syllabusNombre") ?? "";
-    } catch {
-      return "";
-    }
-  });
+  const { syllabusId, courseName } = useSyllabusContext();
   const [summary, setSummary] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
-  const [loading, setLoading] = useState(false);
 
-  // Cargar sumilla existente al montar el componente
+  // Load existing sumilla via query
+  const { data, isLoading, isError, error } = useSumilla(syllabusId);
+  const saveSumilla = useSaveSumilla();
+
   useEffect(() => {
-    const syllabusId = localStorage.getItem("syllabusId");
-    if (!syllabusId) return;
-
-    let cancelled = false;
-
-    (async () => {
-      setLoading(true);
-      setApiError("");
+    if (isError) {
+      setApiError(error?.message ?? "Error cargando sumilla");
+      return;
+    }
+    if (!data) return;
+    if (data?.sumilla) {
+      setSummary(data.sumilla);
       try {
-        const res = await fetch(
-          `http://localhost:7071/api/syllabus/${syllabusId}/sumilla`,
-        );
-        if (!res.ok) {
-          if (res.status === 404) {
-            // No hay sumilla guardada todavía, es normal
-            return;
-          }
-          const txt = await res.text();
-          throw new Error(`${res.status} ${txt}`);
-        }
-        const json = await res.json();
-        if (cancelled) return;
-
-        if (json.sumilla) {
-          setSummary(json.sumilla);
-          // Guardar en localStorage para persistencia
-          localStorage.setItem("datos_sumilla", json.sumilla);
-        }
-      } catch (err: unknown) {
-        if (!cancelled) {
-          if (err instanceof Error) setApiError(err.message);
-          else setApiError(String(err));
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+        localStorage.setItem("datos_sumilla", data.sumilla);
+      } catch {
+        /* ignore */
       }
-    })();
+    }
+  }, [data, isError, error]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  // Mutation: PUT /syllabus/{id}/sumilla
-  const putSumillaMutation = useMutation<
-    void,
-    Error,
-    { id: string; sumilla: string }
-  >({
-    mutationFn: async ({ id, sumilla }: { id: string; sumilla: string }) => {
-      const res = await fetch(
-        `http://localhost:7071/api/syllabus/${id}/sumilla`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sumilla }),
-        },
-      );
-
-      if (res.status === 200 || res.status === 201) {
-        // Guardar en localStorage para persistencia
-        localStorage.setItem("datos_sumilla", sumilla);
-        return;
-      }
-
-      // Si hay error, intentar parsear la respuesta como JSON
-      try {
-        const json = await res.json();
-        // Extraer el mensaje del API (puede venir como "message" o "error")
-        const apiMessage = json?.message || json?.error;
-        if (apiMessage) {
-          throw new Error(apiMessage);
-        }
-        // Si no hay mensaje específico, mostrar el JSON completo
-        throw new Error(JSON.stringify(json));
-      } catch (parseError) {
-        // Si parseError ya es un Error con mensaje, re-lanzarlo
-        if (
-          parseError instanceof Error &&
-          parseError.message &&
-          !parseError.message.includes("Unexpected")
-        ) {
-          throw parseError;
-        }
-        // Si no se puede parsear como JSON, intentar obtener el texto
-        try {
-          const txt = await res.text();
-          throw new Error(txt || `Error ${res.status}`);
-        } catch {
-          throw new Error(`Error desconocido: ${res.status}`);
-        }
-      }
-    },
-  });
+  // No need to define a raw mutation here, useSaveSumilla above
 
   const validateAndNext = async () => {
     const newErrors: Record<string, string> = {};
@@ -123,7 +42,7 @@ export default function SecondStep() {
     setErrors(newErrors);
     if (Object.keys(newErrors).length === 0) {
       setApiError("");
-      const id = localStorage.getItem("syllabusId");
+      const id = syllabusId;
       if (!id) {
         setApiError(
           "Id del sílabo no encontrado. Completa el primer paso antes de continuar.",
@@ -131,7 +50,7 @@ export default function SecondStep() {
         return;
       }
       try {
-        await putSumillaMutation.mutateAsync({ id, sumilla: summary });
+        await saveSumilla.mutateAsync({ id, sumilla: summary });
         nextStep();
       } catch (err: unknown) {
         if (err instanceof Error)
@@ -152,7 +71,7 @@ export default function SecondStep() {
   return (
     <Step step={2} onNextStep={validateAndNext}>
       <div className="w-full">
-        {loading && (
+        {isLoading && (
           <div className="mb-4 text-sm text-gray-700">Cargando sumilla...</div>
         )}
 
@@ -186,8 +105,8 @@ export default function SecondStep() {
             onChange={(e) => setSummary(e.target.value)}
             placeholder="Escribe la sumilla aquí..."
             rows={8}
-            disabled={loading}
-            className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-gray-100 resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-200 ${errors.summary ? "ring-2 ring-red-400" : "border border-gray-200"} ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
+            disabled={isLoading}
+            className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-gray-100 resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-200 ${errors.summary ? "ring-2 ring-red-400" : "border border-gray-200"} ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
           />
           {errors.summary && (
             <div className="text-red-600 text-sm mt-1">{errors.summary}</div>
@@ -198,7 +117,7 @@ export default function SecondStep() {
           <div className="text-red-600 text-sm mt-3">{apiError}</div>
         )}
 
-        {putSumillaMutation.isPending && (
+        {saveSumilla.isPending && (
           <div className="text-sm text-blue-600 mt-3">Guardando sumilla...</div>
         )}
       </div>

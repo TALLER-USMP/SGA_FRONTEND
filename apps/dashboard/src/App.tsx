@@ -3,6 +3,7 @@ import Layout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import MyAssignments from "./pages/MyAssignments";
 import CreateCourse from "./pages/SyllabusProcess";
+import Profile from "./pages/Profile";
 import { SessionProvider } from "./contexts/SessionProvider";
 
 export default function App() {
@@ -27,10 +28,27 @@ export default function App() {
             }
           />
           <Route
+            path="/MyAssignmentsTeacher"
+            element={
+              <Layout title="Mis sílabos">
+                <MyAssignments />
+              </Layout>
+            }
+          />
+
+          <Route
             path="/syllabus"
             element={
               <Layout title="Crear nuevo curso">
                 <CreateCourse />
+              </Layout>
+            }
+          />
+          <Route
+            path="/perfil"
+            element={
+              <Layout title="Perfil">
+                <Profile />
               </Layout>
             }
           />
