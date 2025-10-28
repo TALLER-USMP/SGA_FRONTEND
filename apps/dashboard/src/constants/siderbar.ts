@@ -10,9 +10,10 @@ export const sidebarMenusByRole = {
       label: "Mis Asignaciones",
     },
   ],
-  director: [
+  director_escuela: [
     { to: "/", label: "Inicio" },
-    { to: "/management", label: "Asignar docente" },
+    { to: "/silabus", label: "Silabus" },
+    { to: "/management", label: "Asignar Docente" },
   ],
   indeterminado: [],
 } as const;

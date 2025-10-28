@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import MyAssignments from "./pages/MyAssignments";
 import CreateCourse from "./pages/SyllabusProcess";
 import Profile from "./pages/Profile";
+import Management from "./pages/Management";
 import { SessionProvider } from "./contexts/SessionProvider";
 
 export default function App() {
@@ -49,6 +50,14 @@ export default function App() {
             element={
               <Layout title="Perfil">
                 <Profile />
+              </Layout>
+            }
+          />
+          <Route
+            path="/management"
+            element={
+              <Layout title="Asignar Docente">
+                <Management />
               </Layout>
             }
           />
