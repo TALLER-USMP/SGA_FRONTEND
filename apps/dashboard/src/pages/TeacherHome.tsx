@@ -9,13 +9,16 @@ export default function TeacherHome() {
   };
 
   return (
-    <div className="flex gap-4 p-8">
+    <div className="flex flex-col items-center justify-center gap-8 p-8 min-h-[60vh]">
+      {/* Botón Modificar Sílabo */}
       <button
         onClick={handleModifySyllabus}
-        className="bg-white hover:bg-gray-50 text-black font-semibold py-4 px-8 rounded-lg border-2 border-gray-300 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-3 min-w-[200px]"
+        className="bg-white hover:bg-gray-50 text-black font-semibold py-8 px-12 rounded-lg border-2 border-gray-300 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-4 min-w-[300px]"
       >
-        <ClipboardList className="text-red-600" size={24} />
-        Modificar sílabo
+        <div className="bg-red-600 text-white p-3 rounded-lg">
+          <ClipboardList size={28} />
+        </div>
+        <span className="text-lg">Modificar Sílabo</span>
       </button>
     </div>
   );
