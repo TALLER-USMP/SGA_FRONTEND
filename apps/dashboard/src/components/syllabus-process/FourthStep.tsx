@@ -59,6 +59,46 @@ export const FourthStep: React.FC = () => {
     {},
   );
 
+  // === VALIDACIONES ===
+  const errores = useMemo(() => {
+    const errs: string[] = [];
+
+    if (conceptuales.trim() === "")
+      errs.push("Contenidos conceptuales requeridos");
+    if (conceptuales.length > 400)
+      errs.push("Conceptuales: máx. 400 caracteres");
+
+    if (procedimentales.trim() === "")
+      errs.push("Contenidos procedimentales requeridos");
+    if (procedimentales.length > 400)
+      errs.push("Procedimentales: máx. 400 caracteres");
+
+    Object.values(programacionLocal).forEach((acts: ActividadEditable[]) => {
+      acts.forEach((a: ActividadEditable) => {
+        if (a.nombre.trim() === "") {
+          errs.push(`Actividad vacía en semana ${a.id}`);
+        }
+      });
+    });
+
+    return errs;
+  }, [conceptuales, procedimentales, programacionLocal]);
+
+  const esValido = useMemo(() => {
+    if (!data) return false;
+
+    const horasOk = data.semanas.every((s: Semana) => {
+      const acts = programacionLocal[s.numeroSemana] || [];
+      const usadas = acts.reduce(
+        (sum: number, a: ActividadEditable) => sum + a.horas,
+        0,
+      );
+      return usadas === s.horasDisponibles;
+    });
+
+    return horasOk && errores.length === 0;
+  }, [data, programacionLocal, errores]);
+
   // Carga inicial
   useEffect(() => {
     if (!data || unidadSel) return;
@@ -124,21 +164,10 @@ export const FourthStep: React.FC = () => {
   const horasDisponibles = semanaActual?.horasDisponibles || 0;
   const actividadesSemana = programacionLocal[Number(semanaSel)] || [];
 
-  const esValido = useMemo(() => {
-    if (!data) return false;
-    return data.semanas.every((s: Semana) => {
-      const acts = programacionLocal[s.numeroSemana] || [];
-      const usadas = acts.reduce(
-        (sum: number, a: ActividadEditable) => sum + a.horas,
-        0,
-      );
-      return usadas === s.horasDisponibles;
-    });
-  }, [data, programacionLocal]);
-
   const handleSiguiente = () => {
     if (!esValido) {
-      toast.error("Completa todas las semanas con las horas exactas", {
+      errores.forEach((err) => toast.error(err, { duration: 4000 }));
+      toast.error("Completa todos los campos y horas", {
         duration: 5000,
         icon: "Warning",
       });
@@ -149,14 +178,24 @@ export const FourthStep: React.FC = () => {
       ([semana, acts]: [string, ActividadEditable[]]) =>
         acts.map((a) => ({
           semanaNumero: Number(semana),
-          nombreActividad: a.nombre,
+          nombreActividad: a.nombre.trim(),
           horasAsignadas: a.horas,
         })),
     );
 
     const payload = {
       asignaturaId,
-      unidades: data!.unidades,
+      unidades: data!.unidades.map((u: Unidad) => ({
+        ...u,
+        contenidosConceptuales:
+          u.numero === Number(unidadSel)
+            ? conceptuales.trim()
+            : u.contenidosConceptuales,
+        contenidosProcedimentales:
+          u.numero === Number(unidadSel)
+            ? procedimentales.trim()
+            : u.contenidosProcedimentales,
+      })),
       semanas: data!.semanas,
       programacionGuardada: programacionFinal,
     };
@@ -193,19 +232,13 @@ export const FourthStep: React.FC = () => {
     }
   };
 
-  // Toasts para carga y error
   useEffect(() => {
-    if (isLoading) {
-      toast.loading("Cargando programación...", { id: "loading" });
-    } else {
-      toast.dismiss("loading");
-    }
+    if (isLoading) toast.loading("Cargando...", { id: "load" });
+    else toast.dismiss("load");
   }, [isLoading]);
 
   useEffect(() => {
-    if (error) {
-      toast.error("Error al cargar datos", { duration: 5000 });
-    }
+    if (error) toast.error("Error al cargar datos", { duration: 5000 });
   }, [error]);
 
   if (isLoading)
@@ -250,36 +283,51 @@ export const FourthStep: React.FC = () => {
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contenidos conceptuales
+                    Contenidos conceptuales{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={conceptuales}
                     onChange={(e) =>
                       setConceptuales(e.target.value.slice(0, 400))
                     }
-                    className="w-full p-4 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full p-4 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500 ${
+                      conceptuales.trim() === "" || conceptuales.length > 400
+                        ? "border-red-500"
+                        : ""
+                    }`}
                     rows={5}
-                    placeholder="Máximo 400 caracteres"
+                    placeholder="Requerido. Máx. 400 caracteres"
                   />
-                  <p className="text-xs text-right text-gray-500 mt-1">
+                  <p
+                    className={`text-xs text-right mt-1 ${conceptuales.length > 400 ? "text-red-500" : "text-gray-500"}`}
+                  >
                     {conceptuales.length}/400
                   </p>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contenidos procedimentales
+                    Contenidos procedimentales{" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     value={procedimentales}
                     onChange={(e) =>
                       setProcedimentales(e.target.value.slice(0, 400))
                     }
-                    className="w-full p-4 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500"
+                    className={`w-full p-4 border rounded-lg resize-none focus:ring-2 focus:ring-blue-500 ${
+                      procedimentales.trim() === "" ||
+                      procedimentales.length > 400
+                        ? "border-red-500"
+                        : ""
+                    }`}
                     rows={5}
-                    placeholder="Máximo 400 caracteres"
+                    placeholder="Requerido. Máx. 400 caracteres"
                   />
-                  <p className="text-xs text-right text-gray-500 mt-1">
+                  <p
+                    className={`text-xs text-right mt-1 ${procedimentales.length > 400 ? "text-red-500" : "text-gray-500"}`}
+                  >
                     {procedimentales.length}/400
                   </p>
                 </div>
