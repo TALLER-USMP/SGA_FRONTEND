@@ -4,10 +4,8 @@ import { useState, useEffect } from "react";
 import { ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSyllabusContext } from "../../contexts/SyllabusContext";
-import { useSession } from "../../contexts/useSession";
 import { Step } from "../common/Step";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { updateLocalAssignmentStatus } from "../../hooks/api/AssignmentsQuery";
 
 // Nota: duplicamos la interfaz localmente para evitar dependencias de tipo
 // que en algunos entornos del build daban problemas de resolución.
@@ -101,8 +99,7 @@ const ConfirmationToast = ({
  */
 export default function NineStep() {
   const navigate = useNavigate();
-  const { syllabusId, courseName, cursoCodigo } = useSyllabusContext();
-  const { user } = useSession();
+  const { syllabusId, courseName } = useSyllabusContext();
 
   const [contributions, setContributions] = useState<Record<string, string>>(
     {},
@@ -214,33 +211,7 @@ export default function NineStep() {
       return;
     }
 
-    // Validación cliente: comprobar que el curso corresponde al docente autenticado
-    try {
-      const codigo =
-        cursoCodigo ??
-        (localStorage.getItem("current_course_code") as string) ??
-        "";
-      if (codigo && user) {
-        const raw = localStorage.getItem("assignments_mock");
-        if (raw) {
-          const list = JSON.parse(raw) as Array<{
-            cursoCodigo: string;
-            docenteId: number | string;
-          }>;
-          const found = list.find(
-            (a) => String(a.cursoCodigo) === String(codigo),
-          );
-          if (found && String(found.docenteId) !== String(user.id)) {
-            setApiError(
-              "No autorizado: este curso no pertenece al docente autenticado.",
-            );
-            return;
-          }
-        }
-      }
-    } catch {
-      // ignore validation errors and continue
-    }
+    // NOTE: server must validate course ownership; client-side checks removed for prod
 
     try {
       // Convertir el objeto a array para enviar
@@ -254,16 +225,7 @@ export default function NineStep() {
         aportes,
       });
 
-      // Actualizar estado local de la asignación a 'ANALIZANDO' (pendiente)
-      try {
-        const codigo =
-          cursoCodigo ??
-          (localStorage.getItem("current_course_code") as string) ??
-          "";
-        if (codigo) updateLocalAssignmentStatus(codigo, "ANALIZANDO");
-      } catch {
-        // ignore
-      }
+      // Production: state change should be handled by backend. No local-only updates here.
 
       // Mostrar toast de éxito
       setIsToastOpen(true);

@@ -26,16 +26,8 @@ class AssignmentsManager {
       const data = Array.isArray(json) ? json : json?.data;
       return (data ?? []) as Assignment[];
     } catch {
-      // Fallback local: intentar cargar assignments desde localStorage
-      try {
-        const raw = localStorage.getItem("assignments_mock");
-        if (!raw) return [] as Assignment[];
-        const parsed = JSON.parse(raw) as Assignment[];
-        // filtrar por docenteId
-        return parsed.filter((a) => String(a.docenteId) === String(docenteId));
-      } catch {
-        return [] as Assignment[];
-      }
+      // In production do not fallback to localStorage; return empty list on error
+      return [] as Assignment[];
     }
   }
 }
@@ -58,18 +50,4 @@ export const useAssignments = (
 };
 
 // Función auxiliar para actualizar el estado de una asignación en localStorage
-export const updateLocalAssignmentStatus = (
-  cursoCodigo: string,
-  newStatus: string,
-) => {
-  try {
-    const raw = localStorage.getItem("assignments_mock");
-    const list: Assignment[] = raw ? JSON.parse(raw) : [];
-    const updated = list.map((a) =>
-      a.cursoCodigo === cursoCodigo ? { ...a, estadoRevision: newStatus } : a,
-    );
-    localStorage.setItem("assignments_mock", JSON.stringify(updated));
-  } catch {
-    // ignore
-  }
-};
+// Note: local-only helpers were removed for production-safe branch
