@@ -1,36 +1,45 @@
-import type { FC } from "react";
+import React from "react";
 
-type Props = {
-  semanas: number[];
-  semanaSeleccionada: number | "";
-  onChange: (semana: number | "") => void;
-};
+interface Semana {
+  numeroSemana: number;
+}
 
-export const WeekSelector: FC<Props> = ({
-  semanas,
-  semanaSeleccionada,
-  onChange,
-}) => {
+interface Props {
+  value: string;
+  onChange: (value: string) => void;
+  semanas: Semana[];
+}
+
+export const WeekSelector: React.FC<Props> = ({ value, onChange, semanas }) => {
   return (
-    <div className="flex flex-col gap-1 w-auto">
-      <label className="text-sm font-semibold text-gray-700 text-left">
-        Selecciona una semana
-      </label>
+    <div className="relative">
       <select
-        value={semanaSeleccionada}
-        onChange={(e) =>
-          onChange(e.target.value === "" ? "" : Number(e.target.value))
-        }
-        name="semana"
-        className="border border-gray-300 rounded-md px-3 py-2 bg-black text-white text-sm w-auto"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="bg-black text-white px-8 py-3 pl-10 pr-12 rounded-full font-medium text-base appearance-none cursor-pointer min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500"
       >
-        <option value="">Selecciona</option>
+        <option value="">Seleccionar semana</option>
         {semanas.map((s) => (
-          <option key={s} value={s}>
-            Semana {s}
+          <option key={s.numeroSemana} value={s.numeroSemana}>
+            Semana {s.numeroSemana}
           </option>
         ))}
       </select>
+      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+        <svg
+          className="w-5 h-5 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 9l-7 7-7-7"
+          />
+        </svg>
+      </div>
     </div>
   );
 };

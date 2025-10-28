@@ -1,39 +1,41 @@
-import type { FC } from "react";
+import React from "react";
 
-type Unidad = {
-  id: number;
+interface UnidadOption {
   numero: number;
   titulo: string;
-};
+}
 
-type UnitSelectorProps = {
-  unidades: Unidad[];
-  unidadSeleccionada: number | "";
-  onChange: (unidadId: number | "") => void;
-};
+interface Props {
+  value: string;
+  onChange: (value: string) => void;
+  unidades: UnidadOption[];
+}
 
-export const UnitSelector: FC<UnitSelectorProps> = ({
-  unidades,
-  unidadSeleccionada,
+export const UnitSelector: React.FC<Props> = ({
+  value,
   onChange,
+  unidades,
 }) => {
   return (
-    <div className="mb-6">
-      <h2 className="text-lg font-bold mb-2 text-left">4. Unidades</h2>
-      <select
-        value={unidadSeleccionada}
-        onChange={(e) =>
-          onChange(e.target.value === "" ? "" : Number(e.target.value))
-        }
-        className="border border-gray-300 rounded-md px-3 py-2 w-full text-sm"
-      >
-        <option value="">Selecciona una unidad</option>
-        {unidades.map((u) => (
-          <option key={u.id} value={u.id}>
-            {`Unidad ${u.numero}: ${u.titulo}`}
-          </option>
-        ))}
-      </select>
+    <div className="bg-white p-4 rounded-lg border">
+      {unidades.map((u) => (
+        <label
+          key={u.numero}
+          className="flex items-center p-3 cursor-pointer hover:bg-gray-50 rounded"
+        >
+          <input
+            type="radio"
+            name="unidad"
+            value={u.numero}
+            checked={value === String(u.numero)}
+            onChange={(e) => onChange(e.target.value)}
+            className="mr-3 h-4 w-4 text-blue-600"
+          />
+          <span className="font-medium">
+            Unidad {u.numero}: {u.titulo}
+          </span>
+        </label>
+      ))}
     </div>
   );
 };
