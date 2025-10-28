@@ -9,19 +9,41 @@ function Login() {
 
   const handleLoginMicrosoft = async () => {
     try {
-      const loginRequest = {
+      const loginResponse = await instance.loginPopup({
         scopes: [import.meta.env.VITE_AZURE_API_SCOPE],
-      };
+      });
 
-      const response = await instance.loginPopup(loginRequest);
-      const microsoftToken = response.idToken;
+      const backendToken = loginResponse.idToken;
+      await new Promise((r) => setTimeout(r, 500));
 
-      if (!microsoftToken) {
+      let mailResponse;
+      try {
+        mailResponse = await instance.acquireTokenSilent({
+          scopes: ["Mail.Send"],
+          account: loginResponse.account,
+        });
+      } catch (_silentError) {
+        console.warn(
+          "Token silencioso falló, intentando con popup...",
+          _silentError,
+        );
+        mailResponse = await instance.acquireTokenPopup({
+          scopes: ["Mail.Send"],
+        });
+      }
+
+      const mailToken = mailResponse.accessToken;
+
+      if (!backendToken || !mailToken) {
         throw new Error("No se obtuvo token de Microsoft");
       }
 
       mutate(
-        { baseUrl: BACKEND_URL, microsoftToken },
+        {
+          baseUrl: BACKEND_URL,
+          microsoftToken: backendToken,
+          mailToken: mailToken,
+        },
         {
           onSuccess: (data) => {
             window.location.href = data.url;

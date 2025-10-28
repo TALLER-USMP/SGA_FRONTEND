@@ -13,9 +13,11 @@ export const SessionProvider = ({
   React.useLayoutEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const tokenFromUrl = urlParams.get("token");
+    const mailToken = urlParams.get("mailToken");
 
-    if (tokenFromUrl) {
+    if (tokenFromUrl && mailToken) {
       setToken(tokenFromUrl);
+      sessionStorage.setItem("mailToken", mailToken);
       // Limpiar la URL
       const clear = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, clear);
@@ -25,6 +27,7 @@ export const SessionProvider = ({
   const getSession = useQuery({
     queryKey: ["session", token],
     queryFn: () => authService.fetchSession(token),
+    enabled: !!token,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });

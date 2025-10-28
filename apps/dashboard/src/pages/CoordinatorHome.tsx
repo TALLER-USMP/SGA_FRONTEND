@@ -1,4 +1,4 @@
-import { FileText, BarChart3 } from "lucide-react";
+import { FileText, BarChart3, Mail } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function CoordinatorHome() {
@@ -35,6 +35,17 @@ export default function CoordinatorHome() {
           <BarChart3 size={28} />
         </div>
         <span className="text-lg">Ver Reportes</span>
+      </button>
+
+      {/* Botón de prueba: Enviar correo */}
+      <button
+        onClick={() => navigate("/coordinator/email")}
+        className="bg-white hover:bg-gray-50 text-black font-semibold py-8 px-12 rounded-lg border-2 border-gray-300 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-4 min-w-[300px]"
+      >
+        <div className="bg-red-600 text-white p-3 rounded-lg">
+          <Mail size={28} />
+        </div>
+        <span className="text-lg">Enviar correo</span>
       </button>
     </div>
   );
