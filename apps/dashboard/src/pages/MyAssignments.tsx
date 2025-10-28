@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Eye, Edit, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../contexts/useSession";
@@ -12,6 +12,7 @@ export default function MyAssignments() {
     isLoading,
     isError,
     error,
+    refetch,
   } = useAssignments(docenteId);
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,6 +79,44 @@ export default function MyAssignments() {
   };
 
   const closeModal = () => setSelectedAssignment(null);
+
+  // Seed local assignments for demo if backend is not available
+  // Esto permite ver la UI aunque el backend no esté levantado.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("assignments_mock");
+      if ((!raw || raw === "[]") && docenteId) {
+        const sample = [
+          {
+            cursoCodigo: "TALLER_PROY",
+            cursoNombre: "Taller de Proyectos",
+            estadoRevision: "ASIGNADO",
+            docenteId: Number(docenteId),
+            syllabusId: 123,
+          },
+          {
+            cursoCodigo: "ALG2",
+            cursoNombre: "Algoritmos 2",
+            estadoRevision: "ANALIZANDO",
+            docenteId: Number(docenteId),
+            syllabusId: 124,
+          },
+          {
+            cursoCodigo: "INV_SYS",
+            cursoNombre: "Investigacion de Sistemas de informacion",
+            estadoRevision: "APROBADO",
+            docenteId: Number(docenteId),
+            syllabusId: 125,
+          },
+        ];
+        localStorage.setItem("assignments_mock", JSON.stringify(sample));
+        // refetch to pick up the seeded data
+        refetch?.();
+      }
+    } catch {
+      // ignore
+    }
+  }, [docenteId, refetch]);
 
   if (sessionLoading || isLoading) {
     return (

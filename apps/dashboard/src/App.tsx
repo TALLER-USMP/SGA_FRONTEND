@@ -3,6 +3,7 @@ import Layout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import MyAssignments from "./pages/MyAssignments";
 import CreateCourse from "./pages/SyllabusProcess";
+import NineStepDemo from "./pages/NineStepDemo";
 import Profile from "./pages/Profile";
 import { SessionProvider } from "./contexts/SessionProvider";
 
@@ -41,6 +42,14 @@ export default function App() {
             element={
               <Layout title="Crear nuevo curso">
                 <CreateCourse />
+              </Layout>
+            }
+          />
+          <Route
+            path="/nine-step-demo"
+            element={
+              <Layout title="NineStep Demo">
+                <NineStepDemo />
               </Layout>
             }
           />
