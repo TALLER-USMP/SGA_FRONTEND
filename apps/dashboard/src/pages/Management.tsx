@@ -4,6 +4,7 @@ import {
   getCurrentAcademicPeriod,
   getSemesterName,
 } from "../utils/academicPeriod";
+import { useToast } from "../hooks/useToast";
 
 interface Teacher {
   id: string;
@@ -18,6 +19,7 @@ interface Course {
 }
 
 export default function Management() {
+  const toast = useToast();
   const [academicPeriod, setAcademicPeriod] = useState<string>("");
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
@@ -110,23 +112,75 @@ export default function Management() {
     setCourseCode("");
   };
 
-  const handleSubmit = () => {
-    if (!selectedTeacher || !selectedCourse) {
-      alert("Por favor selecciona un docente y una asignatura");
+  const handleSubmit = async () => {
+    // Validaciones
+    if (!selectedTeacher) {
+      toast.error(
+        "Docente requerido",
+        "Por favor selecciona un docente antes de continuar",
+      );
       return;
     }
 
-    const assignmentData = {
-      teacher: selectedTeacher,
-      course: selectedCourse,
-      courseCode,
-      academicPeriod,
-      message,
-    };
+    if (!selectedCourse) {
+      toast.error(
+        "Asignatura requerida",
+        "Por favor selecciona una asignatura antes de continuar",
+      );
+      return;
+    }
 
-    console.log("Asignación creada:", assignmentData);
-    // Aquí iría la llamada al backend para crear la asignación
-    alert("Asignación enviada correctamente");
+    if (!message.trim()) {
+      toast.warning(
+        "Mensaje vacío",
+        "Se recomienda agregar un mensaje para el docente",
+      );
+    }
+
+    try {
+      const assignmentData = {
+        teacher: selectedTeacher,
+        course: selectedCourse,
+        courseCode,
+        academicPeriod,
+        message,
+      };
+
+      console.log("Asignación creada:", assignmentData);
+
+      // Simular llamada al backend
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Aquí iría la llamada real al backend:
+      // const response = await fetch('/api/assignments', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(assignmentData),
+      // });
+      // if (!response.ok) throw new Error('Error al crear asignación');
+
+      toast.success(
+        "¡Asignación exitosa!",
+        `Se asignó ${selectedCourse.name} a ${selectedTeacher.name} para el periodo ${academicPeriod}`,
+      );
+
+      // Limpiar formulario después de éxito
+      setTimeout(() => {
+        setSelectedTeacher(null);
+        setSelectedCourse(null);
+        setTeacherSearch("");
+        setCourseSearch("");
+        setCourseCode("");
+        setMessage("");
+        setCharCount(0);
+      }, 1500);
+    } catch (error) {
+      console.error("Error al crear asignación:", error);
+      toast.error(
+        "Error al asignar docente",
+        "Ocurrió un error al procesar la asignación. Por favor intenta nuevamente.",
+      );
+    }
   };
 
   const handleGoBack = () => {
