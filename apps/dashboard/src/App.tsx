@@ -1,10 +1,13 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "react-hot-toast";
 import Layout from "./layouts/MainLayout";
 import Home from "./pages/Home";
 import MyAssignments from "./pages/MyAssignments";
 import CreateCourse from "./pages/SyllabusProcess";
 import Profile from "./pages/Profile";
 import Management from "./pages/Management";
+import CoordinatorHome from "./pages/CoordinatorHome";
+import CoordinatorEmail from "./pages/CoordinatorEmail";
 import { SessionProvider } from "./contexts/SessionProvider";
 import { ToastProvider } from "./contexts/ToastContext";
 
@@ -13,6 +16,7 @@ export default function App() {
     <Router>
       <SessionProvider>
         <ToastProvider>
+          <Toaster position="top-right" />
           <Routes>
             <Route
               path="/"
@@ -60,6 +64,24 @@ export default function App() {
               element={
                 <Layout title="Asignar Docente">
                   <Management />
+                </Layout>
+              }
+            />
+          </Routes>
+          <Routes>
+            <Route
+              path="/coordinator"
+              element={
+                <Layout title="Coordinador">
+                  <CoordinatorHome />
+                </Layout>
+              }
+            />
+            <Route
+              path="/coordinator/email"
+              element={
+                <Layout title="Enviar correo">
+                  <CoordinatorEmail />
                 </Layout>
               }
             />
