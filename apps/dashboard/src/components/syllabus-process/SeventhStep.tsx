@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useSteps } from "../../contexts/StepsContext";
+import { useSyllabusContext } from "../../contexts/SyllabusContext";
 import { Step } from "../common/Step";
 import {
   useGetEvaluacion,
@@ -8,7 +10,9 @@ import {
 
 export default function SeventhStep() {
   const { nextStep } = useSteps();
-  const syllabusId = localStorage.getItem("syllabusId") ?? "";
+  const [searchParams] = useSearchParams();
+  const syllabusId = searchParams.get("id");
+  const { courseName } = useSyllabusContext();
   const { data, isLoading, isError, error, refetch } =
     useGetEvaluacion(syllabusId);
   const postMutation = usePostEvaluacion();
@@ -81,7 +85,7 @@ export default function SeventhStep() {
             </div>
           </div>
           <div className="mt-2 w-full bg-blue-50 border border-blue-100 rounded-md px-4 py-2 text-left">
-            {localStorage.getItem("syllabusNombre") || "TALLER DE PROYECTOS"}
+            {courseName || "TALLER DE PROYECTOS"}
           </div>
         </div>
 

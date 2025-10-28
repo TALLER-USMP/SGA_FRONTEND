@@ -15,11 +15,11 @@ export default function HomePage() {
   } as const;
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">bienvenido {role}</h1>
-
+    <div>
       {roleContent[role as keyof typeof roleContent] ?? (
-        <p className="text-gray-700">Rol no autorizado o sin contenido.</p>
+        <div className="p-6">
+          <p className="text-gray-700">Rol no autorizado o sin contenido.</p>
+        </div>
       )}
     </div>
   );
