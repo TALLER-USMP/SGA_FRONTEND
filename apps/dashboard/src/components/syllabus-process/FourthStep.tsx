@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import toast, { Toaster } from "react-hot-toast";
 import {
   useGetProgramacion,
   useCreateProgramacion,
@@ -47,8 +48,8 @@ export const FourthStep: React.FC = () => {
   const programacionId = searchParams.get("id");
 
   const { data, isLoading, error } = useGetProgramacion(asignaturaId);
-  const { mutate: create } = useCreateProgramacion();
-  const { mutate: update } = useUpdateProgramacion();
+  const { mutate: create, isPending: isCreating } = useCreateProgramacion();
+  const { mutate: update, isPending: isUpdating } = useUpdateProgramacion();
 
   const [unidadSel, setUnidadSel] = useState<string>("");
   const [semanaSel, setSemanaSel] = useState<string>("");
@@ -137,7 +138,10 @@ export const FourthStep: React.FC = () => {
 
   const handleSiguiente = () => {
     if (!esValido) {
-      alert("Completa todas las semanas con las horas exactas");
+      toast.error("Completa todas las semanas con las horas exactas", {
+        duration: 5000,
+        icon: "Warning",
+      });
       return;
     }
 
@@ -157,23 +161,52 @@ export const FourthStep: React.FC = () => {
       programacionGuardada: programacionFinal,
     };
 
+    const loadingToast = toast.loading("Guardando programación...");
+
     if (programacionId) {
       update(
         { id: programacionId, payload },
         {
-          onSuccess: () =>
-            navigate(`/syllabus/step5?asignaturaId=${asignaturaId}`),
-          onError: () => alert("Error al actualizar"),
+          onSuccess: () => {
+            toast.dismiss(loadingToast);
+            toast.success("¡Programación actualizada!", { duration: 3000 });
+            navigate(`/syllabus/step5?asignaturaId=${asignaturaId}`);
+          },
+          onError: () => {
+            toast.dismiss(loadingToast);
+            toast.error("Error al actualizar");
+          },
         },
       );
     } else {
       create(payload, {
-        onSuccess: (res: { id: string }) =>
-          navigate(`/syllabus/step5?asignaturaId=${asignaturaId}&id=${res.id}`),
-        onError: () => alert("Error al crear"),
+        onSuccess: (res: { id: string }) => {
+          toast.dismiss(loadingToast);
+          toast.success("¡Programación creada!", { duration: 3000 });
+          navigate(`/syllabus/step5?asignaturaId=${asignaturaId}&id=${res.id}`);
+        },
+        onError: () => {
+          toast.dismiss(loadingToast);
+          toast.error("Error al crear");
+        },
       });
     }
   };
+
+  // Toasts para carga y error
+  useEffect(() => {
+    if (isLoading) {
+      toast.loading("Cargando programación...", { id: "loading" });
+    } else {
+      toast.dismiss("loading");
+    }
+  }, [isLoading]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error("Error al cargar datos", { duration: 5000 });
+    }
+  }, [error]);
 
   if (isLoading)
     return <div className="p-8 text-center text-lg">Cargando...</div>;
@@ -184,6 +217,7 @@ export const FourthStep: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-center" reverseOrder={false} />
       <div className="p-8 max-w-6xl mx-auto ml-4">
         <div className="mb-10">
           <h3 className="text-xl font-semibold mb-4">4. Unidades</h3>
@@ -283,10 +317,10 @@ export const FourthStep: React.FC = () => {
           </button>
           <button
             onClick={handleSiguiente}
-            disabled={!esValido}
+            disabled={!esValido || isCreating || isUpdating}
             className="px-8 py-3 bg-blue-600 text-white rounded-lg disabled:opacity-50 hover:bg-blue-700 transition text-base"
           >
-            Siguiente
+            {isCreating || isUpdating ? "Guardando..." : "Siguiente"}
           </button>
         </div>
       </div>
