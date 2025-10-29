@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react"; // asegúrate de tener useEffect importado
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../contexts/useSession";
 import { getRoleName } from "../constants/roles";
@@ -36,6 +36,21 @@ export default function Profile() {
     photo: null,
   });
 
+  // ✅ Actualiza automáticamente nombre y apellidos cuando el usuario se carga
+  useEffect(() => {
+    if (user && user.name) {
+      const parts = user.name.trim().split(" ");
+      const firstName = parts.slice(0, 2).join(" "); // primeras 2 palabras
+      const lastName = parts.slice(2).join(" "); // el resto
+      setProfileData((prev) => ({
+        ...prev,
+        firstName,
+        lastName,
+        email: user.email ?? "",
+      }));
+    }
+  }, [user]);
+
   const [isEditing, setIsEditing] = useState(false);
 
   const handleInputChange = (field: keyof ProfileData, value: string) => {
@@ -59,10 +74,38 @@ export default function Profile() {
     }
   };
 
-  const handleSave = () => {
-    // Aquí iría la lógica para guardar en el backend
-    console.log("Datos del perfil a guardar:", profileData);
-    setIsEditing(false);
+  // 🧠 Implementación del Guardar (conectado al backend)
+  const handleSave = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:7071/api/docente/${user?.id}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            nombre: `${profileData.firstName} ${profileData.lastName}`.trim(),
+            correo: profileData.email,
+            grado: profileData.profession,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert("✅ Perfil actualizado correctamente");
+        console.log("Respuesta del servidor:", data);
+        setIsEditing(false);
+      } else {
+        alert(`❌ Error: ${data.message || "No se pudo actualizar el perfil"}`);
+        console.error("Error:", data);
+      }
+    } catch (error) {
+      console.error("Error al guardar perfil:", error);
+      alert("⚠️ Ocurrió un error al guardar los cambios.");
+    }
   };
 
   const handleCancel = () => {
