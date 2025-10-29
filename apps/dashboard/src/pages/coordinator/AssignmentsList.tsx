@@ -295,12 +295,12 @@ export default function AssignmentsList() {
               // Guardar toda la información en el contexto
               setSelectedDocenteId(assignment.docenteId);
               setSelectedSilaboId(assignment.syllabusId ?? null);
-              setSelectedDocenteName(assignment.docenteNombre ?? "Docente");
+              setSelectedDocenteName(assignment.nombreDocente ?? "Docente");
               setSelectedCourseName(assignment.cursoNombre);
               setSelectedCourseCode(assignment.cursoCodigo);
 
               navigate(
-                `/coordinator/syllabus-management?courseName=${encodeURIComponent(assignment.cursoNombre)}&teacherName=${encodeURIComponent(assignment.docenteNombre || "Docente")}&courseCode=${encodeURIComponent(assignment.cursoCodigo)}`,
+                `/coordinator/syllabus-management?courseName=${encodeURIComponent(assignment.cursoNombre)}&teacherName=${encodeURIComponent(assignment.nombreDocente || "Docente")}&courseCode=${encodeURIComponent(assignment.cursoCodigo)}`,
               );
             }}
           >
@@ -311,9 +311,9 @@ export default function AssignmentsList() {
                   <h3 className="text-lg font-medium text-gray-800">
                     {assignment.cursoNombre}
                   </h3>
-                  {assignment.docenteNombre && (
+                  {assignment.nombreDocente && (
                     <p className="text-sm text-gray-500">
-                      {assignment.docenteNombre}
+                      {assignment.nombreDocente}
                     </p>
                   )}
                 </div>

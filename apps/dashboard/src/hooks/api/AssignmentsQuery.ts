@@ -6,7 +6,7 @@ export interface Assignment {
   cursoNombre: string;
   estadoRevision: string;
   docenteId: number;
-  docenteNombre?: string;
+  nombreDocente?: string; // ← Backend usa "nombreDocente"
   areaCurricular?: string;
   syllabusId?: number;
 }
