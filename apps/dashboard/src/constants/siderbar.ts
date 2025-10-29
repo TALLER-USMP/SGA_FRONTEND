@@ -6,8 +6,8 @@ export const sidebarMenusByRole = {
   coordinadora_academica: [
     { to: "/", label: "Inicio" },
     {
-      to: "/mis-asignaciones",
-      label: "Mis Asignaciones",
+      to: "/coordinator/assignments",
+      label: "Gestión de Asignaturas",
     },
   ],
   director: [

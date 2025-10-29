@@ -25,6 +25,22 @@ class AssignmentsManager {
     const data = Array.isArray(json) ? json : json?.data;
     return (data ?? []) as Assignment[];
   }
+
+  async fetchAll(baseUrl?: string) {
+    const apiBase =
+      baseUrl ??
+      import.meta.env.VITE_API_BASE_URL ??
+      "http://localhost:7071/api";
+    const url = `${apiBase}/assignments`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      const t = await res.text();
+      throw new Error(`${res.status} ${t}`);
+    }
+    const json = await res.json();
+    const data = Array.isArray(json) ? json : json?.data;
+    return (data ?? []) as Assignment[];
+  }
 }
 
 export const assignmentsManager = new AssignmentsManager();
@@ -38,6 +54,18 @@ export const useAssignments = (
     queryFn: () =>
       assignmentsManager.fetchByDocente(docenteId as number | string),
     enabled: docenteId !== null && docenteId !== undefined,
+    retry: false,
+    staleTime: 60_000,
+    ...options,
+  });
+};
+
+export const useAllAssignments = (
+  options?: UseQueryOptions<Assignment[], Error>,
+) => {
+  return useQuery<Assignment[], Error>({
+    queryKey: ["assignments", "all"],
+    queryFn: () => assignmentsManager.fetchAll(),
     retry: false,
     staleTime: 60_000,
     ...options,
