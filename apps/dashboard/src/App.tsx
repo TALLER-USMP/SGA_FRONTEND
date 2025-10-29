@@ -1,70 +1,69 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Layout from "./layouts/MainLayout";
-import Home from "./pages/Home";
-import MyAssignments from "./pages/MyAssignments";
-import CreateCourse from "./pages/SyllabusProcess";
-import Profile from "./pages/Profile";
-import Management from "./pages/Management";
-import { SessionProvider } from "./contexts/SessionProvider";
-import { ToastProvider } from "./contexts/ToastContext";
+import { Toaster } from "sonner";
+import MyAssignmentsPage from "./features/assignments/pages/my-assignments";
+import ManagementPage from "./features/assignments/pages/management";
+import SyllabusProcessPage from "./features/syllabus/pages/syllabus-process";
+import { SessionProvider } from "./features/auth/contexts/session-provider";
+import MainLayout from "./common/layouts/main-layout";
+import { HomePage } from "./features/home";
+import { ProfilePage } from "./features/auth";
 
 export default function App() {
   return (
     <Router>
       <SessionProvider>
-        <ToastProvider>
-          <Routes>
-            <Route
-              path="/"
-              element={
-                <Layout title="Inicio">
-                  <Home />
-                </Layout>
-              }
-            />
-            <Route
-              path="/mis-asignaciones"
-              element={
-                <Layout title="Mis sílabos">
-                  <MyAssignments />
-                </Layout>
-              }
-            />
-            <Route
-              path="/MyAssignmentsTeacher"
-              element={
-                <Layout title="Mis sílabos">
-                  <MyAssignments />
-                </Layout>
-              }
-            />
+        <Toaster position="top-right" richColors closeButton />
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <MainLayout title="Inicio">
+                <HomePage />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/mis-asignaciones"
+            element={
+              <MainLayout title="Mis sílabos">
+                <MyAssignmentsPage />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/MyAssignmentsTeacher"
+            element={
+              <MainLayout title="Mis sílabos">
+                <MyAssignmentsPage />
+              </MainLayout>
+            }
+          />
 
-            <Route
-              path="/syllabus"
-              element={
-                <Layout title="Crear nuevo curso">
-                  <CreateCourse />
-                </Layout>
-              }
-            />
-            <Route
-              path="/perfil"
-              element={
-                <Layout title="Perfil">
-                  <Profile />
-                </Layout>
-              }
-            />
-            <Route
-              path="/management"
-              element={
-                <Layout title="Asignar Docente">
-                  <Management />
-                </Layout>
-              }
-            />
-          </Routes>
-        </ToastProvider>
+          <Route
+            path="/syllabus"
+            element={
+              <MainLayout title="Crear nuevo curso">
+                <SyllabusProcessPage />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/perfil"
+            element={
+              <MainLayout title="Perfil">
+                <ProfilePage />
+              </MainLayout>
+            }
+          />
+          <Route
+            path="/management"
+            element={
+              <MainLayout title="Asignar Docente">
+                <ManagementPage />
+              </MainLayout>
+            }
+          />
+        </Routes>
       </SessionProvider>
     </Router>
   );
