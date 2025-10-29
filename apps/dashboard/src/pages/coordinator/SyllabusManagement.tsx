@@ -5,6 +5,10 @@ import { Button } from "../../components/ui/button";
 import { useCoordinator } from "../../contexts/CoordinatorContext";
 import { useSession } from "../../contexts/useSession";
 import { getRoleName } from "../../constants/roles";
+import {
+  usePermissions,
+  useSavePermissions,
+} from "../../hooks/api/PermissionsQuery";
 
 interface SyllabusSection {
   id: number;
@@ -29,7 +33,24 @@ export default function SyllabusManagement() {
     }
   }, [user, sessionLoading, navigate]);
 
-  const { viewMode } = useCoordinator();
+  const { viewMode, selectedDocenteId, selectedSilaboId } = useCoordinator();
+
+  // Obtener permisos del backend
+  const { data: permissions = [], isLoading: permissionsLoading } =
+    usePermissions(selectedDocenteId);
+
+  // Mutation para guardar permisos
+  const savePermissionsMutation = useSavePermissions();
+
+  // Validar que haya información del docente
+  useEffect(() => {
+    if (!selectedDocenteId || !selectedSilaboId) {
+      console.warn(
+        "No se encontró información del docente o sílabo. Redirigiendo...",
+      );
+      // Podríamos redireccionar, pero por ahora solo advertimos
+    }
+  }, [selectedDocenteId, selectedSilaboId]);
 
   const [sections, setSections] = useState<SyllabusSection[]>([
     { id: 1, title: "Datos generales", isEnabled: false, hasInfo: true },
@@ -63,14 +84,26 @@ export default function SyllabusManagement() {
     { id: 9, title: "Resultados (outcomes)", isEnabled: false, hasInfo: false },
   ]);
 
+  // Actualizar secciones cuando se cargan los permisos
+  useEffect(() => {
+    if (!permissionsLoading) {
+      setSections((prevSections) =>
+        prevSections.map((section) => ({
+          ...section,
+          isEnabled: permissions.some((p) => p.numeroSeccion === section.id),
+        })),
+      );
+    }
+  }, [permissions, permissionsLoading]);
+
   const handleToggle = (id: number) => {
     // En modo MICRO, los primeros 3 están bloqueados
     if (viewMode === "MICRO" && id <= 3) {
       return;
     }
 
-    setSections(
-      sections.map((section) =>
+    setSections((prevSections) =>
+      prevSections.map((section) =>
         section.id === id
           ? { ...section, isEnabled: !section.isEnabled }
           : section,
@@ -156,15 +189,41 @@ export default function SyllabusManagement() {
           Atrás
         </Button>
         <Button
-          onClick={() => {
-            // TODO: Validar que al menos una sección esté habilitada
-            navigate(
-              `/coordinator/send-to-teacher?teacherName=${encodeURIComponent(teacherName)}&courseCode=${searchParams.get("courseCode") || ""}`,
-            );
+          onClick={async () => {
+            // Validar que haya un docenteId y silaboId
+            if (!selectedDocenteId || !selectedSilaboId) {
+              alert("Error: No se encontró información del docente o sílabo");
+              return;
+            }
+
+            // Obtener las secciones habilitadas
+            const enabledSections = sections
+              .filter((section) => section.isEnabled)
+              .map((section) => ({ numeroSeccion: section.id }));
+
+            try {
+              // Guardar permisos (puede ser un array vacío si no hay permisos)
+              await savePermissionsMutation.mutateAsync({
+                silaboId: selectedSilaboId,
+                docenteId: selectedDocenteId,
+                permisos: enabledSections,
+              });
+
+              // Navegar a la siguiente pantalla
+              navigate(
+                `/coordinator/send-to-teacher?teacherName=${encodeURIComponent(teacherName)}&courseCode=${searchParams.get("courseCode") || ""}`,
+              );
+            } catch (error) {
+              console.error("Error al guardar permisos:", error);
+              alert(
+                "Error al guardar los permisos. Por favor, intente de nuevo.",
+              );
+            }
           }}
           className="px-6 py-2"
+          disabled={savePermissionsMutation.isPending || permissionsLoading}
         >
-          Siguiente
+          {savePermissionsMutation.isPending ? "Guardando..." : "Siguiente"}
         </Button>
       </div>
     </div>

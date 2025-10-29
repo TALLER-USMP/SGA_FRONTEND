@@ -3,13 +3,29 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { useSession } from "../../contexts/useSession";
 import { getRoleName } from "../../constants/roles";
+import { useCoordinator } from "../../contexts/CoordinatorContext";
+import { useSendMessage } from "../../hooks/api/MessagesQuery";
 
 export default function SendToTeacher() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const teacherName = searchParams.get("teacherName") || "Docente";
-  const courseCode = searchParams.get("courseCode") || "";
   const { user, isLoading: sessionLoading } = useSession();
+  const {
+    selectedDocenteName,
+    selectedCourseCode,
+    selectedCourseName,
+    selectedDocenteId,
+    selectedSilaboId,
+  } = useCoordinator();
+
+  // Obtener valores desde contexto o fallback a searchParams
+  const teacherName =
+    selectedDocenteName || searchParams.get("teacherName") || "Docente";
+  const courseCode = selectedCourseCode || searchParams.get("courseCode") || "";
+  const courseName = selectedCourseName || searchParams.get("courseName") || "";
+
+  // Mutation para enviar mensaje
+  const sendMessageMutation = useSendMessage();
 
   // Validar que el usuario sea coordinadora
   useEffect(() => {
@@ -27,6 +43,15 @@ export default function SendToTeacher() {
     mensaje: "",
   });
 
+  // Actualizar formulario cuando cambian los valores del contexto
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      destinatario: teacherName,
+      codigoAsignatura: courseCode,
+    }));
+  }, [teacherName, courseCode]);
+
   const maxCharacters = 400;
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -36,13 +61,41 @@ export default function SendToTeacher() {
     }
   };
 
-  const handleSubmit = () => {
-    // TODO: Implementar lógica de envío
-    // - Validar que los campos no estén vacíos
-    // - Enviar petición al backend para activar permisos
-    // - Mostrar mensaje de éxito/error
-    // - Redirigir a la vista anterior
-    alert("Funcionalidad de envío pendiente de implementación");
+  const handleSubmit = async () => {
+    // Validar que los campos no estén vacíos
+    if (!formData.destinatario.trim()) {
+      alert("Por favor, ingrese el nombre del destinatario");
+      return;
+    }
+
+    if (!formData.codigoAsignatura.trim()) {
+      alert("Por favor, ingrese el código de la asignatura");
+      return;
+    }
+
+    if (!formData.mensaje.trim()) {
+      alert("Por favor, ingrese un mensaje");
+      return;
+    }
+
+    try {
+      // Enviar mensaje
+      await sendMessageMutation.mutateAsync({
+        destinatario: formData.destinatario,
+        codigoAsignatura: formData.codigoAsignatura,
+        nombreAsignatura: courseName,
+        mensaje: formData.mensaje,
+        docenteId: selectedDocenteId ?? undefined,
+        silaboId: selectedSilaboId ?? undefined,
+      });
+
+      alert("Mensaje enviado exitosamente");
+      // Redirigir a la lista de asignaturas
+      navigate("/coordinator/assignments");
+    } catch (error) {
+      console.error("Error al enviar mensaje:", error);
+      alert("Error al enviar el mensaje. Por favor, intente de nuevo.");
+    }
   };
 
   return (
@@ -113,8 +166,9 @@ export default function SendToTeacher() {
         <Button
           onClick={handleSubmit}
           className="px-8 py-2 bg-red-600 hover:bg-red-700 text-white rounded-full"
+          disabled={sendMessageMutation.isPending}
         >
-          Enviar
+          {sendMessageMutation.isPending ? "Enviando..." : "Enviar"}
         </Button>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { Search, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../../contexts/useSession";
 import {
@@ -30,9 +30,19 @@ export default function AssignmentsList() {
     error,
   } = useAllAssignments();
 
-  const { viewMode, setViewMode } = useCoordinator();
+  const {
+    viewMode,
+    setViewMode,
+    setSelectedDocenteId,
+    setSelectedSilaboId,
+    setSelectedDocenteName,
+    setSelectedCourseName,
+    setSelectedCourseCode,
+  } = useCoordinator();
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchFilter, setSearchFilter] = useState<"curso" | "area">("curso");
+  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   type AssignmentStatus =
     | "APROBADO"
     | "ANALIZANDO"
@@ -40,6 +50,24 @@ export default function AssignmentsList() {
     | "ASIGNADO";
   type FilterStatus = "ALL" | AssignmentStatus;
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("ALL");
+
+  // Cerrar dropdown al hacer click fuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest(".filter-dropdown-container")) {
+        setShowFilterDropdown(false);
+      }
+    };
+
+    if (showFilterDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showFilterDropdown]);
 
   const statusConfig: Record<
     AssignmentStatus,
@@ -72,9 +100,16 @@ export default function AssignmentsList() {
   };
 
   const filteredAssignments = assignments.filter((assignment: Assignment) => {
-    const matchesSearch = assignment.cursoNombre
-      .toLowerCase()
-      .includes(searchTerm.toLowerCase());
+    const matchesSearch =
+      searchFilter === "curso"
+        ? assignment.cursoNombre
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase())
+        : assignment.areaCurricular
+          ? assignment.areaCurricular
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase())
+          : false;
     const matchesStatus =
       selectedStatus === "ALL" || assignment.estadoRevision === selectedStatus;
     return matchesSearch && matchesStatus;
@@ -132,19 +167,75 @@ export default function AssignmentsList() {
           </span>
         </div>
 
-        {/* Search Bar */}
-        <div className="relative flex-1 max-w-md mb-6">
-          <Search
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            size={20}
-          />
-          <input
-            type="text"
-            placeholder="Buscar curso..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          />
+        {/* Search Bar con Filtro */}
+        <div className="relative max-w-md mb-6">
+          <div className="flex items-center gap-2">
+            {/* Dropdown de filtros */}
+            <div className="relative filter-dropdown-container">
+              <button
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+              >
+                <span className="text-sm font-medium text-gray-700">
+                  {searchFilter === "curso"
+                    ? "Nombre de Curso"
+                    : "Área Curricular"}
+                </span>
+                <ChevronDown size={16} className="text-gray-500" />
+              </button>
+
+              {/* Dropdown menu */}
+              {showFilterDropdown && (
+                <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+                  <button
+                    onClick={() => {
+                      setSearchFilter("area");
+                      setShowFilterDropdown(false);
+                      setSearchTerm("");
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full ${searchFilter === "area" ? "bg-green-500" : "bg-gray-300"}`}
+                    ></div>
+                    <span className="text-sm text-gray-700">
+                      Área Curricular
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setSearchFilter("curso");
+                      setShowFilterDropdown(false);
+                      setSearchTerm("");
+                    }}
+                    className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                  >
+                    <div
+                      className={`w-2 h-2 rounded-full ${searchFilter === "curso" ? "bg-green-500" : "bg-gray-300"}`}
+                    ></div>
+                    <span className="text-sm text-gray-700">
+                      Nombre de Curso
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Search input */}
+            <div className="relative flex-1">
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={20}
+              />
+              <input
+                type="text"
+                placeholder="Buscar"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Filtros por estado */}
@@ -201,17 +292,31 @@ export default function AssignmentsList() {
             key={assignment.cursoCodigo}
             className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
             onClick={() => {
+              // Guardar toda la información en el contexto
+              setSelectedDocenteId(assignment.docenteId);
+              setSelectedSilaboId(assignment.syllabusId ?? null);
+              setSelectedDocenteName(assignment.docenteNombre ?? "Docente");
+              setSelectedCourseName(assignment.cursoNombre);
+              setSelectedCourseCode(assignment.cursoCodigo);
+
               navigate(
-                `/coordinator/syllabus-management?courseName=${encodeURIComponent(assignment.cursoNombre)}&teacherName=${encodeURIComponent(user?.name || "Docente")}&courseCode=${encodeURIComponent(assignment.cursoCodigo)}`,
+                `/coordinator/syllabus-management?courseName=${encodeURIComponent(assignment.cursoNombre)}&teacherName=${encodeURIComponent(assignment.docenteNombre || "Docente")}&courseCode=${encodeURIComponent(assignment.cursoCodigo)}`,
               );
             }}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
-                <h3 className="text-lg font-medium text-gray-800">
-                  {assignment.cursoNombre}
-                </h3>
+                <div className="flex flex-col">
+                  <h3 className="text-lg font-medium text-gray-800">
+                    {assignment.cursoNombre}
+                  </h3>
+                  {assignment.docenteNombre && (
+                    <p className="text-sm text-gray-500">
+                      {assignment.docenteNombre}
+                    </p>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-3">

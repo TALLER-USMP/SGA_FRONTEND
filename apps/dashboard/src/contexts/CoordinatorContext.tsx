@@ -7,6 +7,16 @@ type ViewMode = "MICRO" | "MACRO";
 interface CoordinatorContextType {
   viewMode: ViewMode;
   setViewMode: (mode: ViewMode) => void;
+  selectedDocenteId: number | null;
+  setSelectedDocenteId: (id: number | null) => void;
+  selectedSilaboId: number | null;
+  setSelectedSilaboId: (id: number | null) => void;
+  selectedDocenteName: string | null;
+  setSelectedDocenteName: (name: string | null) => void;
+  selectedCourseName: string | null;
+  setSelectedCourseName: (name: string | null) => void;
+  selectedCourseCode: string | null;
+  setSelectedCourseCode: (code: string | null) => void;
 }
 
 const CoordinatorContext = createContext<CoordinatorContextType | undefined>(
@@ -18,6 +28,19 @@ export function CoordinatorProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem("coordinatorViewMode");
     return (saved as ViewMode) || "MICRO";
   });
+  const [selectedDocenteId, setSelectedDocenteId] = useState<number | null>(
+    null,
+  );
+  const [selectedSilaboId, setSelectedSilaboId] = useState<number | null>(null);
+  const [selectedDocenteName, setSelectedDocenteName] = useState<string | null>(
+    null,
+  );
+  const [selectedCourseName, setSelectedCourseName] = useState<string | null>(
+    null,
+  );
+  const [selectedCourseCode, setSelectedCourseCode] = useState<string | null>(
+    null,
+  );
 
   const setViewMode = (mode: ViewMode) => {
     setViewModeState(mode);
@@ -25,7 +48,22 @@ export function CoordinatorProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <CoordinatorContext.Provider value={{ viewMode, setViewMode }}>
+    <CoordinatorContext.Provider
+      value={{
+        viewMode,
+        setViewMode,
+        selectedDocenteId,
+        setSelectedDocenteId,
+        selectedSilaboId,
+        setSelectedSilaboId,
+        selectedDocenteName,
+        setSelectedDocenteName,
+        selectedCourseName,
+        setSelectedCourseName,
+        selectedCourseCode,
+        setSelectedCourseCode,
+      }}
+    >
       {children}
     </CoordinatorContext.Provider>
   );
