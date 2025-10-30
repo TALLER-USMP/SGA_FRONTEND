@@ -3,6 +3,7 @@ import { useSaveSumilla, useSumilla } from "../hooks/second-step-query";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
+import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
 
 /**
  * Paso 2: formulario con validaciones básicas (no vacíos)
@@ -98,20 +99,22 @@ export default function SecondStep() {
           </div>
         </div>
 
-        <div>
-          <textarea
-            name="summary"
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="Escribe la sumilla aquí..."
-            rows={8}
-            disabled={isLoading}
-            className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-white border resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.summary ? "border-red-500" : "border-gray-300"} ${isLoading ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`}
-          />
-          {errors.summary && (
-            <div className="text-red-600 text-sm mt-1">{errors.summary}</div>
-          )}
-        </div>
+        <ReviewFieldWrapper fieldId="sumilla" orientation="vertical">
+          <div>
+            <textarea
+              name="summary"
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="Escribe la sumilla aquí..."
+              rows={8}
+              disabled={isLoading}
+              className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-white border resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.summary ? "border-red-500" : "border-gray-300"} ${isLoading ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`}
+            />
+            {errors.summary && (
+              <div className="text-red-600 text-sm mt-1">{errors.summary}</div>
+            )}
+          </div>
+        </ReviewFieldWrapper>
 
         {apiError && (
           <div className="text-red-600 text-sm mt-3">{apiError}</div>

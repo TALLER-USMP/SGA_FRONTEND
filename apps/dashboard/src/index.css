@@ -118,3 +118,54 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Estilos para modo revisión de sílabo - todos los campos readonly */
+.syllabus-review-readonly input:not([type="radio"]):not([type="checkbox"]),
+.syllabus-review-readonly textarea:not([data-review-comment="true"]) {
+  pointer-events: none !important;
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
+  cursor: not-allowed !important;
+}
+
+/* Permitir selects para navegación pero con estilo readonly */
+.syllabus-review-readonly select {
+  background-color: #f3f4f6 !important;
+  color: #6b7280 !important;
+}
+
+/* Permitir radios y checkboxes para navegación */
+.syllabus-review-readonly input[type="radio"],
+.syllabus-review-readonly input[type="checkbox"] {
+  cursor: pointer !important;
+}
+
+/* Bloquear TODOS los botones en modo revisión excepto los de revisión y navegación */
+.syllabus-review-readonly
+  button:not([data-review-button="true"]):not([data-navigation-button="true"]) {
+  pointer-events: none !important;
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+}
+
+/* Permitir botones de revisión */
+.syllabus-review-readonly button[data-review-button="true"] {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+
+/* Permitir botones de navegación (tabs, selects de unidades, etc) */
+.syllabus-review-readonly button[data-navigation-button="true"] {
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  cursor: pointer !important;
+}
+
+/* Permitir textarea de comentarios */
+.syllabus-review-readonly textarea[data-review-comment="true"] {
+  pointer-events: auto !important;
+  background-color: white !important;
+  color: #1f2937 !important;
+  cursor: text !important;
+}

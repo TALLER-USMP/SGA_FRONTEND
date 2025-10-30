@@ -1,8 +1,17 @@
 import type React from "react";
 import { useSteps } from "../contexts/steps-context-provider";
 
-const StepControls: React.FC<{ onNextStep: () => void }> = ({ onNextStep }) => {
+const StepControls: React.FC<{
+  onNextStep: () => void;
+  hideControls?: boolean;
+}> = ({ onNextStep, hideControls = false }) => {
   const { prevStep, isFirst, isLast } = useSteps();
+
+  // Don't show controls if hideControls is true
+  if (hideControls) {
+    return null;
+  }
+
   return (
     <div className="flex gap-2 justify-between w-full mt-6">
       <button

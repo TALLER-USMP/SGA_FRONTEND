@@ -1,25 +1,49 @@
 import { ClipboardList } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+interface ModuleCardProps {
+  icon: React.ReactNode;
+  title: string;
+  onClick: () => void;
+}
+
+function ModuleCard({ icon, title, onClick }: ModuleCardProps) {
+  return (
+    <button
+      onClick={onClick}
+      className="bg-white hover:bg-gray-50 border-2 border-gray-300 rounded-lg p-8 transition-all duration-200 shadow-sm hover:shadow-md flex flex-col items-center justify-center gap-4 aspect-square"
+    >
+      <div className="bg-red-600 text-white p-4 rounded-lg">{icon}</div>
+      <span className="text-base font-semibold text-black text-center">
+        {title}
+      </span>
+    </button>
+  );
+}
+
 export default function TeacherHome() {
   const navigate = useNavigate();
 
-  const handleModifySyllabus = () => {
-    navigate("/mis-asignaciones");
-  };
+  const modules = [
+    {
+      icon: <ClipboardList size={32} />,
+      title: "Modificar Sílabo",
+      onClick: () => navigate("/mis-asignaciones"),
+    },
+  ];
 
   return (
-    <div className="flex flex-col items-center justify-center gap-8 p-8 min-h-[60vh]">
-      {/* Botón Modificar Sílabo */}
-      <button
-        onClick={handleModifySyllabus}
-        className="bg-white hover:bg-gray-50 text-black font-semibold py-8 px-12 rounded-lg border-2 border-gray-300 transition-all duration-200 shadow-lg hover:shadow-xl flex items-center justify-center gap-4 min-w-[300px]"
-      >
-        <div className="bg-red-600 text-white p-3 rounded-lg">
-          <ClipboardList size={28} />
-        </div>
-        <span className="text-lg">Modificar Sílabo</span>
-      </button>
+    <div className="p-8 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {modules.map((module, index) => (
+          <ModuleCard
+            key={index}
+            icon={module.icon}
+            title={module.title}
+            onClick={module.onClick}
+          />
+        ))}
+      </div>
     </div>
   );
 }

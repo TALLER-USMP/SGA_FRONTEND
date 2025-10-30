@@ -4,6 +4,7 @@ import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
 import { useSyllabusGeneral } from "../hooks/first-step-query";
 import type { SyllabusGeneral } from "../hooks/first-step-query";
+import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
 
 export default function FirstStep() {
   const { nextStep } = useSteps();
@@ -243,132 +244,138 @@ export default function FirstStep() {
               Error cargando datos: {apiError}
             </div>
           )}
-          <div className="mb-6">
-            <div className="w-full h-12 rounded-md px-4 flex items-center text-lg bg-blue-50 border border-blue-100">
-              {form.nombreAsignatura || "TALLER DE PROYECTOS"}
-            </div>
-            {errors["nombreAsignatura"] && (
-              <div className="text-red-600 text-sm mt-1">
-                {errors["nombreAsignatura"]}
+          <ReviewFieldWrapper fieldId="nombreAsignatura" orientation="vertical">
+            <div className="mb-6">
+              <div className="w-full h-12 rounded-md px-4 flex items-center text-lg bg-blue-50 border border-blue-100">
+                {form.nombreAsignatura || "TALLER DE PROYECTOS"}
               </div>
-            )}
-          </div>
+              {errors["nombreAsignatura"] && (
+                <div className="text-red-600 text-sm mt-1">
+                  {errors["nombreAsignatura"]}
+                </div>
+              )}
+            </div>
+          </ReviewFieldWrapper>
 
           <div className="grid gap-4">
             {fields.map(([label, name]) => (
-              <div
+              <ReviewFieldWrapper
                 key={name}
-                className="grid grid-cols-[250px_24px_1fr] items-start gap-2 py-2 border-b last:border-b-0"
+                fieldId={name}
+                orientation="horizontal"
               >
-                <div className="text-sm text-gray-700 flex items-center">
-                  <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded w-full text-center">
-                    {label}
+                <div className="grid grid-cols-[250px_24px_1fr] items-start gap-2 py-2 border-b last:border-b-0">
+                  <div className="text-sm text-gray-700 flex items-center">
+                    <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded w-full text-center">
+                      {label}
+                    </div>
+                  </div>
+                  <div className="text-gray-400 flex items-center justify-left">
+                    -
+                  </div>
+                  <div className="pr-2">
+                    {name === "requisitos" ? (
+                      <div
+                        className={`w-full min-h-[44px] rounded-md px-3 py-2 bg-gray-100 text-left whitespace-pre-line ${errors[name] ? "border-red-500" : "border border-gray-300"}`}
+                      >
+                        {String(form[name] ?? "")
+                          .split(",")
+                          .map((req) => req.trim())
+                          .filter((req) => req)
+                          .join("\n")}
+                      </div>
+                    ) : name === "creditos" ? (
+                      <div className="flex gap-2">
+                        <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
+                          Teoría (
+                          {String(form.creditosTeoria || "").padStart(2, "0")})
+                        </div>
+                        <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
+                          Práctica (
+                          {String(form.creditosPractica || "").padStart(2, "0")}
+                          )
+                        </div>
+                        <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
+                          Total créditos (
+                          {String(form.creditosTotal || "").padStart(2, "0")})
+                        </div>
+                      </div>
+                    ) : name === "horas" ? (
+                      <div className="w-full rounded px-3 py-2 bg-gray-100 border border-gray-300 text-left">
+                        {`Teoría (${String(theoryTotal).padStart(2, "0")}) Práctica (${String(practiceTotal).padStart(2, "0")}) Total horas (${String(totalHours).padStart(2, "0")})`}
+                      </div>
+                    ) : name === "tipoEstudios" ? (
+                      <div className="flex gap-2">
+                        <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
+                          General (
+                          {form.tipoEstudios === "general" ||
+                          form.tipoEstudios?.toLowerCase() === "general"
+                            ? "X"
+                            : " "}
+                          )
+                        </div>
+                        <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
+                          Específica (
+                          {form.tipoEstudios === "especifica" ||
+                          form.tipoEstudios?.toLowerCase() === "específica" ||
+                          form.tipoEstudios?.toLowerCase() === "especifica"
+                            ? "X"
+                            : " "}
+                          )
+                        </div>
+                        <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
+                          Especialidad (
+                          {form.tipoEstudios === "especialidad" ||
+                          form.tipoEstudios?.toLowerCase() === "especialidad"
+                            ? "X"
+                            : " "}
+                          )
+                        </div>
+                      </div>
+                    ) : name === "modalidad" ? (
+                      <div className="flex gap-2">
+                        <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
+                          Presencial (
+                          {form.modalidad === "presencial" ||
+                          form.modalidad?.toLowerCase() === "presencial"
+                            ? "X"
+                            : " "}
+                          )
+                        </div>
+                        <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
+                          Semipresencial (
+                          {form.modalidad === "semipresencial" ||
+                          form.modalidad?.toLowerCase() === "semipresencial"
+                            ? "X"
+                            : " "}
+                          )
+                        </div>
+                        <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
+                          A distancia (
+                          {form.modalidad === "aDistancia" ||
+                          form.modalidad?.toLowerCase() === "a distancia"
+                            ? "X"
+                            : " "}
+                          )
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div
+                          className={`w-full rounded-md px-3 py-2 bg-gray-100 text-left ${errors[name] ? "border-red-500" : "border border-gray-300"}`}
+                        >
+                          {String(form[name] ?? "")}
+                        </div>
+                        {errors[name] && (
+                          <div className="text-red-600 text-sm mt-1">
+                            {errors[name]}
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
                 </div>
-                <div className="text-gray-400 flex items-center justify-left">
-                  -
-                </div>
-                <div className="pr-2">
-                  {name === "requisitos" ? (
-                    <div
-                      className={`w-full min-h-[44px] rounded-md px-3 py-2 bg-gray-100 text-left whitespace-pre-line ${errors[name] ? "border-red-500" : "border border-gray-300"}`}
-                    >
-                      {String(form[name] ?? "")
-                        .split(",")
-                        .map((req) => req.trim())
-                        .filter((req) => req)
-                        .join("\n")}
-                    </div>
-                  ) : name === "creditos" ? (
-                    <div className="flex gap-2">
-                      <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
-                        Teoría (
-                        {String(form.creditosTeoria || "").padStart(2, "0")})
-                      </div>
-                      <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
-                        Práctica (
-                        {String(form.creditosPractica || "").padStart(2, "0")})
-                      </div>
-                      <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
-                        Total créditos (
-                        {String(form.creditosTotal || "").padStart(2, "0")})
-                      </div>
-                    </div>
-                  ) : name === "horas" ? (
-                    <div className="w-full rounded px-3 py-2 bg-gray-100 border border-gray-300 text-left">
-                      {`Teoría (${String(theoryTotal).padStart(2, "0")}) Práctica (${String(practiceTotal).padStart(2, "0")}) Total horas (${String(totalHours).padStart(2, "0")})`}
-                    </div>
-                  ) : name === "tipoEstudios" ? (
-                    <div className="flex gap-2">
-                      <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
-                        General (
-                        {form.tipoEstudios === "general" ||
-                        form.tipoEstudios?.toLowerCase() === "general"
-                          ? "X"
-                          : " "}
-                        )
-                      </div>
-                      <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
-                        Específica (
-                        {form.tipoEstudios === "especifica" ||
-                        form.tipoEstudios?.toLowerCase() === "específica" ||
-                        form.tipoEstudios?.toLowerCase() === "especifica"
-                          ? "X"
-                          : " "}
-                        )
-                      </div>
-                      <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
-                        Especialidad (
-                        {form.tipoEstudios === "especialidad" ||
-                        form.tipoEstudios?.toLowerCase() === "especialidad"
-                          ? "X"
-                          : " "}
-                        )
-                      </div>
-                    </div>
-                  ) : name === "modalidad" ? (
-                    <div className="flex gap-2">
-                      <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
-                        Presencial (
-                        {form.modalidad === "presencial" ||
-                        form.modalidad?.toLowerCase() === "presencial"
-                          ? "X"
-                          : " "}
-                        )
-                      </div>
-                      <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
-                        Semipresencial (
-                        {form.modalidad === "semipresencial" ||
-                        form.modalidad?.toLowerCase() === "semipresencial"
-                          ? "X"
-                          : " "}
-                        )
-                      </div>
-                      <div className="flex-1 rounded-md px-3 py-2 bg-gray-100 border border-gray-300 text-center">
-                        A distancia (
-                        {form.modalidad === "aDistancia" ||
-                        form.modalidad?.toLowerCase() === "a distancia"
-                          ? "X"
-                          : " "}
-                        )
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div
-                        className={`w-full rounded-md px-3 py-2 bg-gray-100 text-left ${errors[name] ? "border-red-500" : "border border-gray-300"}`}
-                      >
-                        {String(form[name] ?? "")}
-                      </div>
-                      {errors[name] && (
-                        <div className="text-red-600 text-sm mt-1">
-                          {errors[name]}
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
+              </ReviewFieldWrapper>
             ))}
           </div>
         </div>
