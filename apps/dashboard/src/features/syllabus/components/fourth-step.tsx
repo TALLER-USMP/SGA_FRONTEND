@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from "sonner";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import {
@@ -51,7 +52,6 @@ const FourthStep: React.FC = () => {
   const [programacionForm, setProgramacionForm] = useState<
     Partial<ProgramacionResponse>
   >({});
-  const [toastMessage, setToastMessage] = useState<string>("");
 
   // Estado para almacenar cambios locales por semana
 
@@ -314,10 +314,9 @@ const FourthStep: React.FC = () => {
 
       nextStep();
     } catch (err) {
-      setToastMessage(
+      toast.error(
         err instanceof Error ? err.message : "Error guardando programación",
       );
-      setTimeout(() => setToastMessage(""), 4000);
     }
   };
 
@@ -427,9 +426,6 @@ const FourthStep: React.FC = () => {
         </h3>
         {/* Actividades */}
         <div className="mt-4">
-          {toastMessage && (
-            <div className="mb-2 text-sm text-red-600">{toastMessage}</div>
-          )}
           <LearningActivities
             actividades={
               (() => {
@@ -457,9 +453,7 @@ const FourthStep: React.FC = () => {
               }))
             }
             onLimitExceeded={(msg) => {
-              setToastMessage(msg);
-              // quitar mensaje después de 3s
-              setTimeout(() => setToastMessage(""), 3000);
+              toast.error(msg);
             }}
           />
         </div>
