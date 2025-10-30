@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Upload, X } from "lucide-react";
 import {
   useSendMail,
@@ -7,66 +7,23 @@ import {
   MAX_FILE_BYTES,
 } from "../../../common/hooks/useSendMail";
 import { toast } from "sonner";
-import { useSession } from "../../auth/hooks/use-session";
-import { getRoleName } from "../../../common/constants/roles";
-import { useCoordinator } from "../contexts/coordinator-context";
-import { useSendMessage } from "../hooks/messages-query";
 
 export default function SendEmail() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { user, isLoading: sessionLoading } = useSession();
-  const {
-    selectedDocenteName,
-    selectedCourseCode,
-    selectedCourseName,
-    selectedDocenteId,
-    selectedSilaboId,
-  } = useCoordinator();
+  const [recipient, setRecipient] = useState("");
+  const [courseCode, setCourseCode] = useState("");
+  const [message, setMessage] = useState("");
+  const [charCount, setCharCount] = useState(0);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const maxChars = 400;
 
-  // Obtener valores desde contexto o fallback a searchParams
-  const teacherName =
-    selectedDocenteName || searchParams.get("teacherName") || "Docente";
-  const courseCode = selectedCourseCode || searchParams.get("courseCode") || "";
-  const courseName = selectedCourseName || searchParams.get("courseName") || "";
-
-  // Mutation para enviar mensaje (API backend)
-  const sendMessageMutation = useSendMessage();
-  // Hook para enviar email con archivos adjuntos
   const { sendMail, isSending } = useSendMail();
 
-  // Validar que el usuario sea coordinadora
-  useEffect(() => {
-    if (!sessionLoading && user) {
-      const roleName = getRoleName(user.role);
-      if (roleName !== "coordinadora_academica") {
-        navigate("/");
-      }
-    }
-  }, [user, sessionLoading, navigate]);
-
-  const [formData, setFormData] = useState({
-    destinatario: teacherName,
-    codigoAsignatura: courseCode,
-    mensaje: "",
-  });
-
-  const [attachments, setAttachments] = useState<File[]>([]);
-  const maxCharacters = 400;
-
-  // Actualizar formulario cuando cambian los valores del contexto
-  useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      destinatario: teacherName,
-      codigoAsignatura: courseCode,
-    }));
-  }, [teacherName, courseCode]);
-
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const value = e.target.value;
-    if (value.length <= maxCharacters) {
-      setFormData({ ...formData, mensaje: value });
+    const text = e.target.value;
+    if (text.length <= maxChars) {
+      setMessage(text);
+      setCharCount(text.length);
     }
   };
 
@@ -92,55 +49,41 @@ export default function SendEmail() {
 
   const handleSubmit = async () => {
     // Validar que los campos no estén vacíos
-    if (!formData.destinatario.trim()) {
-      toast.error("Por favor, ingrese el nombre del destinatario");
+    if (!recipient.trim()) {
+      toast.error("Ingresa el destinatario");
       return;
     }
 
-    if (!formData.codigoAsignatura.trim()) {
-      toast.error("Por favor, ingrese el código de la asignatura");
+    if (!courseCode.trim()) {
+      toast.error("Ingresa el código de asignatura");
       return;
     }
 
-    if (!formData.mensaje.trim()) {
-      toast.error("Por favor, ingrese un mensaje");
+    if (!message.trim()) {
+      toast.error("Ingresa el mensaje");
       return;
     }
 
     try {
-      // 1. Enviar mensaje a la API (para notificaciones internas)
-      await sendMessageMutation.mutateAsync({
-        destinatario: formData.destinatario,
-        codigoAsignatura: formData.codigoAsignatura,
-        nombreAsignatura: courseName,
-        mensaje: formData.mensaje,
-        docenteId: selectedDocenteId ?? undefined,
-        silaboId: selectedSilaboId ?? undefined,
+      await sendMail({
+        to: recipient,
+        subject: `Notificación - Curso ${courseCode}`,
+        body: message,
+        files: attachments,
       });
-
-      // 2. Si hay archivos adjuntos, enviar email con archivos
-      if (attachments.length > 0) {
-        await sendMail({
-          to: formData.destinatario,
-          subject: `Notificación - Curso ${formData.codigoAsignatura}`,
-          body: formData.mensaje,
-          files: attachments,
-        });
-        toast.success("Mensaje y archivos enviados exitosamente");
-      } else {
-        toast.success("Mensaje enviado exitosamente");
-      }
-
-      // Redirigir a la lista de asignaturas
-      navigate("/coordinator/assignments");
-    } catch (error) {
-      console.error("Error al enviar mensaje:", error);
-      toast.error("Error al enviar el mensaje. Por favor, intente de nuevo.");
+      // Limpiar formulario después del éxito
+      setRecipient("");
+      setCourseCode("");
+      setMessage("");
+      setCharCount(0);
+      setAttachments([]);
+    } catch {
+      // El error ya se maneja en el hook con toast
     }
   };
 
   const handleGoBack = () => {
-    navigate(-1);
+    navigate("/");
   };
 
   return (
@@ -153,10 +96,8 @@ export default function SendEmail() {
           </label>
           <input
             type="text"
-            value={formData.destinatario}
-            onChange={(e) =>
-              setFormData({ ...formData, destinatario: e.target.value })
-            }
+            value={recipient}
+            onChange={(e) => setRecipient(e.target.value)}
             className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Nombre del destinatario"
           />
@@ -169,10 +110,8 @@ export default function SendEmail() {
           </label>
           <input
             type="text"
-            value={formData.codigoAsignatura}
-            onChange={(e) =>
-              setFormData({ ...formData, codigoAsignatura: e.target.value })
-            }
+            value={courseCode}
+            onChange={(e) => setCourseCode(e.target.value)}
             className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Código de la asignatura"
           />
@@ -185,14 +124,14 @@ export default function SendEmail() {
           </label>
           <div className="relative">
             <textarea
-              value={formData.mensaje}
+              value={message}
               onChange={handleMessageChange}
               placeholder="Se te han activado permisos para modificar el sílabo."
               rows={8}
               className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <div className="absolute bottom-3 right-3 text-xs text-gray-400">
-              {formData.mensaje.length}/{maxCharacters}
+              {charCount}/{maxChars}
             </div>
           </div>
         </div>
@@ -261,12 +200,10 @@ export default function SendEmail() {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={sendMessageMutation.isPending || isSending}
+            disabled={isSending}
             className="px-8 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {sendMessageMutation.isPending || isSending
-              ? "Enviando..."
-              : "Enviar"}
+            {isSending ? "Enviando..." : "Enviar"}
           </button>
         </div>
       </div>

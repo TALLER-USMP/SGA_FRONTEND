@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, ChevronDown } from "lucide-react";
+import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../../auth/hooks/use-session";
 import type { Assignment } from "../../assignments/hooks/assignments-query";
@@ -27,15 +27,6 @@ export default function PermissionsList() {
     isError,
     error,
   } = useAllAssignments();
-
-  // Log para debug
-  useEffect(() => {
-    console.log("👥 Assignments loaded:", assignments);
-    console.log("📊 Total count:", assignments.length);
-    if (assignments.length > 0) {
-      console.log("📋 Sample assignment:", assignments[0]);
-    }
-  }, [assignments]);
 
   const {
     viewMode,
@@ -106,17 +97,36 @@ export default function PermissionsList() {
     },
   };
 
+  // Normalizar área curricular para búsqueda
+  const normalizeAreaCurricular = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, ""); // Eliminar acentos
+  };
+
   const filteredAssignments = assignments.filter((assignment: Assignment) => {
-    const matchesSearch =
-      searchFilter === "curso"
-        ? assignment.cursoNombre
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())
-        : assignment.areaCurricular
-          ? assignment.areaCurricular
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase())
-          : false;
+    let matchesSearch = true;
+
+    if (searchTerm.trim()) {
+      if (searchFilter === "curso") {
+        matchesSearch = assignment.cursoNombre
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+      } else if (searchFilter === "area") {
+        // Filtrar por área curricular
+        if (!assignment.areaCurricular) {
+          matchesSearch = false;
+        } else {
+          const normalizedArea = normalizeAreaCurricular(
+            assignment.areaCurricular,
+          );
+          const normalizedSearch = normalizeAreaCurricular(searchTerm);
+          matchesSearch = normalizedArea.includes(normalizedSearch);
+        }
+      }
+    }
+
     const matchesStatus =
       selectedStatus === "ALL" || assignment.estadoRevision === selectedStatus;
     return matchesSearch && matchesStatus;
@@ -174,38 +184,49 @@ export default function PermissionsList() {
           </span>
         </div>
 
-        {/* Search Bar con Filtro */}
+        {/* Search Bar con Filtro integrado */}
         <div className="relative max-w-md mb-6">
-          <div className="flex items-center gap-2">
-            {/* Dropdown de filtros */}
-            <div className="relative filter-dropdown-container">
-              <button
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg bg-white hover:bg-gray-50 transition-colors"
-              >
-                <span className="text-sm font-medium text-gray-700">
-                  {searchFilter === "curso"
-                    ? "Nombre de Curso"
-                    : "Área Curricular"}
-                </span>
-                <ChevronDown size={16} className="text-gray-500" />
-              </button>
+          <div className="relative">
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={20}
+            />
+            <input
+              type="text"
+              placeholder={`Buscar por ${searchFilter === "curso" ? "Nombre de Curso" : "Área Curricular"}`}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onFocus={() => setShowFilterDropdown(true)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
 
-              {/* Dropdown menu */}
-              {showFilterDropdown && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
+            {/* Dropdown menu de filtros dentro del input */}
+            {showFilterDropdown && (
+              <>
+                {/* Overlay para cerrar al hacer clic fuera */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setShowFilterDropdown(false)}
+                ></div>
+
+                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
+                  <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
+                    <span className="text-xs font-semibold text-gray-600 uppercase">
+                      Filtrar por:
+                    </span>
+                  </div>
                   <button
                     onClick={() => {
                       setSearchFilter("area");
                       setShowFilterDropdown(false);
                       setSearchTerm("");
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center gap-3"
                   >
                     <div
                       className={`w-2 h-2 rounded-full ${searchFilter === "area" ? "bg-green-500" : "bg-gray-300"}`}
                     ></div>
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-gray-700 font-medium">
                       Área Curricular
                     </span>
                   </button>
@@ -215,33 +236,18 @@ export default function PermissionsList() {
                       setShowFilterDropdown(false);
                       setSearchTerm("");
                     }}
-                    className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors flex items-center gap-2"
+                    className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center gap-3"
                   >
                     <div
                       className={`w-2 h-2 rounded-full ${searchFilter === "curso" ? "bg-green-500" : "bg-gray-300"}`}
                     ></div>
-                    <span className="text-sm text-gray-700">
+                    <span className="text-sm text-gray-700 font-medium">
                       Nombre de Curso
                     </span>
                   </button>
                 </div>
-              )}
-            </div>
-
-            {/* Search input */}
-            <div className="relative flex-1">
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-              <input
-                type="text"
-                placeholder="Buscar"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
+              </>
+            )}
           </div>
         </div>
 
