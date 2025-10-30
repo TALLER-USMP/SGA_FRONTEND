@@ -30,6 +30,15 @@ export default function AssignmentsList() {
     error,
   } = useAllAssignments();
 
+  // Log para debug
+  useEffect(() => {
+    console.log("👥 Assignments loaded:", assignments);
+    console.log("📊 Total count:", assignments.length);
+    if (assignments.length > 0) {
+      console.log("📋 Sample assignment:", assignments[0]);
+    }
+  }, [assignments]);
+
   const {
     viewMode,
     setViewMode,

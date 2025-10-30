@@ -3,6 +3,7 @@ import { useSteps } from "../../contexts/StepsContext";
 import { useSyllabusContext } from "../../contexts/SyllabusContext";
 import { Step } from "../common/Step";
 import { useSyllabusGeneral } from "../../hooks/api/FirstStepQuery";
+import { secondStepManager } from "../../hooks/api/SecondStepQuery";
 import type { SyllabusGeneral } from "../../hooks/api/FirstStepQuery";
 
 export default function FirstStep() {
@@ -187,7 +188,7 @@ export default function FirstStep() {
     return e;
   };
 
-  const validateAndNext = () => {
+  const validateAndNext = async () => {
     const e = validate();
     if (Object.keys(e).length > 0) {
       const firstKey = Object.keys(e)[0];
@@ -215,6 +216,17 @@ export default function FirstStep() {
         // ignore
       }
     }
+
+    // Hacer petición GET de la sumilla antes de avanzar al Step 2
+    if (syllabusId) {
+      try {
+        await secondStepManager.fetchSumilla(syllabusId);
+      } catch (error) {
+        // Si hay error, solo lo registramos pero no bloqueamos el avance
+        console.warn("Error al cargar sumilla:", error);
+      }
+    }
+
     nextStep();
   };
 

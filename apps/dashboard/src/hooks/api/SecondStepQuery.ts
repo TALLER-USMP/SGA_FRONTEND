@@ -1,7 +1,10 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 
 export interface SumillaResponse {
-  sumilla?: string;
+  success: boolean;
+  content: Array<{
+    sumilla: string;
+  }>;
 }
 
 interface ApiErrorResponse {
@@ -29,7 +32,42 @@ class SecondStepManager {
       const t = await res.text();
       throw new Error(`${res.status} ${t}`);
     }
-    return (await res.json()) as SumillaResponse;
+    const data = (await res.json()) as SumillaResponse;
+    return data;
+  }
+
+  async postSumilla(
+    id: string,
+    sumilla: string,
+    baseUrl?: string,
+  ): Promise<void> {
+    const apiBase =
+      baseUrl ??
+      import.meta.env.VITE_API_BASE_URL ??
+      "http://localhost:7071/api";
+    const url = `${apiBase}/syllabus/${encodeURIComponent(id)}/sumilla`;
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sumilla }),
+    });
+    if (res.status === 200 || res.status === 201) return;
+
+    // intentar parsear error JSON
+    try {
+      const json = (await res.json()) as ApiErrorResponse;
+      const apiMessage = json?.message || json?.error;
+      if (apiMessage) throw new Error(apiMessage);
+      throw new Error(JSON.stringify(json));
+    } catch {
+      // fallback a texto simple
+      try {
+        const t = await res.text();
+        throw new Error(t || `Error ${res.status}`);
+      } catch {
+        throw new Error(`Error desconocido: ${res.status}`);
+      }
+    }
   }
 
   async putSumilla(
@@ -81,7 +119,14 @@ export const useSumilla = (syllabusId: string | null) => {
 };
 
 export const useSaveSumilla = () => {
-  return useMutation<void, Error, { id: string; sumilla: string }>({
-    mutationFn: ({ id, sumilla }) => secondStepManager.putSumilla(id, sumilla),
+  return useMutation<
+    void,
+    Error,
+    { id: string; sumilla: string; isUpdate: boolean }
+  >({
+    mutationFn: ({ id, sumilla, isUpdate }) =>
+      isUpdate
+        ? secondStepManager.putSumilla(id, sumilla)
+        : secondStepManager.postSumilla(id, sumilla),
   });
 };

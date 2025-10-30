@@ -34,13 +34,20 @@ class AssignmentsManager {
       import.meta.env.VITE_API_BASE_URL ??
       "http://localhost:7071/api";
     const url = `${apiBase}/assignments`;
+    console.log("🔍 Fetching all assignments from:", url);
     const res = await fetch(url);
     if (!res.ok) {
       const t = await res.text();
+      console.error("❌ Error fetching assignments:", res.status, t);
       throw new Error(`${res.status} ${t}`);
     }
     const json = await res.json();
+    console.log("📦 Response from API:", json);
+    console.log("📊 Is Array?", Array.isArray(json));
+    console.log("📊 Has data property?", json?.data);
     const data = Array.isArray(json) ? json : json?.data;
+    console.log("✅ Final assignments array:", data);
+    console.log("📈 Total assignments found:", data?.length ?? 0);
     return (data ?? []) as Assignment[];
   }
 }

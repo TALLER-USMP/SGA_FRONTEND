@@ -13,6 +13,7 @@ export default function SecondStep() {
   const [summary, setSummary] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
+  const [hasPreviousSumilla, setHasPreviousSumilla] = useState(false);
 
   // Load existing sumilla via query
   const { data, isLoading, isError, error } = useSumilla(syllabusId);
@@ -23,18 +24,27 @@ export default function SecondStep() {
       setApiError(error?.message ?? "Error cargando sumilla");
       return;
     }
-    if (!data) return;
-    if (data?.sumilla) {
-      setSummary(data.sumilla);
+    if (!data) {
+      setHasPreviousSumilla(false);
+      return;
+    }
+
+    // Verificar si hay contenido en el array
+    if (data.content && data.content.length > 0 && data.content[0].sumilla) {
+      const sumillaText = data.content[0].sumilla;
+      setSummary(sumillaText);
+      setHasPreviousSumilla(true);
       try {
-        localStorage.setItem("datos_sumilla", data.sumilla);
+        localStorage.setItem("datos_sumilla", sumillaText);
       } catch {
         /* ignore */
       }
+    } else {
+      // Array vacío o sin sumilla
+      setHasPreviousSumilla(false);
+      setSummary("");
     }
   }, [data, isError, error]);
-
-  // No need to define a raw mutation here, useSaveSumilla above
 
   const validateAndNext = async () => {
     const newErrors: Record<string, string> = {};
@@ -50,7 +60,12 @@ export default function SecondStep() {
         return;
       }
       try {
-        await saveSumilla.mutateAsync({ id, sumilla: summary });
+        // Usar POST si no había sumilla previa, PUT si ya existía
+        await saveSumilla.mutateAsync({
+          id,
+          sumilla: summary,
+          isUpdate: hasPreviousSumilla,
+        });
         nextStep();
       } catch (err: unknown) {
         if (err instanceof Error)
