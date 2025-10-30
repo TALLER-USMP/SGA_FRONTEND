@@ -1,4 +1,18 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import CoordinatorAssignments from "./features/coordinator/pages/coordinator-assignments";
+<Route
+  path="/coordinator/assignments"
+  element={
+    <MainLayout title="Asignaciones">
+      <CoordinatorAssignments />
+    </MainLayout>
+  }
+/>;
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 import { Toaster } from "sonner";
 import MyAssignmentsPage from "./features/assignments/pages/my-assignments";
 import ManagementPage from "./features/assignments/pages/management";
@@ -121,6 +135,9 @@ export default function App() {
               </MainLayout>
             }
           />
+
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </SessionProvider>
     </Router>
