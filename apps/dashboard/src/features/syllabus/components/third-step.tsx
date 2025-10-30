@@ -3,20 +3,30 @@ import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
 import { X, Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../common/components/ui/select";
 
 interface CompetenciaItem {
   id: string;
   text: string;
+  code: string;
 }
 
 interface ComponenteItem {
   id: string;
   text: string;
+  code: string;
 }
 
 interface ContenidoActitudinalItem {
   id: string;
   text: string;
+  code: string;
 }
 
 interface FormData {
@@ -30,30 +40,39 @@ export default function ThirdStep() {
   const { syllabusId, courseName } = useSyllabusContext();
   console.log("Syllabus ID in ThirdStep:", syllabusId, "Course:", courseName);
 
+  // Generar opciones de códigos de la A a la Z
+  const codeOptions = Array.from({ length: 26 }, (_, i) =>
+    String.fromCharCode(65 + i),
+  );
+
   const [formData, setFormData] = useState<FormData>({
     competencias: [
       {
         id: "1",
-        text: "Elabora y gestiona proyectos de diversa índole, vinculados a profesión. (g)",
+        text: "Elabora y gestiona proyectos de diversa índole, vinculados a profesión.",
+        code: "G",
       },
       {
         id: "2",
-        text: "Analizar un sistema complejo de computación y aplicar principios de computación y otras disciplinas relevantes para identificar soluciones. (i)",
+        text: "Analizar un sistema complejo de computación y aplicar principios de computación y otras disciplinas relevantes para identificar soluciones.",
+        code: "I",
       },
     ],
     componentes: [
       {
         id: "1",
-        text: "Elabora trabajos de aplicación a proyectos vinculados a la especialidad (g.1)",
+        text: "Elabora trabajos de aplicación a proyectos vinculados a la especialidad",
+        code: "A",
       },
       {
         id: "2",
-        text: "Gestiona proyectos de diversa índole, vinculados a la especialidad (g.2)",
+        text: "Gestiona proyectos de diversa índole, vinculados a la especialidad",
+        code: "B",
       },
     ],
     contenidosActitudinales: [
-      { id: "1", text: "Búsqueda de la verdad. (b)" },
-      { id: "2", text: "Compromiso ético en todo su quehacer. (c)" },
+      { id: "1", text: "Búsqueda de la verdad.", code: "A" },
+      { id: "2", text: "Compromiso ético en todo su quehacer.", code: "B" },
     ],
   });
 
@@ -62,7 +81,7 @@ export default function ThirdStep() {
     const newId = Date.now().toString();
     setFormData((prev) => ({
       ...prev,
-      [section]: [...prev[section], { id: newId, text: "" }],
+      [section]: [...prev[section], { id: newId, text: "", code: "A" }],
     }));
   };
 
@@ -80,6 +99,20 @@ export default function ThirdStep() {
       ...prev,
       [section]: prev[section].map((item) =>
         item.id === id ? { ...item, text } : item,
+      ),
+    }));
+  };
+
+  // Update item code
+  const updateItemCode = (
+    section: keyof FormData,
+    id: string,
+    code: string,
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [section]: prev[section].map((item) =>
+        item.id === id ? { ...item, code } : item,
       ),
     }));
   };
@@ -140,16 +173,37 @@ export default function ThirdStep() {
           </h3>
           <div className="space-y-3">
             {formData.competencias.map((item) => (
-              <div key={item.id} className="flex items-center gap-3">
-                <textarea
-                  value={item.text}
-                  onChange={(e) =>
-                    updateItem("competencias", item.id, e.target.value)
-                  }
-                  className="flex-1 p-3 border border-gray-300 rounded-lg resize-none bg-gray-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={2}
-                  placeholder="Ingrese la competencia..."
-                />
+              <div key={item.id} className="flex items-start gap-3">
+                <div className="flex-1">
+                  <textarea
+                    value={item.text}
+                    onChange={(e) =>
+                      updateItem("competencias", item.id, e.target.value)
+                    }
+                    className="w-full p-3 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={2}
+                    placeholder="Ingrese la competencia..."
+                  />
+                </div>
+                <div className="w-24">
+                  <Select
+                    value={item.code}
+                    onValueChange={(value) =>
+                      updateItemCode("competencias", item.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full bg-white">
+                      <SelectValue placeholder="Código" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {codeOptions.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <button
                   onClick={() => removeItem("competencias", item.id)}
                   className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
@@ -178,16 +232,37 @@ export default function ThirdStep() {
           </h3>
           <div className="space-y-3">
             {formData.componentes.map((item) => (
-              <div key={item.id} className="flex items-center gap-3">
-                <textarea
-                  value={item.text}
-                  onChange={(e) =>
-                    updateItem("componentes", item.id, e.target.value)
-                  }
-                  className="flex-1 p-3 border border-gray-300 rounded-lg resize-none bg-gray-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={2}
-                  placeholder="Ingrese el componente..."
-                />
+              <div key={item.id} className="flex items-start gap-3">
+                <div className="flex-1">
+                  <textarea
+                    value={item.text}
+                    onChange={(e) =>
+                      updateItem("componentes", item.id, e.target.value)
+                    }
+                    className="w-full p-3 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={2}
+                    placeholder="Ingrese el componente..."
+                  />
+                </div>
+                <div className="w-24">
+                  <Select
+                    value={item.code}
+                    onValueChange={(value) =>
+                      updateItemCode("componentes", item.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full bg-white">
+                      <SelectValue placeholder="Código" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {codeOptions.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <button
                   onClick={() => removeItem("componentes", item.id)}
                   className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
@@ -216,20 +291,41 @@ export default function ThirdStep() {
           </h3>
           <div className="space-y-3">
             {formData.contenidosActitudinales.map((item) => (
-              <div key={item.id} className="flex items-center gap-3">
-                <textarea
-                  value={item.text}
-                  onChange={(e) =>
-                    updateItem(
-                      "contenidosActitudinales",
-                      item.id,
-                      e.target.value,
-                    )
-                  }
-                  className="flex-1 p-3 border border-gray-300 rounded-lg resize-none bg-gray-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  rows={2}
-                  placeholder="Ingrese el contenido actitudinal..."
-                />
+              <div key={item.id} className="flex items-start gap-3">
+                <div className="flex-1">
+                  <textarea
+                    value={item.text}
+                    onChange={(e) =>
+                      updateItem(
+                        "contenidosActitudinales",
+                        item.id,
+                        e.target.value,
+                      )
+                    }
+                    className="w-full p-3 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    rows={2}
+                    placeholder="Ingrese el contenido actitudinal..."
+                  />
+                </div>
+                <div className="w-24">
+                  <Select
+                    value={item.code}
+                    onValueChange={(value) =>
+                      updateItemCode("contenidosActitudinales", item.id, value)
+                    }
+                  >
+                    <SelectTrigger className="w-full bg-white">
+                      <SelectValue placeholder="Código" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {codeOptions.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <button
                   onClick={() => removeItem("contenidosActitudinales", item.id)}
                   className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"

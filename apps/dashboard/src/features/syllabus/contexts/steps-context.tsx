@@ -16,7 +16,7 @@ const StepsProvider: React.FC<
 
   return (
     <StepsContext.Provider value={{ ...stepper }}>
-      <div className="flex flex-col items-center w-full h-full pt-2">
+      <div className="flex flex-col items-center w-full h-full">
         <div className="flex items-center justify-center mb-8">
           {steps.map((step, index) => (
             <div key={step} className="flex items-center">
@@ -44,7 +44,7 @@ const StepsProvider: React.FC<
             </div>
           ))}
         </div>
-        <div className="flex-1 w-full ">
+        <div className="flex-1 w-full pb-5">
           {renderedSteps.length > 0 ? renderedSteps : children}
         </div>
       </div>
