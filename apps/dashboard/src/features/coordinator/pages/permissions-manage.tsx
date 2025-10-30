@@ -1,128 +1,225 @@
-import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Info } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useCoordinator } from "../contexts/coordinator-context";
+import { useSession } from "../../auth/hooks/use-session";
+import { getRoleName } from "../../../common/constants/roles";
+import { usePermissions, useSavePermissions } from "../hooks/permissions-query";
 
-// Componente Switch personalizado
-interface SwitchProps {
-  checked: boolean;
-  onChange: (checked: boolean) => void;
-}
-
-function Switch({ checked, onChange }: SwitchProps) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        checked ? "bg-blue-600" : "bg-gray-300"
-      }`}
-    >
-      <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          checked ? "translate-x-6" : "translate-x-1"
-        }`}
-      />
-    </button>
-  );
-}
-
-interface SectionPermission {
-  id: string;
-  name: string;
-  enabled: boolean;
+interface SyllabusSection {
+  id: number;
+  title: string;
+  isEnabled: boolean;
+  hasInfo: boolean;
 }
 
 export default function PermissionsManage() {
-  // const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const teacherName = searchParams.get("teacherName") || "Docente";
+  const { user, isLoading: sessionLoading } = useSession();
 
-  // Mock data - reemplazar con datos del backend
-  const [teacherName] = useState("Norma Birginia Leon Lescano");
-  const [courseName] = useState("Taller de Proyectos");
+  // Validar que el usuario sea coordinadora
+  useEffect(() => {
+    if (!sessionLoading && user) {
+      const roleName = getRoleName(user.role);
+      if (roleName !== "coordinadora_academica") {
+        navigate("/");
+      }
+    }
+  }, [user, sessionLoading, navigate]);
 
-  const [sections, setSections] = useState<SectionPermission[]>([
-    { id: "1", name: "Datos Generales", enabled: false },
-    { id: "2", name: "Sumilla", enabled: false },
-    { id: "3", name: "Competencias y Componentes", enabled: false },
-    { id: "4", name: "Unidades", enabled: false },
-    { id: "5", name: "Estrategias Metodológicas", enabled: false },
-    { id: "6", name: "Recursos Didácticos", enabled: false },
-    { id: "7", name: "Evaluación del Aprendizaje", enabled: false },
-    { id: "8", name: "Fuentes de Consulta", enabled: false },
+  const { viewMode, selectedDocenteId, selectedSilaboId } = useCoordinator();
+
+  // Obtener permisos del backend
+  const { data: permissions = [], isLoading: permissionsLoading } =
+    usePermissions(selectedDocenteId);
+
+  // Mutation para guardar permisos
+  const savePermissionsMutation = useSavePermissions();
+
+  // Validar que haya información del docente
+  useEffect(() => {
+    if (!selectedDocenteId || !selectedSilaboId) {
+      console.warn(
+        "No se encontró información del docente o sílabo. Redirigiendo...",
+      );
+      // Podríamos redireccionar, pero por ahora solo advertimos
+    }
+  }, [selectedDocenteId, selectedSilaboId]);
+
+  const [sections, setSections] = useState<SyllabusSection[]>([
+    { id: 1, title: "Datos generales", isEnabled: false, hasInfo: true },
+    { id: 2, title: "Sumilla", isEnabled: false, hasInfo: true },
     {
-      id: "9",
-      name: "Aporte de la Asignatura al logro de resultados",
-      enabled: false,
+      id: 3,
+      title: "Competencias y componentes",
+      isEnabled: false,
+      hasInfo: true,
     },
+    {
+      id: 4,
+      title: "Programacion del contenido",
+      isEnabled: false,
+      hasInfo: false,
+    },
+    {
+      id: 5,
+      title: "Estrategias metodologicas",
+      isEnabled: false,
+      hasInfo: false,
+    },
+    { id: 6, title: "Recursos didacticos", isEnabled: false, hasInfo: false },
+    {
+      id: 7,
+      title: "Evaluacion de aprendizaje",
+      isEnabled: false,
+      hasInfo: false,
+    },
+    { id: 8, title: "Fuentes de consulta", isEnabled: false, hasInfo: false },
+    { id: 9, title: "Resultados (outcomes)", isEnabled: false, hasInfo: false },
   ]);
 
-  const handleToggle = (sectionId: string) => {
-    setSections((prev) =>
-      prev.map((section) =>
-        section.id === sectionId
-          ? { ...section, enabled: !section.enabled }
+  // Actualizar secciones cuando se cargan los permisos
+  useEffect(() => {
+    if (!permissionsLoading) {
+      setSections((prevSections) =>
+        prevSections.map((section) => ({
+          ...section,
+          isEnabled: permissions.some((p) => p.numeroSeccion === section.id),
+        })),
+      );
+    }
+  }, [permissions, permissionsLoading]);
+
+  const handleToggle = (id: number) => {
+    // En modo MICRO, los primeros 3 están bloqueados
+    if (viewMode === "MICRO" && id <= 3) {
+      return;
+    }
+
+    setSections((prevSections) =>
+      prevSections.map((section) =>
+        section.id === id
+          ? { ...section, isEnabled: !section.isEnabled }
           : section,
       ),
     );
   };
 
-  const handleSave = () => {
-    console.log("Guardando permisos:", sections);
-    // Aquí iría la llamada al backend
-    navigate("/coordinator/permissions");
+  const isDisabled = (id: number) => {
+    return viewMode === "MICRO" && id <= 3;
   };
 
-  const handleGoBack = () => {
-    navigate("/coordinator/permissions");
+  const handleSave = async () => {
+    // Validar que haya un docenteId y silaboId
+    if (!selectedDocenteId || !selectedSilaboId) {
+      alert("Error: No se encontró información del docente o sílabo");
+      return;
+    }
+
+    // Obtener las secciones habilitadas
+    const enabledSections = sections
+      .filter((section) => section.isEnabled)
+      .map((section) => ({ numeroSeccion: section.id }));
+
+    try {
+      // Guardar permisos (puede ser un array vacío si no hay permisos)
+      await savePermissionsMutation.mutateAsync({
+        silaboId: selectedSilaboId,
+        docenteId: selectedDocenteId,
+        permisos: enabledSections,
+      });
+
+      // Navegar a la siguiente pantalla
+      navigate(
+        `/coordinator/send-email?teacherName=${encodeURIComponent(teacherName)}&courseCode=${searchParams.get("courseCode") || ""}`,
+      );
+    } catch (error) {
+      console.error("Error al guardar permisos:", error);
+      alert("Error al guardar los permisos. Por favor, intente de nuevo.");
+    }
   };
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="bg-white border border-gray-300 rounded-lg p-8">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-black mb-2">
-            1. Gestión de Secciones del Silabo
-          </h1>
-          <h2 className="text-xl font-semibold text-black mb-4">
-            {teacherName}
-          </h2>
-          <p className="text-gray-600">{courseName}</p>
-        </div>
+    <div className="p-6 w-full mx-auto" style={{ maxWidth: "1400px" }}>
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+          I. Gestión de Secciones del Sílabo
+        </h1>
+        <p className="text-lg text-gray-700 font-medium">{teacherName}</p>
+      </div>
 
-        {/* Sections List */}
-        <div className="space-y-3 mb-8">
-          {sections.map((section, index) => (
+      {/* Lista de secciones */}
+      <div className="space-y-3">
+        {sections.map((section) => {
+          const disabled = isDisabled(section.id);
+          return (
             <div
               key={section.id}
-              className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+              className={`bg-white border border-gray-300 rounded-lg p-4 flex items-center justify-between hover:shadow-md transition-shadow ${
+                disabled ? "opacity-50" : ""
+              }`}
             >
-              <span className="text-gray-800">
-                {index + 1}. {section.name}
-              </span>
-              <Switch
-                checked={section.enabled}
-                onChange={() => handleToggle(section.id)}
-              />
-            </div>
-          ))}
-        </div>
+              <div className="flex items-center gap-3">
+                <span className="text-gray-700 font-medium">
+                  {section.id}. {section.title}
+                </span>
+              </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-between pt-6">
-          <button
-            onClick={handleGoBack}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
-          >
-            <ArrowLeft size={20} />
-            <span>Atrás</span>
-          </button>
-          <button
-            onClick={handleSave}
-            className="px-8 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Siguiente &gt;
-          </button>
-        </div>
+              <div className="flex items-center gap-3">
+                {/* Toggle Switch */}
+                <button
+                  onClick={() => handleToggle(section.id)}
+                  disabled={disabled}
+                  className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                    disabled ? "cursor-not-allowed" : ""
+                  }`}
+                  style={{
+                    backgroundColor: section.isEnabled ? "#4B5563" : "#D1D5DB",
+                  }}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                      section.isEnabled ? "translate-x-8" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+
+                {/* Info Icon */}
+                {section.hasInfo && (
+                  <button
+                    className="p-1 text-blue-500 hover:text-blue-700 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // TODO: Implementar modal de información de sección
+                    }}
+                  >
+                    <Info size={20} />
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Botones de navegación */}
+      <div className="flex gap-2 justify-between w-full mt-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        >
+          Atrás
+        </button>
+        <button
+          onClick={handleSave}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={savePermissionsMutation.isPending || permissionsLoading}
+        >
+          {savePermissionsMutation.isPending ? "Guardando..." : "Siguiente"}
+        </button>
       </div>
     </div>
   );
