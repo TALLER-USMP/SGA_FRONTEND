@@ -106,7 +106,7 @@ export default function SecondStep() {
             placeholder="Escribe la sumilla aquí..."
             rows={8}
             disabled={isLoading}
-            className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-gray-100 resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-200 ${errors.summary ? "ring-2 ring-red-400" : "border border-gray-200"} ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+            className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-white border resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.summary ? "border-red-500" : "border-gray-300"} ${isLoading ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`}
           />
           {errors.summary && (
             <div className="text-red-600 text-sm mt-1">{errors.summary}</div>

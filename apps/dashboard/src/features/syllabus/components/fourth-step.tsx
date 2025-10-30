@@ -2,6 +2,13 @@ import { useState } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
 import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../common/components/ui/select";
 
 // Tipos
 interface Activity {
@@ -82,7 +89,7 @@ const mockUnits: Unit[] = [
 
 export default function FourthStep() {
   const { nextStep } = useSteps();
-  const [units] = useState<Unit[]>(mockUnits);
+  const [units, setUnits] = useState<Unit[]>(mockUnits);
   const [selectedUnit, setSelectedUnit] = useState<string>(units[0]?.id || "");
   const [selectedWeek, setSelectedWeek] = useState<number>(1);
   const [expandedUnit, setExpandedUnit] = useState<string | null>(
@@ -104,24 +111,112 @@ export default function FourthStep() {
   };
 
   const handleAddActivity = () => {
-    console.log("Agregar nueva actividad");
-    // Lógica para agregar actividad
+    setUnits((prevUnits) =>
+      prevUnits.map((unit) => {
+        if (unit.id === selectedUnit) {
+          return {
+            ...unit,
+            weeks: unit.weeks.map((week) => {
+              if (week.id === selectedWeek) {
+                const newActivity: Activity = {
+                  id: Date.now().toString(),
+                  name: "",
+                  hours: 1,
+                };
+                return {
+                  ...week,
+                  activities: [...week.activities, newActivity],
+                };
+              }
+              return week;
+            }),
+          };
+        }
+        return unit;
+      }),
+    );
   };
 
   const handleRemoveActivity = (activityId: string) => {
-    console.log("Eliminar actividad:", activityId);
-    // Lógica para eliminar actividad
+    setUnits((prevUnits) =>
+      prevUnits.map((unit) => {
+        if (unit.id === selectedUnit) {
+          return {
+            ...unit,
+            weeks: unit.weeks.map((week) => {
+              if (week.id === selectedWeek) {
+                return {
+                  ...week,
+                  activities: week.activities.filter(
+                    (act) => act.id !== activityId,
+                  ),
+                };
+              }
+              return week;
+            }),
+          };
+        }
+        return unit;
+      }),
+    );
   };
 
   const handleUpdateActivityHours = (activityId: string, hours: number) => {
-    console.log("Actualizar horas de actividad:", activityId, hours);
-    // Lógica para actualizar horas
+    setUnits((prevUnits) =>
+      prevUnits.map((unit) => {
+        if (unit.id === selectedUnit) {
+          return {
+            ...unit,
+            weeks: unit.weeks.map((week) => {
+              if (week.id === selectedWeek) {
+                return {
+                  ...week,
+                  activities: week.activities.map((act) =>
+                    act.id === activityId ? { ...act, hours } : act,
+                  ),
+                };
+              }
+              return week;
+            }),
+          };
+        }
+        return unit;
+      }),
+    );
+  };
+
+  const handleUpdateActivityName = (activityId: string, name: string) => {
+    setUnits((prevUnits) =>
+      prevUnits.map((unit) => {
+        if (unit.id === selectedUnit) {
+          return {
+            ...unit,
+            weeks: unit.weeks.map((week) => {
+              if (week.id === selectedWeek) {
+                return {
+                  ...week,
+                  activities: week.activities.map((act) =>
+                    act.id === activityId ? { ...act, name } : act,
+                  ),
+                };
+              }
+              return week;
+            }),
+          };
+        }
+        return unit;
+      }),
+    );
   };
 
   return (
     <Step step={4} onNextStep={handleNextStep}>
-      <div className="w-full max-w-6xl mx-auto p-6">
-        <h2 className="text-2xl font-bold mb-6">4. Unidades</h2>
+      <div className="w-full p-6">
+        {/* Título alineado a la izquierda */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="text-lg font-bold text-black">4.</div>
+          <h2 className="text-lg font-semibold text-black">Unidades</h2>
+        </div>
 
         {/* Selector de Unidad */}
         <div className="mb-6">
@@ -132,7 +227,7 @@ export default function FourthStep() {
                   setSelectedUnit(unit.id);
                   setExpandedUnit(expandedUnit === unit.id ? null : unit.id);
                 }}
-                className="w-full flex items-center justify-between px-4 py-3 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 <span className="font-medium text-left">{unit.name}</span>
                 {expandedUnit === unit.id ? (
@@ -150,29 +245,36 @@ export default function FourthStep() {
           <div className="space-y-6">
             {/* Selector de Semanas */}
             <div>
-              <h3 className="text-xl font-semibold mb-4">4.1. Semanas</h3>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="text-base font-bold text-black">4.1.</div>
+                <h3 className="text-base font-semibold text-black">Semanas</h3>
+              </div>
               <div className="flex items-center gap-4 mb-4">
                 <div className="flex-1">
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Selecciona una semana
                   </label>
-                  <select
-                    value={selectedWeek}
-                    onChange={(e) => setSelectedWeek(Number(e.target.value))}
-                    className="w-full px-4 py-2 bg-black text-white rounded-lg"
+                  <Select
+                    value={selectedWeek.toString()}
+                    onValueChange={(value) => setSelectedWeek(Number(value))}
                   >
-                    {currentUnit.weeks.map((week) => (
-                      <option key={week.id} value={week.id}>
-                        {week.name}
-                      </option>
-                    ))}
-                  </select>
+                    <SelectTrigger className="w-full bg-white">
+                      <SelectValue placeholder="Selecciona una semana" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {currentUnit.weeks.map((week) => (
+                        <SelectItem key={week.id} value={week.id.toString()}>
+                          {week.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="flex-shrink-0">
-                  <label className="block text-sm font-medium mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Horas disponibles
                   </label>
-                  <div className="px-6 py-2 bg-black text-white rounded-lg text-center font-bold">
+                  <div className="px-6 py-2 bg-blue-600 text-white rounded-lg text-center font-bold">
                     {HOURS_PER_WEEK} Horas
                   </div>
                 </div>
@@ -185,13 +287,13 @@ export default function FourthStep() {
                 <div className="grid grid-cols-2 gap-4">
                   {/* Contenidos Conceptuales */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contenidos conceptuales
                     </label>
                     <textarea
                       value={currentWeek.conceptualContent}
                       readOnly
-                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-50"
+                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-100 text-gray-600"
                       placeholder="Contenidos conceptuales..."
                     />
                     <div className="text-right text-sm text-gray-500 mt-1">
@@ -201,13 +303,13 @@ export default function FourthStep() {
 
                   {/* Contenidos Procedimentales */}
                   <div>
-                    <label className="block text-sm font-medium mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Contenidos Procedimentales
                     </label>
                     <textarea
                       value={currentWeek.proceduralContent}
                       readOnly
-                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-50"
+                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-100 text-gray-600"
                       placeholder="Contenidos procedimentales..."
                     />
                     <div className="text-right text-sm text-gray-500 mt-1">
@@ -218,9 +320,12 @@ export default function FourthStep() {
 
                 {/* Actividades de Aprendizaje */}
                 <div>
-                  <h3 className="text-xl font-semibold mb-4">
-                    4.2. Actividades de Aprendizaje
-                  </h3>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="text-base font-bold text-black">4.2.</div>
+                    <h3 className="text-base font-semibold text-black">
+                      Actividades de Aprendizaje
+                    </h3>
+                  </div>
                   <div className="space-y-3">
                     {currentWeek.activities.map((activity) => (
                       <div
@@ -230,34 +335,42 @@ export default function FourthStep() {
                         <input
                           type="text"
                           value={activity.name}
-                          readOnly
-                          className="flex-1 px-4 py-2 bg-gray-200 rounded-lg"
-                        />
-                        <select
-                          value={activity.hours}
                           onChange={(e) =>
-                            handleUpdateActivityHours(
+                            handleUpdateActivityName(
                               activity.id,
-                              Number(e.target.value),
+                              e.target.value,
                             )
                           }
-                          className="w-24 px-3 py-2 bg-gray-200 rounded-lg text-center"
+                          placeholder="Nombre de la actividad..."
+                          className="flex-1 px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <Select
+                          value={activity.hours.toString()}
+                          onValueChange={(value) =>
+                            handleUpdateActivityHours(
+                              activity.id,
+                              Number(value),
+                            )
+                          }
                         >
-                          {Array.from(
-                            { length: HOURS_PER_WEEK + 1 },
-                            (_, i) => i,
-                          ).map((hour) => (
-                            <option key={hour} value={hour}>
-                              {hour} - h
-                            </option>
-                          ))}
-                        </select>
-                        <button className="p-2 hover:bg-gray-100 rounded-lg">
-                          <ChevronDown className="w-5 h-5" />
-                        </button>
+                          <SelectTrigger className="w-28 bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from(
+                              { length: HOURS_PER_WEEK + 1 },
+                              (_, i) => i,
+                            ).map((hour) => (
+                              <SelectItem key={hour} value={hour.toString()}>
+                                {hour}h
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                         <button
                           onClick={() => handleRemoveActivity(activity.id)}
-                          className="p-2 hover:bg-red-100 rounded-lg"
+                          className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                          disabled={currentWeek.activities.length <= 1}
                         >
                           <X className="w-5 h-5 text-red-600" />
                         </button>
@@ -267,7 +380,7 @@ export default function FourthStep() {
                     {/* Botón Agregar Actividad */}
                     <button
                       onClick={handleAddActivity}
-                      className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors"
+                      className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-gray-600"
                     >
                       <Plus className="w-5 h-5" />
                       <span>Agregar actividad</span>
@@ -275,9 +388,14 @@ export default function FourthStep() {
                   </div>
 
                   {/* Indicador de horas */}
-                  <div className="mt-4 text-sm text-gray-600">
-                    Horas usadas: {usedHours}/{HOURS_PER_WEEK} ({availableHours}{" "}
-                    horas disponibles)
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="text-sm text-gray-700">
+                      <span className="font-semibold">Horas usadas:</span>{" "}
+                      {usedHours}/{HOURS_PER_WEEK}
+                      <span className="ml-2 text-blue-600">
+                        ({availableHours} horas disponibles)
+                      </span>
+                    </div>
                   </div>
                 </div>
               </>
