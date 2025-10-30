@@ -1,54 +1,46 @@
 import { useState } from "react";
 import { Search, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-// Mock data - reemplazar con datos del backend
-interface Syllabus {
-  id: string;
-  courseName: string;
-  courseCode: string;
-  teacherName: string;
-  status: string;
-}
-
-const mockSyllabi: Syllabus[] = [
-  {
-    id: "1",
-    courseName: "Taller de Proyectos",
-    courseCode: "09072108042",
-    teacherName: "Norma Birginia Leon Lescano",
-    status: "EN_REVISION",
-  },
-  {
-    id: "2",
-    courseName: "Programación Orientada a Objetos",
-    courseCode: "09072108043",
-    teacherName: "Juan Manuel Huapalla García",
-    status: "EN_REVISION",
-  },
-  {
-    id: "3",
-    courseName: "Base de Datos",
-    courseCode: "09072108044",
-    teacherName: "María Elena García López",
-    status: "APROBADO",
-  },
-];
+import {
+  useAllAssignments,
+  type Assignment,
+} from "../../assignments/hooks/assignments-query";
 
 export default function PermissionsList() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  // Sin parámetro docenteId, obtiene todas las asignaciones
+  const {
+    data: assignments = [],
+    isLoading,
+    isError,
+    error,
+  } = useAllAssignments();
 
-  const filteredSyllabi = mockSyllabi.filter(
-    (syllabus) =>
-      syllabus.courseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      syllabus.courseCode.includes(searchTerm) ||
-      syllabus.teacherName.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredAssignments = assignments.filter((assignment: Assignment) => {
+    return (
+      assignment.cursoNombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      assignment.cursoCodigo.includes(searchTerm) ||
+      assignment.nombreDocente.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  });
 
-  const handleSelectSyllabus = (syllabusId: string) => {
+  const handleSelectSyllabus = (syllabusId: string | number) => {
     navigate(`/coordinator/permissions/${syllabusId}`);
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 text-center text-gray-600">Cargando sílabos...</div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="p-6 text-center text-red-500">
+        Error: {error?.message}
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
@@ -79,22 +71,26 @@ export default function PermissionsList() {
 
       {/* Syllabi List */}
       <div className="space-y-4">
-        {filteredSyllabi.map((syllabus) => (
+        {filteredAssignments.map((assignment) => (
           <div
-            key={syllabus.id}
-            onClick={() => handleSelectSyllabus(syllabus.id)}
+            key={assignment.syllabusId ?? assignment.cursoCodigo}
+            onClick={() =>
+              handleSelectSyllabus(
+                assignment.syllabusId ?? assignment.cursoCodigo,
+              )
+            }
             className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group"
           >
             <div className="flex items-center justify-between">
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                  {syllabus.courseName}
+                  {assignment.cursoNombre}
                 </h3>
                 <p className="text-sm text-gray-600 mb-1">
-                  Código: {syllabus.courseCode}
+                  Código: {assignment.cursoCodigo}
                 </p>
                 <p className="text-sm text-gray-600">
-                  Docente: {syllabus.teacherName}
+                  Docente: {assignment.nombreDocente}
                 </p>
               </div>
               <ChevronRight
@@ -106,7 +102,7 @@ export default function PermissionsList() {
         ))}
       </div>
 
-      {filteredSyllabi.length === 0 && (
+      {filteredAssignments.length === 0 && (
         <div className="text-center py-12 text-gray-500">
           No se encontraron sílabos que coincidan con tu búsqueda.
         </div>
