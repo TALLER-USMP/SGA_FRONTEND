@@ -223,6 +223,7 @@ export default function FourthStep() {
           {units.map((unit) => (
             <div key={unit.id} className="mb-2">
               <button
+                data-navigation-button="true"
                 onClick={() => {
                   setSelectedUnit(unit.id);
                   setExpandedUnit(expandedUnit === unit.id ? null : unit.id);
