@@ -1,409 +1,470 @@
-import { useState } from "react";
-import { Step } from "./step";
+import React, { useState, useEffect } from "react";
 import { useSteps } from "../contexts/steps-context-provider";
-import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
+import { useSyllabusContext } from "../contexts/syllabus-context";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../common/components/ui/select";
+  useGetProgramacion,
+  useCreateProgramacion,
+  useUpdateProgramacion,
+} from "../hooks/fourth-step-query";
+import type {
+  CreateProgramacionBody,
+  UpdateProgramacionBody,
+  ProgramacionResponse,
+} from "../hooks/fourth-step-query";
+import { UnitSelector } from "../../../common/unit-selector";
+import { WeekSelector } from "../../../common/week-selector";
+import { Step } from "./step";
+import { LearningActivities } from "../../../common/learning-activities";
+import type { ActividadEditable } from "../../../common/learning-activities";
 
-// Tipos
-interface Activity {
-  id: string;
-  name: string;
-  hours: number;
+interface Unidad {
+  id?: string | number;
+  numero?: number;
+  titulo?: string;
+  semanaInicio?: number;
+  semanaFin?: number;
+  semanas?: Array<{ numeroSemana: number; horasDisponibles?: number }>;
+  contenidosConceptuales?: string;
+  contenidosProcedimentales?: string;
+  actividadesAprendizaje?: string[] | string;
+  horasLectivasTeoria?: number;
+  horasLectivasPractica?: number;
+  horasNoLectivasTeoria?: number;
+  horasNoLectivasPractica?: number;
+  [key: string]: unknown;
+}
+// Tipo para datos por semana
+interface DatosPorSemana {
+  contenidosConceptuales: string;
+  contenidosProcedimentales: string;
+  actividadesAprendizaje: string[];
 }
 
-interface Week {
-  id: number;
-  name: string;
-  conceptualContent: string;
-  proceduralContent: string;
-  activities: Activity[];
-}
+const FourthStep: React.FC = () => {
+  const { cursoCodigo, syllabusId } = useSyllabusContext();
+  const silaboId = syllabusId ? Number(syllabusId) : 0;
+  const { data, isLoading } = useGetProgramacion(cursoCodigo ?? "");
+  const createProgramacion = useCreateProgramacion();
+  const updateProgramacion = useUpdateProgramacion();
+  const [selectedUnidad, setSelectedUnidad] = useState<number | null>(null);
+  const [selectedSemana, setSelectedSemana] = useState<string>("");
+  const [programacionForm, setProgramacionForm] = useState<
+    Partial<ProgramacionResponse>
+  >({});
+  const [toastMessage, setToastMessage] = useState<string>("");
 
-interface Unit {
-  id: string;
-  name: string;
-  weeks: Week[];
-}
+  // Estado para almacenar cambios locales por semana
 
-// Data mockeada
-const HOURS_PER_WEEK = 10;
+  const [cambiosLocales, setCambiosLocales] = useState<
+    Record<string, DatosPorSemana>
+  >({});
 
-const mockUnits: Unit[] = [
-  {
-    id: "1",
-    name: "Unidad I: DISEÑO DE SOLUCIONES INNOVADORAS",
-    weeks: [
-      {
-        id: 1,
-        name: "Semana 1",
-        conceptualContent:
-          "El taller y sus objetivos generales. El modelo de trabajo. Planteamiento del problema. El pensamiento de diseño y sus técnicas. Las necesidades del público objetivo y del entorno para entender a los usuarios.",
-        proceduralContent:
-          "El taller y sus objetivos generales. El modelo de trabajo. Planteamiento del problema. El pensamiento de diseño y sus técnicas. Las necesidades del público objetivo y del entorno para entender a los usuarios.",
-        activities: [
-          { id: "1", name: "Trabajo grupal en el proyecto", hours: 2 },
-          { id: "2", name: "Expone el proyecto final", hours: 2 },
-          { id: "3", name: "Reunión de coordinación diaria", hours: 3 },
-          { id: "4", name: "Crea informe final de proyecto", hours: 3 },
-        ],
-      },
-      {
-        id: 2,
-        name: "Semana 2",
-        conceptualContent: "Metodologías ágiles y gestión de proyectos.",
-        proceduralContent: "Aplicación práctica de metodologías ágiles.",
-        activities: [
-          { id: "5", name: "Sprint planning", hours: 2 },
-          { id: "6", name: "Daily standup", hours: 1 },
-        ],
-      },
-      {
-        id: 3,
-        name: "Semana 3",
-        conceptualContent: "Prototipado y validación de soluciones.",
-        proceduralContent: "Creación de prototipos funcionales.",
-        activities: [
-          { id: "7", name: "Desarrollo de prototipo", hours: 4 },
-          { id: "8", name: "Testing con usuarios", hours: 2 },
-        ],
-      },
-      {
-        id: 4,
-        name: "Semana 4",
-        conceptualContent: "Presentación y evaluación de proyectos.",
-        proceduralContent: "Preparación de presentación final.",
-        activities: [
-          { id: "9", name: "Preparación de presentación", hours: 3 },
-          { id: "10", name: "Presentación final", hours: 2 },
-        ],
-      },
-    ],
-  },
-];
+  const getSemanaKey = (unidad: number, semana: string) => {
+    return `unidad_${unidad}_semana_${semana}`;
+  };
 
-export default function FourthStep() {
+  // Función para guardar datos locales de la semana actual
+  const guardarDatosLocales = () => {
+    if (!selectedUnidad || !selectedSemana) return;
+
+    const unidadForm = programacionForm as Unidad;
+    const key = getSemanaKey(selectedUnidad, selectedSemana);
+
+    const actividadesArray = Array.isArray(unidadForm.actividadesAprendizaje)
+      ? unidadForm.actividadesAprendizaje
+      : typeof unidadForm.actividadesAprendizaje === "string"
+        ? unidadForm.actividadesAprendizaje
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+
+    setCambiosLocales((prev) => ({
+      ...prev,
+      [key]: {
+        contenidosConceptuales: unidadForm.contenidosConceptuales || "",
+        contenidosProcedimentales: unidadForm.contenidosProcedimentales || "",
+        actividadesAprendizaje: actividadesArray,
+      },
+    }));
+  };
+
+  // Función para cargar datos locales de una semana
+  const cargarDatosLocales = (unidad: number, semana: string) => {
+    const key = getSemanaKey(unidad, semana);
+    const datosGuardados = cambiosLocales[key];
+
+    if (datosGuardados) {
+      setProgramacionForm((prev) => ({
+        ...prev,
+        contenidosConceptuales: datosGuardados.contenidosConceptuales,
+        contenidosProcedimentales: datosGuardados.contenidosProcedimentales,
+        actividadesAprendizaje: datosGuardados.actividadesAprendizaje,
+      }));
+      return true;
+    }
+    return false;
+  };
+
+  useEffect(() => {
+    if (Array.isArray(data) && data.length) {
+      const first = data[0] as Unidad;
+      setProgramacionForm(first);
+      const num = Number(first.numero) || 1;
+      setSelectedUnidad(num);
+      setSelectedSemana(String(first.semanaInicio ?? ""));
+    }
+  }, [data]);
+  // Efecto para cambiar de unidad
+  useEffect(() => {
+    if (!Array.isArray(data) || !selectedUnidad) return;
+    const unit = data.find(
+      (d: Unidad) => Number(d.numero) === Number(selectedUnidad),
+    );
+    if (unit) {
+      setProgramacionForm(unit);
+      if (unit.semanaInicio) setSelectedSemana(String(unit.semanaInicio));
+    }
+  }, [selectedUnidad, data]);
+
+  // Efecto para guardar y cargar datos al cambiar de semana
+  useEffect(() => {
+    if (!selectedUnidad || !selectedSemana) return;
+
+    // Intentar cargar datos locales primero
+    const tieneLocal = cargarDatosLocales(selectedUnidad, selectedSemana);
+
+    // Si no hay datos locales, cargar desde la unidad actual
+    if (!tieneLocal && Array.isArray(data)) {
+      const unit = data.find(
+        (d: Unidad) => Number(d.numero) === Number(selectedUnidad),
+      );
+      if (unit) {
+        setProgramacionForm(unit);
+      }
+    }
+  }, [selectedSemana, selectedUnidad]);
+  const allSemanas: Array<{
+    numeroSemana: number;
+    horasDisponibles?: number;
+    unidadNumero?: number;
+  }> = (() => {
+    if (!data) return [];
+    if (Array.isArray(data)) {
+      const collected = data.flatMap(
+        (d: Unidad) =>
+          (d.semanas ?? []) as {
+            numeroSemana: number;
+            horasDisponibles?: number;
+          }[],
+      );
+      if (collected && collected.length) return collected;
+      return [];
+    }
+    const maybe = data as unknown as {
+      semanas?: Array<{ numeroSemana: number; horasDisponibles?: number }>;
+    };
+    if (maybe.semanas) return maybe.semanas;
+    return [];
+  })();
+  // Mapping fijo de unidades -> rango de semanas solicitado
+  const unitWeekRanges: Record<number, [number, number]> = {
+    1: [1, 4],
+    2: [5, 8],
+    3: [9, 12],
+    4: [13, 16],
+  };
+  const weeksForSelectedUnit = (() => {
+    if (!selectedUnidad) return [] as number[];
+    const range = unitWeekRanges[selectedUnidad];
+    if (!range) return [] as number[];
+    const arr: number[] = [];
+    for (let i = range[0]; i <= range[1]; i++) arr.push(i);
+    return arr;
+  })();
+  const horasDisponiblesForSelectedWeek = (() => {
+    const weekNum = Number(selectedSemana);
+    if (!weekNum) return 0;
+    const found = allSemanas.find((s) => Number(s.numeroSemana) === weekNum);
+    if (found && typeof found.horasDisponibles === "number")
+      return found.horasDisponibles;
+
+    const unidad = programacionForm as Unidad;
+    const sum =
+      Number(unidad.horasLectivasTeoria ?? 0) +
+      Number(unidad.horasLectivasPractica ?? 0) +
+      Number(unidad.horasNoLectivasTeoria ?? 0) +
+      Number(unidad.horasNoLectivasPractica ?? 0);
+
+    const range = unitWeekRanges[Number(unidad.numero)] || [0, 0];
+    const weeksCount = Math.max(1, range[1] - range[0] + 1);
+    return Math.floor(sum / weeksCount);
+  })();
   const { nextStep } = useSteps();
-  const [units, setUnits] = useState<Unit[]>(mockUnits);
-  const [selectedUnit, setSelectedUnit] = useState<string>(units[0]?.id || "");
-  const [selectedWeek, setSelectedWeek] = useState<number>(1);
-  const [expandedUnit, setExpandedUnit] = useState<string | null>(
-    units[0]?.id || null,
-  );
 
-  const currentUnit = units.find((u) => u.id === selectedUnit);
-  const currentWeek = currentUnit?.weeks.find((w) => w.id === selectedWeek);
+  const handleSave = async () => {
+    try {
+      // Primero guardar los datos de la semana actual
+      guardarDatosLocales();
 
-  // Calcular horas usadas en la semana actual
-  const usedHours =
-    currentWeek?.activities.reduce((sum, act) => sum + act.hours, 0) || 0;
-  const availableHours = HOURS_PER_WEEK - usedHours;
+      const unidadesConCambios = new Set<number>();
 
-  const handleNextStep = () => {
-    // Aquí iría la lógica de guardado
-    console.log("Guardando programación de contenidos...", units);
-    nextStep();
-  };
-
-  const handleAddActivity = () => {
-    setUnits((prevUnits) =>
-      prevUnits.map((unit) => {
-        if (unit.id === selectedUnit) {
-          return {
-            ...unit,
-            weeks: unit.weeks.map((week) => {
-              if (week.id === selectedWeek) {
-                const newActivity: Activity = {
-                  id: Date.now().toString(),
-                  name: "",
-                  hours: 1,
-                };
-                return {
-                  ...week,
-                  activities: [...week.activities, newActivity],
-                };
-              }
-              return week;
-            }),
-          };
+      // Identificar qué unidades tienen cambios
+      Object.keys(cambiosLocales).forEach((key) => {
+        const match = key.match(/unidad_(\d+)_semana_(\d+)/);
+        if (match) {
+          unidadesConCambios.add(Number(match[1]));
         }
-        return unit;
-      }),
-    );
-  };
+      });
 
-  const handleRemoveActivity = (activityId: string) => {
-    setUnits((prevUnits) =>
-      prevUnits.map((unit) => {
-        if (unit.id === selectedUnit) {
-          return {
-            ...unit,
-            weeks: unit.weeks.map((week) => {
-              if (week.id === selectedWeek) {
-                return {
-                  ...week,
-                  activities: week.activities.filter(
-                    (act) => act.id !== activityId,
-                  ),
-                };
-              }
-              return week;
-            }),
-          };
+      // Por cada unidad, consolidar los cambios de todas sus semanas
+      for (const numeroUnidad of Array.from(unidadesConCambios)) {
+        const unidadData = Array.isArray(data)
+          ? data.find((u: Unidad) => Number(u.numero) === numeroUnidad)
+          : null;
+
+        if (!unidadData) continue;
+
+        const unidad = unidadData as Unidad;
+        const range = unitWeekRanges[numeroUnidad];
+
+        if (!range) continue;
+
+        // Consolidar todas las actividades de todas las semanas de esta unidad
+        const todasLasActividades: string[] = [];
+        const contenidosConceptuales: string[] = [];
+        const contenidosProcedimentales: string[] = [];
+
+        for (let semana = range[0]; semana <= range[1]; semana++) {
+          const key = getSemanaKey(numeroUnidad, String(semana));
+          const datosSemana = cambiosLocales[key];
+
+          if (datosSemana) {
+            if (datosSemana.contenidosConceptuales) {
+              contenidosConceptuales.push(datosSemana.contenidosConceptuales);
+            }
+            if (datosSemana.contenidosProcedimentales) {
+              contenidosProcedimentales.push(
+                datosSemana.contenidosProcedimentales,
+              );
+            }
+            if (datosSemana.actividadesAprendizaje.length > 0) {
+              todasLasActividades.push(...datosSemana.actividadesAprendizaje);
+            }
+          }
         }
-        return unit;
-      }),
-    );
-  };
 
-  const handleUpdateActivityHours = (activityId: string, hours: number) => {
-    setUnits((prevUnits) =>
-      prevUnits.map((unit) => {
-        if (unit.id === selectedUnit) {
-          return {
-            ...unit,
-            weeks: unit.weeks.map((week) => {
-              if (week.id === selectedWeek) {
-                return {
-                  ...week,
-                  activities: week.activities.map((act) =>
-                    act.id === activityId ? { ...act, hours } : act,
-                  ),
-                };
-              }
-              return week;
-            }),
+        // Crear el string de actividades
+        const actividadesString =
+          todasLasActividades.length > 0
+            ? todasLasActividades.join(" , ")
+            : undefined;
+
+        // Preparar el payload
+        if (unidad.id) {
+          // Actualizar existente
+          const updatePayload: Partial<UpdateProgramacionBody> = {
+            silaboId,
+            numero: numeroUnidad,
+            titulo: unidad.titulo,
+            capacidadesText: unidad.capacidadesText as string | undefined,
+            semanaInicio: range[0],
+            semanaFin: range[1],
+            contenidosConceptuales:
+              contenidosConceptuales.join("\n\n") ||
+              unidad.contenidosConceptuales,
+            contenidosProcedimentales:
+              contenidosProcedimentales.join("\n\n") ||
+              unidad.contenidosProcedimentales,
+            actividadesAprendizaje: actividadesString,
+            horasLectivasTeoria: unidad.horasLectivasTeoria,
+            horasLectivasPractica: unidad.horasLectivasPractica,
+            horasNoLectivasTeoria: unidad.horasNoLectivasTeoria,
+            horasNoLectivasPractica: unidad.horasNoLectivasPractica,
           };
-        }
-        return unit;
-      }),
-    );
-  };
-
-  const handleUpdateActivityName = (activityId: string, name: string) => {
-    setUnits((prevUnits) =>
-      prevUnits.map((unit) => {
-        if (unit.id === selectedUnit) {
-          return {
-            ...unit,
-            weeks: unit.weeks.map((week) => {
-              if (week.id === selectedWeek) {
-                return {
-                  ...week,
-                  activities: week.activities.map((act) =>
-                    act.id === activityId ? { ...act, name } : act,
-                  ),
-                };
-              }
-              return week;
-            }),
+          await updateProgramacion.mutateAsync({
+            id: String(unidad.id),
+            payload: updatePayload,
+          });
+        } else {
+          // Crear nuevo
+          const body: CreateProgramacionBody = {
+            silaboId,
+            numero: numeroUnidad,
+            titulo: unidad.titulo || `Unidad ${numeroUnidad}`,
+            capacidadesText: unidad.capacidadesText as string | undefined,
+            semanaInicio: range[0],
+            semanaFin: range[1],
+            contenidosConceptuales:
+              contenidosConceptuales.join("\n\n") || undefined,
+            contenidosProcedimentales:
+              contenidosProcedimentales.join("\n\n") || undefined,
+            actividadesAprendizaje: actividadesString,
+            horasLectivasTeoria: unidad.horasLectivasTeoria,
+            horasLectivasPractica: unidad.horasLectivasPractica,
+            horasNoLectivasTeoria: unidad.horasNoLectivasTeoria,
+            horasNoLectivasPractica: unidad.horasNoLectivasPractica,
           };
+          await createProgramacion.mutateAsync(body);
         }
-        return unit;
-      }),
-    );
+      }
+
+      // Limpiar cambios locales después de guardar exitosamente
+      setCambiosLocales({});
+
+      nextStep();
+    } catch (err) {
+      setToastMessage(
+        err instanceof Error ? err.message : "Error guardando programación",
+      );
+      setTimeout(() => setToastMessage(""), 4000);
+    }
   };
 
+  const handleSemanaChange = (nuevaSemana: string) => {
+    guardarDatosLocales();
+
+    setSelectedSemana(nuevaSemana);
+  };
+
+  const handleUnidadChange = (nuevaUnidad: number | null) => {
+    if (nuevaUnidad === null) return;
+
+    guardarDatosLocales();
+
+    setSelectedUnidad(nuevaUnidad);
+  };
+
+  if (isLoading) return <div>Cargando...</div>;
   return (
-    <Step step={4} onNextStep={handleNextStep}>
-      <div className="w-full p-6">
-        {/* Título alineado a la izquierda */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="text-lg font-bold text-black">4.</div>
-          <h2 className="text-lg font-semibold text-black">Unidades</h2>
+    <Step step={4} onNextStep={handleSave}>
+      <div className="mb-4 w-full">
+        <h2 className="text-lg font-bold text-left w-full">4. Unidades</h2>
+        <UnitSelector
+          value={selectedUnidad}
+          onChange={handleUnidadChange}
+          options={
+            Array.isArray(data)
+              ? data.map((u) => ({
+                  value: Number((u as Unidad).numero) || 0,
+                  label:
+                    (u as Unidad).titulo || `Unidad ${(u as Unidad).numero}`,
+                }))
+              : []
+          }
+        />
+      </div>
+      <div className="mt-2 w-full">
+        <h3 className="text-lg font-bold text-left w-full">4.1 Semanas</h3>
+      </div>
+      <div className="flex items-center gap-4">
+        <div>
+          <WeekSelector
+            value={selectedSemana}
+            onChange={handleSemanaChange}
+            semanas={weeksForSelectedUnit.map((n) => ({ numeroSemana: n }))}
+            className="min-w-[150px] px-4 py-2 text-sm"
+          />
         </div>
-
-        {/* Selector de Unidad */}
-        <div className="mb-6">
-          {units.map((unit) => (
-            <div key={unit.id} className="mb-2">
-              <button
-                data-navigation-button="true"
-                onClick={() => {
-                  setSelectedUnit(unit.id);
-                  setExpandedUnit(expandedUnit === unit.id ? null : unit.id);
-                }}
-                className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors"
-              >
-                <span className="font-medium text-left">{unit.name}</span>
-                {expandedUnit === unit.id ? (
-                  <ChevronUp className="w-5 h-5" />
-                ) : (
-                  <ChevronDown className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {/* Contenido de la unidad seleccionada */}
-        {expandedUnit && currentUnit && (
-          <div className="space-y-6">
-            {/* Selector de Semanas */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="text-base font-bold text-black">4.1.</div>
-                <h3 className="text-base font-semibold text-black">Semanas</h3>
-              </div>
-              <div className="flex items-center gap-4 mb-4">
-                <div className="flex-1">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Selecciona una semana
-                  </label>
-                  <Select
-                    value={selectedWeek.toString()}
-                    onValueChange={(value) => setSelectedWeek(Number(value))}
-                  >
-                    <SelectTrigger className="w-full bg-white">
-                      <SelectValue placeholder="Selecciona una semana" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {currentUnit.weeks.map((week) => (
-                        <SelectItem key={week.id} value={week.id.toString()}>
-                          {week.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex-shrink-0">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Horas disponibles
-                  </label>
-                  <div className="px-6 py-2 bg-blue-600 text-white rounded-lg text-center font-bold">
-                    {HOURS_PER_WEEK} Horas
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Contenidos */}
-            {currentWeek && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Contenidos Conceptuales */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contenidos conceptuales
-                    </label>
-                    <textarea
-                      value={currentWeek.conceptualContent}
-                      readOnly
-                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-100 text-gray-600"
-                      placeholder="Contenidos conceptuales..."
-                    />
-                    <div className="text-right text-sm text-gray-500 mt-1">
-                      {currentWeek.conceptualContent.length}/400
-                    </div>
-                  </div>
-
-                  {/* Contenidos Procedimentales */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Contenidos Procedimentales
-                    </label>
-                    <textarea
-                      value={currentWeek.proceduralContent}
-                      readOnly
-                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-100 text-gray-600"
-                      placeholder="Contenidos procedimentales..."
-                    />
-                    <div className="text-right text-sm text-gray-500 mt-1">
-                      {currentWeek.proceduralContent.length}/400
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actividades de Aprendizaje */}
-                <div>
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="text-base font-bold text-black">4.2.</div>
-                    <h3 className="text-base font-semibold text-black">
-                      Actividades de Aprendizaje
-                    </h3>
-                  </div>
-                  <div className="space-y-3">
-                    {currentWeek.activities.map((activity) => (
-                      <div
-                        key={activity.id}
-                        className="flex items-center gap-3"
-                      >
-                        <input
-                          type="text"
-                          value={activity.name}
-                          onChange={(e) =>
-                            handleUpdateActivityName(
-                              activity.id,
-                              e.target.value,
-                            )
-                          }
-                          placeholder="Nombre de la actividad..."
-                          className="flex-1 px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <Select
-                          value={activity.hours.toString()}
-                          onValueChange={(value) =>
-                            handleUpdateActivityHours(
-                              activity.id,
-                              Number(value),
-                            )
-                          }
-                        >
-                          <SelectTrigger className="w-28 bg-white">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Array.from(
-                              { length: HOURS_PER_WEEK + 1 },
-                              (_, i) => i,
-                            ).map((hour) => (
-                              <SelectItem key={hour} value={hour.toString()}>
-                                {hour}h
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <button
-                          onClick={() => handleRemoveActivity(activity.id)}
-                          className="p-2 hover:bg-red-50 rounded-lg transition-colors"
-                          disabled={currentWeek.activities.length <= 1}
-                        >
-                          <X className="w-5 h-5 text-red-600" />
-                        </button>
-                      </div>
-                    ))}
-
-                    {/* Botón Agregar Actividad */}
-                    <button
-                      onClick={handleAddActivity}
-                      className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:text-blue-600 transition-colors text-gray-600"
-                    >
-                      <Plus className="w-5 h-5" />
-                      <span>Agregar actividad</span>
-                    </button>
-                  </div>
-
-                  {/* Indicador de horas */}
-                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <div className="text-sm text-gray-700">
-                      <span className="font-semibold">Horas usadas:</span>{" "}
-                      {usedHours}/{HOURS_PER_WEEK}
-                      <span className="ml-2 text-blue-600">
-                        ({availableHours} horas disponibles)
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+        <div className="ml-auto text-sm">
+          <div className="text-gray-500">Horas disponibles</div>
+          <div className="text-lg font-semibold">
+            {horasDisponiblesForSelectedWeek} h
           </div>
-        )}
+        </div>
+      </div>
+      {/* Contenidos conceptuales y procedimentales */}
+      <div className="mt-4 flex gap-4">
+        <div className="w-1/2">
+          <label className="block text-sm font-medium">
+            Contenidos conceptuales
+          </label>
+          <textarea
+            maxLength={400}
+            value={(programacionForm as Unidad).contenidosConceptuales ?? ""}
+            onChange={(e) =>
+              setProgramacionForm((prev) => ({
+                ...prev,
+                contenidosConceptuales: e.target.value,
+              }))
+            }
+            className="w-full p-2 border rounded"
+            rows={6}
+          />
+          <div className="text-xs text-gray-500">
+            {((programacionForm as Unidad).contenidosConceptuales ?? "").length}
+            /400
+          </div>
+        </div>
+        <div className="w-1/2">
+          <label className="block text-sm font-medium">
+            Contenidos procedimentales
+          </label>
+          <textarea
+            maxLength={400}
+            value={(programacionForm as Unidad).contenidosProcedimentales ?? ""}
+            onChange={(e) =>
+              setProgramacionForm((prev) => ({
+                ...prev,
+                contenidosProcedimentales: e.target.value,
+              }))
+            }
+            className="w-full p-2 border rounded"
+            rows={6}
+          />
+          <div className="text-xs text-gray-500">
+            {
+              ((programacionForm as Unidad).contenidosProcedimentales ?? "")
+                .length
+            }
+            /400
+          </div>
+        </div>
+      </div>
+      <div className="mt-6 w-full">
+        <h3 className="text-lg font-bold text-left w-full">
+          4.2 Actividades de Aprendizaje
+        </h3>
+        {/* Actividades */}
+        <div className="mt-4">
+          {toastMessage && (
+            <div className="mb-2 text-sm text-red-600">{toastMessage}</div>
+          )}
+          <LearningActivities
+            actividades={
+              (() => {
+                const raw = (programacionForm as Unidad).actividadesAprendizaje;
+                if (!raw) return [] as ActividadEditable[];
+
+                const arr: string[] = Array.isArray(raw)
+                  ? raw
+                  : String(raw)
+                      .split(",")
+                      .map((s) => s.trim())
+                      .filter(Boolean);
+                return arr.map((s, i) => ({
+                  id: Date.now() + i,
+                  nombre: s,
+                  horas: 1,
+                }));
+              })() as ActividadEditable[]
+            }
+            horasDisponibles={horasDisponiblesForSelectedWeek}
+            onChange={(acts: ActividadEditable[]) =>
+              setProgramacionForm((prev) => ({
+                ...prev,
+                actividadesAprendizaje: acts.map((a) => a.nombre),
+              }))
+            }
+            onLimitExceeded={(msg) => {
+              setToastMessage(msg);
+              // quitar mensaje después de 3s
+              setTimeout(() => setToastMessage(""), 3000);
+            }}
+          />
+        </div>
       </div>
     </Step>
   );
-}
+};
+export default FourthStep;
