@@ -15,7 +15,6 @@ import { HomePage } from "./features/home";
 import { ProfilePage } from "./features/auth";
 
 // Coordinator pages
-import CoordinatorAssignments from "./features/coordinator/pages/coordinator-assignments";
 import PermissionsList from "./features/coordinator/pages/permissions-list";
 import PermissionsManage from "./features/coordinator/pages/permissions-manage";
 import SendEmail from "./features/coordinator/pages/send-email";
@@ -77,7 +76,7 @@ export default function App() {
               path="/coordinator/assignments"
               element={
                 <MainLayout title="Asignaturas">
-                  <CoordinatorAssignments />
+                  <HomePage />
                 </MainLayout>
               }
             />
