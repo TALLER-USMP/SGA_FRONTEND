@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useSession } from "@/features/auth/hooks/use-session";
 import { getRoleName } from "@/common/constants/roles";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { User, Camera } from "lucide-react";
+import { Camera } from "lucide-react";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 
 // Mapeo de roles para el título
 const roleDisplayNames = {
@@ -29,10 +30,10 @@ export default function Profile() {
     roleDisplayNames[roleName as keyof typeof roleDisplayNames] || "Usuario";
 
   const [profileData, setProfileData] = useState<ProfileData>({
-    firstName: user?.name?.split(" ")[0] || "",
-    lastName: user?.name?.split(" ").slice(1).join(" ") || "",
+    firstName: "",
+    lastName: "",
     profession: "Ing. Software",
-    email: user?.email || "",
+    email: "",
     photo: null,
   });
 
@@ -58,7 +59,7 @@ export default function Profile() {
   };
 
   const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const file = event.target.files?.[0] || null;
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
@@ -71,7 +72,6 @@ export default function Profile() {
     }
   };
 
-  // ✅ MUTACIÓN con ruta relativa (funciona local y en producción)
   const updateProfileMutation = useMutation({
     mutationFn: async (updatedData: ProfileData) => {
       const response = await fetch(`/api/docente/${user?.id}`, {
@@ -94,14 +94,10 @@ export default function Profile() {
     onSuccess: async (data) => {
       alert("✅ Perfil actualizado correctamente");
       console.log("Respuesta del servidor:", data);
-
-      // 🔁 Refrescar sesión para mostrar los nuevos datos
       await queryClient.invalidateQueries({ queryKey: ["session"] });
-
       setIsEditing(false);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onError: (error: any) => {
+    onError: (error: Error) => {
       console.error("❌ Error al guardar perfil:", error);
       alert("⚠️ Ocurrió un error al guardar los cambios.");
     },
@@ -112,13 +108,15 @@ export default function Profile() {
   };
 
   const handleCancel = () => {
-    setProfileData({
-      firstName: user?.name?.split(" ")[0] || "",
-      lastName: user?.name?.split(" ").slice(1).join(" ") || "",
-      profession: "Ing. Software",
-      email: user?.email || "",
-      photo: null,
-    });
+    if (user) {
+      setProfileData({
+        firstName: user.name?.split(" ")[0] || "",
+        lastName: user.name?.split(" ").slice(1).join(" ") || "",
+        profession: "Ing. Software",
+        email: user.email || "",
+        photo: null,
+      });
+    }
     setIsEditing(false);
   };
 
@@ -134,18 +132,8 @@ export default function Profile() {
             {/* Foto */}
             <div className="flex flex-col items-center">
               <div className="relative">
-                <div className="w-48 h-48 rounded-full bg-gray-200 flex items-center justify-center overflow-hidden">
-                  {profileData.photo ? (
-                    <img
-                      src={profileData.photo}
-                      alt="Foto de perfil"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User size={80} className="text-gray-400" />
-                  )}
-                </div>
-
+                {/* Usamos el componente UserAvatar con tamaño personalizado */}
+                <UserAvatar className="w-48 h-48" />
                 {isEditing && (
                   <label className="absolute bottom-2 right-2 bg-blue-500 text-white p-2 rounded-full cursor-pointer hover:bg-blue-600 transition-colors">
                     <Camera size={20} />
