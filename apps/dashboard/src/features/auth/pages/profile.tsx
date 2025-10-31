@@ -4,6 +4,7 @@ import { useSession } from "@/features/auth/hooks/use-session";
 import { getRoleName } from "@/common/constants/roles";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { User, Camera } from "lucide-react";
+import { useToast } from "@/common/hooks/use-toast"; // 👈 importamos tu hook
 
 // Mapeo de roles para el título
 const roleDisplayNames = {
@@ -24,10 +25,14 @@ interface ProfileData {
 export default function Profile() {
   const navigate = useNavigate();
   const { user } = useSession();
+  const toast = useToast(); // 👈 inicializamos el hook
+  const queryClient = useQueryClient();
+
   const roleName = getRoleName(user?.role);
   const roleDisplayName =
     roleDisplayNames[roleName as keyof typeof roleDisplayNames] || "Usuario";
 
+  const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: user?.name?.split(" ")[0] || "",
     lastName: user?.name?.split(" ").slice(1).join(" ") || "",
@@ -50,9 +55,6 @@ export default function Profile() {
     }
   }, [user]);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const queryClient = useQueryClient();
-
   const handleInputChange = (field: keyof ProfileData, value: string) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
   };
@@ -71,7 +73,7 @@ export default function Profile() {
     }
   };
 
-  // ✅ MUTACIÓN con ruta relativa (funciona local y en producción)
+  // ✅ Mutación con Toast y actualización del cache
   const updateProfileMutation = useMutation({
     mutationFn: async (updatedData: ProfileData) => {
       const response = await fetch(`/api/docente/${user?.id}`, {
@@ -92,18 +94,18 @@ export default function Profile() {
       return response.json();
     },
     onSuccess: async (data) => {
-      alert("✅ Perfil actualizado correctamente");
+      toast.success(
+        "Perfil actualizado",
+        "Los cambios se guardaron correctamente ✅",
+      );
       console.log("Respuesta del servidor:", data);
-
-      // 🔁 Refrescar sesión para mostrar los nuevos datos
       await queryClient.invalidateQueries({ queryKey: ["session"] });
-
       setIsEditing(false);
     },
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
       console.error("❌ Error al guardar perfil:", error);
-      alert("⚠️ Ocurrió un error al guardar los cambios.");
+      toast.error("Error", "No se pudo actualizar el perfil ⚠️");
     },
   });
 
