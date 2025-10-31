@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useSession } from "@/features/auth/hooks/use-session";
 import { getRoleName } from "@/common/constants/roles";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Camera } from "lucide-react";
 import { UserAvatar } from "@/components/ui/UserAvatar";
+import { useToast } from "@/common/hooks/use-toast";
+import {
+  useProfile,
+  type ProfileData,
+} from "@/features/auth/hooks/use-profile";
 
-// Mapeo de roles para el título
 const roleDisplayNames = {
   docente: "Profesor",
   coordinadora_academica: "Coordinador Académico",
@@ -14,111 +16,84 @@ const roleDisplayNames = {
   indeterminado: "Usuario",
 } as const;
 
-interface ProfileData {
-  firstName: string;
-  lastName: string;
-  profession: string;
-  email: string;
-  photo: string | null;
-}
-
 export default function Profile() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useSession();
-  const roleName = getRoleName(user?.role);
-  const roleDisplayName =
-    roleDisplayNames[roleName as keyof typeof roleDisplayNames] || "Usuario";
+  const toast = useToast();
 
+  const { profile, isLoading, isError, updateProfile, isUpdating } =
+    useProfile();
+
+  const [isEditing, setIsEditing] = useState(false);
   const [profileData, setProfileData] = useState<ProfileData>({
     firstName: "",
     lastName: "",
-    profession: "Ing. Software",
+    profession: "",
     email: "",
     photo: null,
   });
 
-  useEffect(() => {
-    if (user && user.name) {
-      const parts = user.name.trim().split(" ");
-      const firstName = parts.slice(0, 2).join(" ");
-      const lastName = parts.slice(2).join(" ");
-      setProfileData((prev) => ({
-        ...prev,
-        firstName,
-        lastName,
-        email: user.email ?? "",
-      }));
-    }
-  }, [user]);
+  const roleName = getRoleName(user?.role);
+  const roleDisplayName =
+    roleDisplayNames[roleName as keyof typeof roleDisplayNames] || "Usuario";
 
-  const [isEditing, setIsEditing] = useState(false);
-  const queryClient = useQueryClient();
+  // ✅ Resetear estado al cambiar de ruta
+  useEffect(() => {
+    setIsEditing(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (profile && !isEditing) {
+      setProfileData(profile);
+    }
+  }, [profile, isEditing]);
 
   const handleInputChange = (field: keyof ProfileData, value: string) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] || null;
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setProfileData((prev) => ({
-          ...prev,
-          photo: e.target?.result as string,
-        }));
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const updateProfileMutation = useMutation({
-    mutationFn: async (updatedData: ProfileData) => {
-      const response = await fetch(`/api/docente/${user?.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: `${updatedData.firstName} ${updatedData.lastName}`.trim(),
-          correo: updatedData.email,
-          grado: updatedData.profession,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Error al actualizar perfil");
-      }
-
-      return response.json();
-    },
-    onSuccess: async (data) => {
-      alert("✅ Perfil actualizado correctamente");
-      console.log("Respuesta del servidor:", data);
-      await queryClient.invalidateQueries({ queryKey: ["session"] });
-      setIsEditing(false);
-    },
-    onError: (error: Error) => {
-      console.error("❌ Error al guardar perfil:", error);
-      alert("⚠️ Ocurrió un error al guardar los cambios.");
-    },
-  });
-
   const handleSave = () => {
-    updateProfileMutation.mutate(profileData);
+    updateProfile(profileData, {
+      onSuccess: () => {
+        toast.success(
+          "Perfil actualizado",
+          "Los cambios se guardaron correctamente ✅",
+        );
+        setIsEditing(false);
+      },
+      onError: (error: Error) => {
+        console.error("❌ Error al guardar perfil:", error);
+        toast.error("Error", "No se pudo actualizar el perfil ⚠️");
+      },
+    });
   };
 
   const handleCancel = () => {
-    if (user) {
-      setProfileData({
-        firstName: user.name?.split(" ")[0] || "",
-        lastName: user.name?.split(" ").slice(1).join(" ") || "",
-        profession: "Ing. Software",
-        email: user.email || "",
-        photo: null,
-      });
+    if (profile) {
+      setProfileData(profile);
     }
     setIsEditing(false);
   };
+
+  // ✅ Mostrar loading solo si realmente está cargando
+  if (isLoading && !profile) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <div className="text-lg">Cargando perfil...</div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6 flex items-center justify-center">
+        <div className="text-lg text-red-600">
+          Error al cargar el perfil. Por favor, intente de nuevo.
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -131,31 +106,17 @@ export default function Profile() {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Foto */}
             <div className="flex flex-col items-center">
-              <div className="relative">
-                {/* Usamos el componente UserAvatar con tamaño personalizado */}
-                <UserAvatar className="w-48 h-48" />
-                {isEditing && (
-                  <label className="absolute bottom-2 right-2 bg-blue-500 text-white p-2 rounded-full cursor-pointer hover:bg-blue-600 transition-colors">
-                    <Camera size={20} />
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handlePhotoChange}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-              </div>
+              <UserAvatar className="w-48 h-48" />
             </div>
 
             {/* Datos */}
             <div className="flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
-                  { label: "Nombre", field: "firstName" },
-                  { label: "Apellidos", field: "lastName" },
-                  { label: "Profesión", field: "profession" },
-                  { label: "Correo", field: "email" },
+                  { label: "Nombre", field: "firstName" as const },
+                  { label: "Apellidos", field: "lastName" as const },
+                  { label: "Profesión", field: "profession" as const },
+                  { label: "Correo", field: "email" as const },
                 ].map(({ label, field }) => (
                   <div key={field}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -163,14 +124,9 @@ export default function Profile() {
                     </label>
                     <input
                       type={field === "email" ? "email" : "text"}
-                      value={profileData[field as keyof ProfileData] || ""}
-                      onChange={(e) =>
-                        handleInputChange(
-                          field as keyof ProfileData,
-                          e.target.value,
-                        )
-                      }
-                      disabled={!isEditing}
+                      value={profileData[field] || ""}
+                      onChange={(e) => handleInputChange(field, e.target.value)}
+                      disabled={field === "email" ? true : !isEditing}
                       className={`w-full p-3 border border-gray-300 rounded-lg ${
                         isEditing
                           ? "bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -198,18 +154,16 @@ export default function Profile() {
                   <button
                     onClick={handleCancel}
                     className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                    disabled={updateProfileMutation.isPending}
+                    disabled={isUpdating}
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleSave}
-                    disabled={updateProfileMutation.isPending}
+                    disabled={isUpdating}
                     className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-60"
                   >
-                    {updateProfileMutation.isPending
-                      ? "Guardando..."
-                      : "Guardar"}
+                    {isUpdating ? "Guardando..." : "Guardar"}
                   </button>
                 </>
               ) : (
