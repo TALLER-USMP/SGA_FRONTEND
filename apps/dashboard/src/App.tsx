@@ -1,4 +1,3 @@
-import CoordinatorAssignments from "./features/coordinator/pages/coordinator-assignments";
 import {
   BrowserRouter as Router,
   Routes,
@@ -33,15 +32,6 @@ export default function App() {
         <QueryClientProvider client={queryClient}>
           <Toaster position="top-right" richColors closeButton />
           <Routes>
-            <Route
-              path="/coordinator/assignments"
-              element={
-                <MainLayout title="Asignaciones">
-                  <CoordinatorAssignments />
-                </MainLayout>
-              }
-            />
-            ;
             <Route
               path="/"
               element={
