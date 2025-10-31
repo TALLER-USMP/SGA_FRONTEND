@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+
 const API_BASE = "http://localhost:7071";
+
 export interface CreateProgramacionBody {
   silaboId: number;
   numero: number;
@@ -16,6 +17,7 @@ export interface CreateProgramacionBody {
   horasNoLectivasTeoria?: number;
   horasNoLectivasPractica?: number;
 }
+
 export interface UpdateProgramacionBody {
   silaboId?: number;
   numero?: number;
@@ -32,36 +34,52 @@ export interface UpdateProgramacionBody {
   horasNoLectivasPractica?: number;
   [key: string]: unknown;
 }
+
 export interface ProgramacionResponse {
   id?: string | number;
   silaboId?: number;
   asignaturaId?: string | number;
   [key: string]: unknown;
 }
+
+function buildError(res: Response): Promise<Error> {
+  return res
+    .json()
+    .then(
+      (b: { message?: string }) =>
+        new Error(b?.message || `Error ${res.status}`),
+    )
+    .catch(() => new Error(`Error ${res.status}`));
+}
+
 // GET: Obtener programación por asignatura
 export const useGetProgramacion = (asignaturaId: string) => {
-  return useQuery({
+  return useQuery<ProgramacionResponse[]>({
     queryKey: ["programacion", asignaturaId],
-    queryFn: async (): Promise<ProgramacionResponse[]> => {
-      const { data } = await axios.get(
-        `${API_BASE}/api/programacion-contenidos/${asignaturaId}`,
+    queryFn: async () => {
+      const res = await fetch(
+        `${API_BASE}/api/programacion-contenidos/${encodeURIComponent(asignaturaId)}`,
       );
-      return data;
+      if (!res.ok) throw await buildError(res);
+      return (await res.json()) as ProgramacionResponse[];
     },
     enabled: !!asignaturaId,
     staleTime: 1000 * 60 * 5,
   });
 };
+
 // POST: Crear nueva programación
 export const useCreateProgramacion = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateProgramacionBody) => {
-      const { data } = await axios.post(
-        `${API_BASE}/api/programacion-contenidos/`,
-        payload,
-      );
-      return data as ProgramacionResponse;
+      const res = await fetch(`${API_BASE}/api/programacion-contenidos/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw await buildError(res);
+      return (await res.json()) as ProgramacionResponse;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
@@ -71,6 +89,7 @@ export const useCreateProgramacion = () => {
     },
   });
 };
+
 // PUT: Actualizar programación existente
 export const useUpdateProgramacion = () => {
   const queryClient = useQueryClient();
@@ -82,11 +101,16 @@ export const useUpdateProgramacion = () => {
       id: string;
       payload: Partial<UpdateProgramacionBody>;
     }) => {
-      const { data } = await axios.put(
-        `${API_BASE}/api/programacion-contenidos/${id}`,
-        payload,
+      const res = await fetch(
+        `${API_BASE}/api/programacion-contenidos/${encodeURIComponent(id)}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
       );
-      return data;
+      if (!res.ok) throw await buildError(res);
+      return (await res.json()) as ProgramacionResponse;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
