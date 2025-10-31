@@ -47,15 +47,18 @@ export default function SendEmail() {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSend = async () => {
+  const handleSubmit = async () => {
+    // Validar que los campos no estén vacíos
     if (!recipient.trim()) {
       toast.error("Ingresa el destinatario");
       return;
     }
+
     if (!courseCode.trim()) {
       toast.error("Ingresa el código de asignatura");
       return;
     }
+
     if (!message.trim()) {
       toast.error("Ingresa el mensaje");
       return;
@@ -74,9 +77,8 @@ export default function SendEmail() {
       setMessage("");
       setCharCount(0);
       setAttachments([]);
-    } catch (error) {
+    } catch {
       // El error ya se maneja en el hook con toast
-      console.error("Error enviando correo:", error);
     }
   };
 
@@ -120,15 +122,17 @@ export default function SendEmail() {
           <label className="block text-xl font-bold text-black mb-3">
             3. Mensaje al Docente
           </label>
-          <textarea
-            value={message}
-            onChange={handleMessageChange}
-            placeholder="Se te han activado permisos para modificar el silabo."
-            rows={8}
-            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <div className="text-right text-sm text-gray-500 mt-2">
-            {charCount}/{maxChars}
+          <div className="relative">
+            <textarea
+              value={message}
+              onChange={handleMessageChange}
+              placeholder="Se te han activado permisos para modificar el sílabo."
+              rows={8}
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="absolute bottom-3 right-3 text-xs text-gray-400">
+              {charCount}/{maxChars}
+            </div>
           </div>
         </div>
 
@@ -195,7 +199,7 @@ export default function SendEmail() {
             <span>Volver</span>
           </button>
           <button
-            onClick={handleSend}
+            onClick={handleSubmit}
             disabled={isSending}
             className="px-8 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
