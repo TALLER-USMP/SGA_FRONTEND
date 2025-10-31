@@ -9,6 +9,7 @@ export const SessionProvider = ({
   children: React.ReactNode;
 }) => {
   const [token, setToken] = React.useState<string | undefined>();
+  const [shouldFetch, setShouldFetch] = React.useState(false);
 
   React.useLayoutEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -18,16 +19,16 @@ export const SessionProvider = ({
     if (tokenFromUrl && mailToken) {
       setToken(tokenFromUrl);
       sessionStorage.setItem("mailToken", mailToken);
-      // Limpiar la URL
       const clear = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, clear);
     }
+    setShouldFetch(true);
   }, []);
 
   const getSession = useQuery({
     queryKey: ["session", token],
     queryFn: () => authService.fetchSession(token),
-    enabled: !!token,
+    enabled: shouldFetch,
     retry: false,
     staleTime: 5 * 60 * 1000, // 5 minutos
   });
