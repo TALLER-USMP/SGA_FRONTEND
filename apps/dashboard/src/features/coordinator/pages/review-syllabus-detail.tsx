@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,7 +15,7 @@ import { StepsContext } from "../../syllabus/contexts/steps-context-provider";
 import { ReviewModeProvider } from "../contexts/review-mode-context";
 
 // Import permissions hook
-import { usePermissions } from "../hooks/permissions-query";
+import type { Permission } from "../hooks/permissions-query";
 
 // Import step components
 import FirstStep from "../../syllabus/components/first-step";
@@ -44,13 +44,22 @@ export default function ReviewSyllabusDetail() {
   const teacherName =
     searchParams.get("teacherName") || "Docente no disponible";
 
-  // Obtener permisos del docente (deshabilitado temporalmente para evitar errores)
-  // Cuando se integre con el backend real, descomentar docenteId y pasar como parámetro
+  // Temporalmente deshabilitamos la integración con permisos del backend
+  // para evitar problemas de logout al refrescar la página
+  // TODO: Re-habilitar cuando el backend esté listo
+  /*
+  const docenteId = searchParams.get("docenteId");
   const {
     data: permissions = [],
     isLoading: permissionsLoading,
     isError: permissionsError,
-  } = usePermissions(null); // Pasar null para deshabilitar la llamada
+  } = usePermissions(docenteId);
+  */
+
+  // Mock de permisos - todas las secciones permitidas por defecto
+  const permissions: Permission[] = [];
+  const permissionsLoading = false;
+  const permissionsError = false;
 
   // Datos del curso desde los parámetros de URL
   const syllabusData = {
@@ -60,16 +69,32 @@ export default function ReviewSyllabusDetail() {
   };
 
   // Create a mock stepper context value
+  // Mock de stepperValue para simular el contexto
+  // Ajustamos el currentStep para que coincida con los step={} de los componentes
   const stepperValue = useMemo(() => {
-    const currentStep = parseInt(selectedSection);
+    // Mapeo de sección ID a step number del componente
+    const sectionToStepMap: Record<string, number> = {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5,
+      "6": 5, // FifthStep (step=5) se usa para ambas secciones 5 y 6
+      "7": 6, // SixthStep (step=6)
+      "8": 7, // SeventhStep (step=7)
+      "9": 8, // EighthStep (step=8)
+    };
+
+    const currentStep = sectionToStepMap[selectedSection] || 1;
+
     return {
       currentStep,
       isFirst: currentStep === 1,
       isLast: currentStep === 8,
       nextStep: () => {},
       prevStep: () => {},
-      goToStep: (step: number) => setSelectedSection(step.toString()),
-      reset: () => setSelectedSection("1"),
+      goToStep: () => {},
+      reset: () => {},
     };
   }, [selectedSection]);
 
@@ -86,13 +111,39 @@ export default function ReviewSyllabusDetail() {
   const handleFieldComment = (fieldId: string, comment: string) => {
     setReviewData((prev) => ({
       ...prev,
-      [fieldId]: { ...prev[fieldId], comment },
+      [fieldId]: {
+        ...prev[fieldId],
+        comment,
+        status: prev[fieldId]?.status || null,
+      },
     }));
   };
 
   const handleGoBack = () => {
     navigate("/coordinator/review-syllabus");
   };
+
+  // Función para guardar la revisión
+  const handleSaveReview = useCallback(() => {
+    // Aquí se enviará reviewData al backend
+    console.log("Guardando revisión:", reviewData);
+
+    // TODO: Implementar llamada al backend
+    // await saveReviewMutation.mutateAsync({ syllabusId: id, reviews: reviewData });
+
+    alert("✅ Revisión guardada correctamente");
+  }, [reviewData]);
+
+  // Calcular estadísticas de revisión
+  const reviewStats = useMemo(() => {
+    const fields = Object.values(reviewData);
+    const approved = fields.filter((f) => f.status === "approved").length;
+    const rejected = fields.filter((f) => f.status === "rejected").length;
+    const withComments = fields.filter((f) => f.comment?.trim()).length;
+    const total = fields.length;
+
+    return { approved, rejected, withComments, total };
+  }, [reviewData]);
 
   const handleFinalize = () => {
     // Aquí se podría guardar reviewData al backend
@@ -117,6 +168,7 @@ export default function ReviewSyllabusDetail() {
   );
 
   // Mapeo de componentes por ID (no memoizado)
+  // La sección 5 y 6 comparten el mismo componente (FifthStep)
   const getComponentById = (id: string): React.ReactNode => {
     const componentMap: Record<string, React.ReactNode> = {
       "1": <FirstStep />,
@@ -124,7 +176,7 @@ export default function ReviewSyllabusDetail() {
       "3": <ThirdStep />,
       "4": <FourthStep />,
       "5": <FifthStep />,
-      "6": <FifthStep />,
+      "6": <FifthStep />, // Comparte con sección 5
       "7": <SixthStep />,
       "8": <SeventhStep />,
       "9": <EighthStep />,
@@ -181,18 +233,57 @@ export default function ReviewSyllabusDetail() {
             <div className="bg-white border border-gray-300 rounded-lg p-8">
               {/* Header */}
               <div className="mb-6">
-                <h1 className="text-2xl font-bold text-black mb-2">
-                  Revisión de Sílabo
-                </h1>
-                <h2 className="text-xl font-semibold text-black mb-1">
-                  {syllabusData.courseName}
-                </h2>
-                <p className="text-sm text-gray-600 mb-1">
-                  Código: {syllabusData.courseCode}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Docente: {syllabusData.teacherName}
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex-1">
+                    <h1 className="text-2xl font-bold text-black mb-2">
+                      Revisión de Sílabo
+                    </h1>
+                    <h2 className="text-xl font-semibold text-black mb-1">
+                      {syllabusData.courseName}
+                    </h2>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Código: {syllabusData.courseCode}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Docente: {syllabusData.teacherName}
+                    </p>
+                  </div>
+
+                  {/* Estadísticas y botón de guardar */}
+                  <div className="flex flex-col items-end gap-3">
+                    {reviewStats.total > 0 && (
+                      <div className="flex items-center gap-4 text-sm bg-gray-50 px-4 py-2 rounded-lg">
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-green-600">
+                            ✓ {reviewStats.approved}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-red-600">
+                            ✗ {reviewStats.rejected}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-blue-600">
+                            💬 {reviewStats.withComments}
+                          </span>
+                        </div>
+                        <div className="text-gray-500">
+                          Total: {reviewStats.total}
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      data-review-button="true"
+                      onClick={handleSaveReview}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      title="Guardar revisión"
+                    >
+                      <Save size={18} />
+                      <span>Guardar Revisión</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Section Selector */}
