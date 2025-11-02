@@ -1,7 +1,20 @@
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, useParams } from "react-router-dom";
 import { ArrowLeft, Check, MessageSquare } from "lucide-react";
+import { useEffect, useState } from "react";
 
-const sections = [
+interface ReviewItem {
+  status: "approved" | "rejected" | null;
+  comment: string;
+}
+
+interface SectionSummary {
+  id: string;
+  name: string;
+  hasApproved: boolean;
+  hasComments: boolean;
+}
+
+const sectionDefinitions = [
   { id: "1", name: "Datos generales" },
   { id: "2", name: "Sumilla" },
   { id: "3", name: "Competencias y componentes" },
@@ -14,13 +27,65 @@ const sections = [
 ];
 
 export default function ReviewSyllabusSummary() {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const [sections, setSections] = useState<SectionSummary[]>([]);
 
   const courseName = searchParams.get("courseName") || "Curso sin nombre";
   const courseCode = searchParams.get("courseCode") || "Código no disponible";
   const teacherName =
     searchParams.get("teacherName") || "Docente no disponible";
+
+  useEffect(() => {
+    // Cargar datos de revisión del sessionStorage
+    const savedData = sessionStorage.getItem(`reviewData_${id}`);
+    if (savedData) {
+      try {
+        const reviewData: Record<string, ReviewItem> = JSON.parse(savedData);
+
+        // Procesar cada sección para determinar si tiene aprobaciones y comentarios
+        const processedSections = sectionDefinitions.map((section) => {
+          // Contar campos con aprobación o comentarios
+          const fields = Object.entries(reviewData);
+
+          const hasApproved = fields.some(
+            ([, data]) => data.status === "approved",
+          );
+
+          const hasComments = fields.some(
+            ([, data]) => data.comment && data.comment.trim() !== "",
+          );
+
+          return {
+            ...section,
+            hasApproved,
+            hasComments,
+          };
+        });
+
+        setSections(processedSections);
+      } catch (error) {
+        console.error("Error al cargar datos de revisión:", error);
+        setSections(
+          sectionDefinitions.map((s) => ({
+            ...s,
+            hasApproved: false,
+            hasComments: false,
+          })),
+        );
+      }
+    } else {
+      // Si no hay datos guardados, mostrar todas las secciones sin marcas
+      setSections(
+        sectionDefinitions.map((s) => ({
+          ...s,
+          hasApproved: false,
+          hasComments: false,
+        })),
+      );
+    }
+  }, [id]);
 
   const handleGoBack = () => {
     navigate(-1);
@@ -70,18 +135,22 @@ export default function ReviewSyllabusSummary() {
                     {section.id}. {section.name}
                   </td>
                   <td className="px-6 py-4 w-24 text-center">
-                    <div className="flex justify-center">
-                      <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
-                        <Check className="w-5 h-5 text-white" />
+                    {section.hasApproved && (
+                      <div className="flex justify-center">
+                        <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
+                          <Check className="w-5 h-5 text-white" />
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 w-24 text-center">
-                    <div className="flex justify-center">
-                      <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
-                        <MessageSquare className="w-5 h-5 text-white" />
+                    {section.hasComments && (
+                      <div className="flex justify-center">
+                        <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
+                          <MessageSquare className="w-5 h-5 text-white" />
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </td>
                 </tr>
               ))}

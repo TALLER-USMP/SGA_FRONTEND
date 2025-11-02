@@ -36,37 +36,50 @@ export default function ReviewSyllabusDetail() {
     Record<string, { status: "approved" | "rejected" | null; comment: string }>
   >({});
 
+  // Cargar datos de revisión guardados al iniciar
+  useEffect(() => {
+    const savedData = sessionStorage.getItem(`reviewData_${id}`);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setReviewData(parsed);
+      } catch (error) {
+        console.error("Error al cargar datos de revisión:", error);
+      }
+    }
+  }, [id]);
+
+  // Guardar datos de revisión automáticamente cuando cambien
+  useEffect(() => {
+    if (Object.keys(reviewData).length > 0) {
+      try {
+        sessionStorage.setItem(`reviewData_${id}`, JSON.stringify(reviewData));
+      } catch (error) {
+        console.error("Error al guardar datos de revisión:", error);
+        // Notificar al usuario si el storage está lleno
+        if (
+          error instanceof DOMException &&
+          error.name === "QuotaExceededError"
+        ) {
+          alert(
+            "No se pueden guardar más cambios. El almacenamiento local está lleno.",
+          );
+        }
+      }
+    }
+  }, [reviewData, id]);
+
   // Obtener parámetros de la URL
-  // const docenteId = searchParams.get("docenteId"); // Para uso futuro con backend
-  // const syllabusId = searchParams.get("syllabusId"); // Para uso futuro
   const courseName = searchParams.get("courseName") || "Curso sin nombre";
   const courseCode = searchParams.get("courseCode") || "Código no disponible";
   const teacherName =
     searchParams.get("teacherName") || "Docente no disponible";
 
-  // Temporalmente deshabilitamos la integración con permisos del backend
-  // para evitar problemas de logout al refrescar la página
-  // TODO: Re-habilitar cuando el backend esté listo
-  /*
-  const docenteId = searchParams.get("docenteId");
-  const {
-    data: permissions = [],
-    isLoading: permissionsLoading,
-    isError: permissionsError,
-  } = usePermissions(docenteId);
-  */
-
-  // Mock de permisos - todas las secciones permitidas por defecto
+  // Mock de permisos - mostrar todas las secciones por defecto
+  // Cuando el backend esté listo, descomentar usePermissions y usar docenteId de la URL
   const permissions: Permission[] = [];
   const permissionsLoading = false;
   const permissionsError = false;
-
-  // Datos del curso desde los parámetros de URL
-  const syllabusData = {
-    courseName,
-    courseCode,
-    teacherName,
-  };
 
   // Create a mock stepper context value
   // Mock de stepperValue para simular el contexto
@@ -147,15 +160,15 @@ export default function ReviewSyllabusDetail() {
   // Definir IDs y nombres de secciones (sin componentes)
   const sectionDefinitions = useMemo(
     () => [
-      { id: "1", name: "Datos Generales" },
+      { id: "1", name: "Datos generales" },
       { id: "2", name: "Sumilla" },
-      { id: "3", name: "Competencias y Componentes" },
-      { id: "4", name: "Unidades" },
-      { id: "5", name: "Estrategias Metodológicas" },
-      { id: "6", name: "Recursos Didácticos" },
-      { id: "7", name: "Evaluación del Aprendizaje" },
-      { id: "8", name: "Fuentes de Consulta" },
-      { id: "9", name: "Aporte de la Asignatura al logro de resultados" },
+      { id: "3", name: "Competencias y componentes" },
+      { id: "4", name: "Programación del contenido" },
+      { id: "5", name: "Estrategias metodológicas" },
+      { id: "6", name: "Recursos didácticos" },
+      { id: "7", name: "Evaluación de aprendizaje" },
+      { id: "8", name: "Fuentes de consulta" },
+      { id: "9", name: "Resultados (outcomes)" },
     ],
     [],
   );
@@ -220,6 +233,7 @@ export default function ReviewSyllabusDetail() {
         isReviewMode={true}
         onFieldReview={handleFieldReview}
         onFieldComment={handleFieldComment}
+        reviewData={reviewData}
       >
         <StepsContext.Provider value={stepperValue}>
           <div className="p-6 w-full mx-auto" style={{ maxWidth: "1600px" }}>
@@ -235,13 +249,13 @@ export default function ReviewSyllabusDetail() {
                       Revisión de Sílabo
                     </h1>
                     <h2 className="text-xl font-semibold text-black mb-1">
-                      {syllabusData.courseName}
+                      {courseName}
                     </h2>
                     <p className="text-sm text-gray-600 mb-1">
-                      Código: {syllabusData.courseCode}
+                      Código: {courseCode}
                     </p>
                     <p className="text-sm text-gray-600">
-                      Docente: {syllabusData.teacherName}
+                      Docente: {teacherName}
                     </p>
                   </div>
 
