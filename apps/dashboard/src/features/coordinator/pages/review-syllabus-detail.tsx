@@ -230,7 +230,10 @@ export default function ReviewSyllabusDetail() {
       >
         <StepsContext.Provider value={stepperValue}>
           <div className="p-6 w-full mx-auto" style={{ maxWidth: "1600px" }}>
-            <div className="bg-white border border-gray-300 rounded-lg p-8">
+            <div
+              className="bg-white border border-gray-300 rounded-lg p-8"
+              translate="no"
+            >
               {/* Header */}
               <div className="mb-6">
                 <div className="flex items-center justify-between mb-4">
@@ -274,6 +277,7 @@ export default function ReviewSyllabusDetail() {
                       </div>
                     )}
                     <button
+                      type="button"
                       data-review-button="true"
                       onClick={handleSaveReview}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -309,13 +313,30 @@ export default function ReviewSyllabusDetail() {
                     value={selectedSection}
                     onValueChange={setSelectedSection}
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger
+                      className="w-full"
+                      translate="no"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <SelectValue placeholder="Seleccione una sección" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent
+                      translate="no"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       {allowedSections.map((section) => (
-                        <SelectItem key={section.id} value={section.id}>
-                          {section.id}. {section.name}
+                        <SelectItem
+                          key={section.id}
+                          value={section.id}
+                          translate="no"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        >
+                          <span translate="no">
+                            {section.id}. {section.name}
+                          </span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -335,6 +356,7 @@ export default function ReviewSyllabusDetail() {
               {/* Actions */}
               <div className="flex items-center justify-between pt-6 border-t border-gray-200">
                 <button
+                  type="button"
                   data-review-button="true"
                   onClick={handleGoBack}
                   className="flex items-center gap-2 px-6 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
@@ -343,6 +365,7 @@ export default function ReviewSyllabusDetail() {
                   <span>Volver</span>
                 </button>
                 <button
+                  type="button"
                   data-review-button="true"
                   onClick={handleFinalize}
                   className="px-8 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
