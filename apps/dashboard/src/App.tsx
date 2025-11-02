@@ -7,6 +7,7 @@ import {
 import { Toaster } from "sonner";
 import MyAssignmentsPage from "./features/assignments/pages/my-assignments";
 import ManagementPage from "./features/assignments/pages/management";
+import ApprovedSyllabiPage from "./features/assignments/pages/approved-syllabi";
 import SyllabusProcessPage from "./features/syllabus/pages/syllabus-process";
 import { SessionProvider } from "./features/auth/contexts/session-provider";
 import { CoordinatorProvider } from "./features/coordinator/contexts/coordinator-context";
@@ -71,6 +72,14 @@ export default function App() {
                 element={
                   <MainLayout title="Asignar Docente">
                     <ManagementPage />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/silabus"
+                element={
+                  <MainLayout title="Sílabos Aprobados">
+                    <ApprovedSyllabiPage />
                   </MainLayout>
                 }
               />
