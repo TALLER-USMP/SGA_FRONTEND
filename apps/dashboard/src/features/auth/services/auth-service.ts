@@ -34,6 +34,10 @@ class AuthService {
     });
 
     if (!res.ok) throw new Error("Error al cerrar sesión");
+
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("mailToken");
+
     return res.json();
   };
 }
