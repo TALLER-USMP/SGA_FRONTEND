@@ -1,9 +1,12 @@
 import React, { createContext, useContext, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
+export type SyllabusMode = "create" | "edit";
+
 interface SyllabusContextType {
   cursoCodigo: string | null;
-  syllabusId: string | null;
+  syllabusId: number | null;
+  mode: SyllabusMode;
   courseName: string;
   setCourseName: (name: string) => void;
 }
@@ -34,16 +37,28 @@ export const SyllabusProvider: React.FC<SyllabusProviderProps> = ({
   const [courseName, setCourseName] = useState<string>("");
 
   const cursoCodigo = useMemo(() => searchParams.get("codigo"), [searchParams]);
-  const syllabusId = useMemo(() => searchParams.get("id"), [searchParams]);
+
+  // Parse syllabusId to number | null
+  const syllabusId = useMemo(() => {
+    const id = searchParams.get("id");
+    return id ? parseInt(id, 10) : null;
+  }, [searchParams]);
+
+  // Get mode from URL params, default to "edit"
+  const mode = useMemo(() => {
+    const modeParam = searchParams.get("mode");
+    return (modeParam === "create" ? "create" : "edit") as SyllabusMode;
+  }, [searchParams]);
 
   const value = useMemo(
     () => ({
       cursoCodigo,
       syllabusId,
+      mode,
       courseName,
       setCourseName,
     }),
-    [cursoCodigo, syllabusId, courseName],
+    [cursoCodigo, syllabusId, mode, courseName],
   );
 
   return (
