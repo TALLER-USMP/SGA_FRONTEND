@@ -51,7 +51,7 @@ export function useProfile() {
     queryFn: async (): Promise<ProfileResponse> => {
       if (!user?.id) throw new Error("No user ID");
 
-      const response = await fetch(`${API_BASE}/docente/${user.id}`);
+      const response = await fetch(`${API_BASE}/teacher/${user.id}`);
 
       if (!response.ok) {
         throw new Error("Error al cargar perfil");
@@ -70,7 +70,7 @@ export function useProfile() {
     mutationFn: async (updatedData: ProfileData) => {
       if (!user?.id) throw new Error("No user ID");
 
-      const response = await fetch(`${API_BASE}/docente/${user.id}`, {
+      const response = await fetch(`${API_BASE}/teacher/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -4,6 +4,8 @@ export interface Course {
   id: string;
   name: string;
   code: string;
+  ciclo?: string;
+  escuela?: string;
 }
 
 interface CourseSelectProps {
