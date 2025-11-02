@@ -8,7 +8,7 @@ interface SyllabusReview {
   courseName: string;
   courseCode: string;
   teacherName: string;
-  status: "EN_REVISION";
+  status: "ANALIZANDO" | "VALIDADO" | "DESAPROBADO";
   submittedDate: string;
 }
 
@@ -18,7 +18,7 @@ const mockSyllabiInReview: SyllabusReview[] = [
     courseName: "Taller de Proyectos",
     courseCode: "09072108042",
     teacherName: "Norma Birginia Leon Lescano",
-    status: "EN_REVISION",
+    status: "ANALIZANDO",
     submittedDate: "2024-01-15",
   },
   {
@@ -26,7 +26,7 @@ const mockSyllabiInReview: SyllabusReview[] = [
     courseName: "Programación Orientada a Objetos",
     courseCode: "09072108043",
     teacherName: "Juan Manuel Huapalla García",
-    status: "EN_REVISION",
+    status: "VALIDADO",
     submittedDate: "2024-01-16",
   },
   {
@@ -34,37 +34,86 @@ const mockSyllabiInReview: SyllabusReview[] = [
     courseName: "Base de Datos",
     courseCode: "09072108044",
     teacherName: "María Elena García López",
-    status: "EN_REVISION",
+    status: "DESAPROBADO",
     submittedDate: "2024-01-17",
   },
+  {
+    id: "4",
+    courseName: "Desarrollo de Aplicaciones Web",
+    courseCode: "09072108045",
+    teacherName: "Carlos Alberto Pérez Ramos",
+    status: "ANALIZANDO",
+    submittedDate: "2024-01-18",
+  },
+  {
+    id: "5",
+    courseName: "Inteligencia Artificial",
+    courseCode: "09072108046",
+    teacherName: "Ana María Torres Silva",
+    status: "VALIDADO",
+    submittedDate: "2024-01-19",
+  },
 ];
+
+type SyllabusStatus = "ANALIZANDO" | "VALIDADO" | "DESAPROBADO";
+type FilterStatus = "ALL" | SyllabusStatus;
 
 export default function ReviewSyllabusList() {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("ALL");
 
-  const filteredSyllabi = mockSyllabiInReview.filter(
-    (syllabus) =>
+  // Configuración de estados
+  const statusConfig: Record<
+    SyllabusStatus,
+    { label: string; color: string; textColor: string; bgColor: string }
+  > = {
+    ANALIZANDO: {
+      label: "Analizado",
+      color: "bg-yellow-500",
+      textColor: "text-yellow-700",
+      bgColor: "bg-yellow-50",
+    },
+    VALIDADO: {
+      label: "Validado",
+      color: "bg-green-500",
+      textColor: "text-green-700",
+      bgColor: "bg-green-50",
+    },
+    DESAPROBADO: {
+      label: "Desaprobado",
+      color: "bg-red-500",
+      textColor: "text-red-700",
+      bgColor: "bg-red-50",
+    },
+  };
+
+  const filteredSyllabi = mockSyllabiInReview.filter((syllabus) => {
+    const matchesSearch =
       syllabus.courseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       syllabus.courseCode.includes(searchTerm) ||
-      syllabus.teacherName.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+      syllabus.teacherName.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      selectedStatus === "ALL" || syllabus.status === selectedStatus;
+
+    return matchesSearch && matchesStatus;
+  });
 
   const handleReviewSyllabus = (syllabusId: string) => {
     navigate(`/coordinator/review-syllabus/${syllabusId}`);
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-6 w-full mx-auto" style={{ maxWidth: "1600px" }}>
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">
           Revisión de Sílabos
         </h1>
-        <p className="text-gray-600 mb-6">Sílabos pendientes de revisión</p>
 
         {/* Search Bar */}
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 max-w-md mb-6">
           <Search
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
             size={20}
@@ -77,6 +126,52 @@ export default function ReviewSyllabusList() {
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
+
+        {/* Filtros por estado */}
+        <div className="flex gap-2 mb-6 flex-wrap">
+          <button
+            onClick={() => setSelectedStatus("ALL")}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+              selectedStatus === "ALL"
+                ? "bg-blue-500 text-white shadow-md"
+                : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            <span className="text-sm">Todos</span>
+            <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full text-black">
+              {mockSyllabiInReview.length}
+            </span>
+          </button>
+
+          {(Object.keys(statusConfig) as SyllabusStatus[]).map((key) => {
+            const cfg = statusConfig[key];
+            const count = mockSyllabiInReview.filter(
+              (s) => s.status === key,
+            ).length;
+            const isSelected = selectedStatus === key;
+            return (
+              <button
+                key={key}
+                onClick={() => setSelectedStatus(key)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                  isSelected
+                    ? `${cfg.color} text-white shadow-md`
+                    : `${cfg.bgColor} ${cfg.textColor} hover:shadow-sm`
+                }`}
+              >
+                <div
+                  className={`w-3 h-3 rounded-full ${isSelected ? "bg-white bg-opacity-30" : cfg.color}`}
+                ></div>
+                <span className="text-sm">{cfg.label}</span>
+                <span
+                  className={`text-xs px-2 py-1 rounded-full ${isSelected ? "bg-white bg-opacity-20" : "bg-white bg-opacity-60"}`}
+                >
+                  <span className="text-black">{count}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Syllabi List */}
@@ -88,7 +183,7 @@ export default function ReviewSyllabusList() {
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 flex-1">
-                <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-800">
                     {syllabus.courseName}
@@ -106,10 +201,20 @@ export default function ReviewSyllabusList() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
-                <span className="px-3 py-1 bg-yellow-50 text-yellow-700 text-sm rounded-full border border-yellow-200">
-                  En Revisión
-                </span>
+              <div className="flex items-center gap-3">
+                {(() => {
+                  const cfg = statusConfig[syllabus.status];
+                  return (
+                    <div
+                      className={`flex items-center gap-2 px-2 py-1 rounded ${cfg.bgColor} ${cfg.textColor}`}
+                    >
+                      <div
+                        className={`w-3 h-3 rounded-full ${cfg.color}`}
+                      ></div>
+                      <span className="text-xs font-semibold">{cfg.label}</span>
+                    </div>
+                  );
+                })()}
                 <button
                   onClick={() => handleReviewSyllabus(syllabus.id)}
                   className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
@@ -125,7 +230,7 @@ export default function ReviewSyllabusList() {
 
       {filteredSyllabi.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          No se encontraron sílabos en revisión que coincidan con tu búsqueda.
+          No se encontraron sílabos que coincidan con tu búsqueda.
         </div>
       )}
     </div>
