@@ -8,6 +8,8 @@ import { ArrowLeft, Check, X, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useApproveSyllabus } from "../hooks/syllabus-review-query";
 import { toast } from "sonner";
+import { ReviewConfirmationModal } from "../components/review-confirmation-modal";
+import { Button } from "../../../common/components/ui/button";
 
 interface ReviewItem {
   status: "approved" | "rejected" | null;
@@ -41,6 +43,10 @@ export default function ReviewSyllabusSummary() {
   const [searchParams] = useSearchParams();
   const [sections, setSections] = useState<SectionSummary[]>([]);
   const [reviewData, setReviewData] = useState<Record<string, ReviewItem>>({});
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState<"approved" | "rejected">(
+    "approved",
+  );
 
   const approveMutation = useApproveSyllabus();
 
@@ -182,50 +188,39 @@ export default function ReviewSyllabusSummary() {
     navigate(-1);
   };
 
-  const handleApprove = async () => {
+  const handleFinalize = async () => {
     if (!syllabusId) {
       toast.error("No se pudo identificar el sílabo");
       return;
     }
 
+    // Determinar si el sílabo debe ser aprobado o desaprobado
+    // Si hay alguna sección rechazada, se desaprueba
+    const hasRejections = sections.some((section) => section.hasRejected);
+    const estado = hasRejections ? "DESAPROBADO" : "VALIDADO";
+
     try {
       await approveMutation.mutateAsync({
         syllabusId: parseInt(syllabusId),
-        estado: "VALIDADO",
+        estado,
         reviewData,
       });
 
-      toast.success("Sílabo aprobado exitosamente");
-      // Limpiar sessionStorage
-      sessionStorage.removeItem(`reviewData_${id}`);
-      navigate("/coordinator/review-syllabus");
+      // Mostrar modal con el resultado
+      setModalType(hasRejections ? "rejected" : "approved");
+      setShowModal(true);
     } catch (error) {
-      console.error("Error al aprobar sílabo:", error);
-      toast.error("Error al aprobar el sílabo. Intente nuevamente.");
+      console.error("Error al finalizar revisión:", error);
+      toast.error("Error al finalizar la revisión. Intente nuevamente.");
     }
   };
 
-  const handleReject = async () => {
-    if (!syllabusId) {
-      toast.error("No se pudo identificar el sílabo");
-      return;
-    }
-
-    try {
-      await approveMutation.mutateAsync({
-        syllabusId: parseInt(syllabusId),
-        estado: "DESAPROBADO",
-        reviewData,
-      });
-
-      toast.success("Sílabo desaprobado");
-      // Limpiar sessionStorage
-      sessionStorage.removeItem(`reviewData_${id}`);
-      navigate("/coordinator/review-syllabus");
-    } catch (error) {
-      console.error("Error al desaprobar sílabo:", error);
-      toast.error("Error al desaprobar el sílabo. Intente nuevamente.");
-    }
+  const handleCloseModal = () => {
+    setShowModal(false);
+    // Limpiar sessionStorage
+    sessionStorage.removeItem(`reviewData_${id}`);
+    // Navegar a la lista de sílabos
+    navigate("/coordinator/review-syllabus");
   };
 
   return (
@@ -296,33 +291,34 @@ export default function ReviewSyllabusSummary() {
 
         {/* Botones de acción */}
         <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-          <button
+          <Button
             type="button"
+            variant="outline"
             onClick={handleGoBack}
-            className="flex items-center gap-2 px-6 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="gap-2"
           >
             <ArrowLeft size={20} />
-            <span>Volver</span>
-          </button>
+            <span>Atrás</span>
+          </Button>
 
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={handleReject}
-              className="px-8 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-            >
-              Desaprobar
-            </button>
-            <button
-              type="button"
-              onClick={handleApprove}
-              className="px-8 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-            >
-              Aprobar
-            </button>
-          </div>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleFinalize}
+            disabled={approveMutation.isPending}
+            size="lg"
+          >
+            {approveMutation.isPending ? "Finalizando..." : "Finalizar"}
+          </Button>
         </div>
       </div>
+
+      {/* Modal de confirmación */}
+      <ReviewConfirmationModal
+        isOpen={showModal}
+        type={modalType}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 }
