@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, Eye } from "lucide-react";
+import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 // Mock data - reemplazar con datos del backend
@@ -8,6 +8,8 @@ interface SyllabusReview {
   courseName: string;
   courseCode: string;
   teacherName: string;
+  docenteId: number;
+  syllabusId: number;
   status: "ANALIZANDO" | "VALIDADO" | "DESAPROBADO";
   submittedDate: string;
 }
@@ -18,6 +20,8 @@ const mockSyllabiInReview: SyllabusReview[] = [
     courseName: "Taller de Proyectos",
     courseCode: "09072108042",
     teacherName: "Norma Birginia Leon Lescano",
+    docenteId: 1,
+    syllabusId: 101,
     status: "ANALIZANDO",
     submittedDate: "2024-01-15",
   },
@@ -26,6 +30,8 @@ const mockSyllabiInReview: SyllabusReview[] = [
     courseName: "Programación Orientada a Objetos",
     courseCode: "09072108043",
     teacherName: "Juan Manuel Huapalla García",
+    docenteId: 2,
+    syllabusId: 102,
     status: "VALIDADO",
     submittedDate: "2024-01-16",
   },
@@ -34,6 +40,8 @@ const mockSyllabiInReview: SyllabusReview[] = [
     courseName: "Base de Datos",
     courseCode: "09072108044",
     teacherName: "María Elena García López",
+    docenteId: 3,
+    syllabusId: 103,
     status: "DESAPROBADO",
     submittedDate: "2024-01-17",
   },
@@ -42,6 +50,8 @@ const mockSyllabiInReview: SyllabusReview[] = [
     courseName: "Desarrollo de Aplicaciones Web",
     courseCode: "09072108045",
     teacherName: "Carlos Alberto Pérez Ramos",
+    docenteId: 4,
+    syllabusId: 104,
     status: "ANALIZANDO",
     submittedDate: "2024-01-18",
   },
@@ -50,6 +60,8 @@ const mockSyllabiInReview: SyllabusReview[] = [
     courseName: "Inteligencia Artificial",
     courseCode: "09072108046",
     teacherName: "Ana María Torres Silva",
+    docenteId: 5,
+    syllabusId: 105,
     status: "VALIDADO",
     submittedDate: "2024-01-19",
   },
@@ -100,8 +112,10 @@ export default function ReviewSyllabusList() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleReviewSyllabus = (syllabusId: string) => {
-    navigate(`/coordinator/review-syllabus/${syllabusId}`);
+  const handleReviewSyllabus = (syllabus: SyllabusReview) => {
+    navigate(
+      `/coordinator/review-syllabus/${syllabus.id}?docenteId=${syllabus.docenteId}&syllabusId=${syllabus.syllabusId}&courseName=${encodeURIComponent(syllabus.courseName)}&courseCode=${encodeURIComponent(syllabus.courseCode)}&teacherName=${encodeURIComponent(syllabus.teacherName)}`,
+    );
   };
 
   return (
@@ -179,7 +193,8 @@ export default function ReviewSyllabusList() {
         {filteredSyllabi.map((syllabus) => (
           <div
             key={syllabus.id}
-            className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
+            onClick={() => handleReviewSyllabus(syllabus)}
+            className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 flex-1">
@@ -215,13 +230,6 @@ export default function ReviewSyllabusList() {
                     </div>
                   );
                 })()}
-                <button
-                  onClick={() => handleReviewSyllabus(syllabus.id)}
-                  className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                  title="Revisar"
-                >
-                  <Eye size={18} />
-                </button>
               </div>
             </div>
           </div>
