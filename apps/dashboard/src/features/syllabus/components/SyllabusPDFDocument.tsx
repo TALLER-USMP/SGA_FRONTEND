@@ -1,10 +1,6 @@
 import { Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 import type { CompleteSyllabus } from "../types/complete-syllabus";
 
-// No necesitamos registrar fuentes, usaremos las fuentes estándar de PDF
-// Helvetica es equivalente a Arial y está incluida en todos los PDFs
-
-// Estilos que replican el formato del PDF original
 const styles = StyleSheet.create({
   page: {
     padding: "20mm 15mm",
@@ -12,7 +8,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     lineHeight: 1.2,
   },
-  // Encabezados principales
   title: {
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
@@ -31,14 +26,12 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 6,
   },
-  // Sección
   sectionTitle: {
     fontSize: 11,
     fontFamily: "Helvetica-Bold",
     marginTop: 6,
     marginBottom: 3,
   },
-  // Tabla
   table: {
     width: "100%",
     border: "1pt solid black",
@@ -66,7 +59,6 @@ const styles = StyleSheet.create({
   tableCellRight: {
     width: "60%",
   },
-  // Texto normal
   text: {
     fontSize: 10,
     marginBottom: 2,
@@ -76,7 +68,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Helvetica-Bold",
   },
-  // Lista
+  textItalic: {
+    fontSize: 10,
+    fontFamily: "Helvetica-Oblique",
+  },
   listItem: {
     fontSize: 10,
     marginLeft: 15,
@@ -220,7 +215,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
               <Text style={styles.textBold}>3.1 Competencia</Text>
               {data.competenciasCurso.map((comp, idx) => (
                 <Text key={idx} style={styles.listItem}>
-                  - ({comp.codigo}) {comp.descripcion}
+                  - {comp.descripcion} ({comp.codigo})
                 </Text>
               ))}
             </View>
@@ -235,7 +230,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                 </Text>
                 {data.componentesConceptuales.map((comp, idx) => (
                   <Text key={idx} style={styles.listItem}>
-                    - ({comp.codigo}) {comp.descripcion}
+                    - {comp.descripcion} ({comp.codigo})
                   </Text>
                 ))}
               </View>
@@ -250,7 +245,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                 </Text>
                 {data.componentesProcedimentales.map((comp, idx) => (
                   <Text key={idx} style={styles.listItem}>
-                    - ({comp.codigo}) {comp.descripcion}
+                    - {comp.descripcion} ({comp.codigo})
                   </Text>
                 ))}
               </View>
@@ -263,7 +258,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                 <Text style={styles.textBold}>Contenidos actitudinales</Text>
                 {data.componentesActitudinales.map((cont, idx) => (
                   <Text key={idx} style={styles.listItem}>
-                    - ({cont.codigo}) {cont.descripcion}
+                    - {cont.descripcion} ({cont.codigo})
                   </Text>
                 ))}
               </View>
@@ -271,8 +266,8 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
         </View>
       </Page>
 
-      {/* Página 2: Programación de Contenidos */}
-      <Page size="A4" style={styles.page}>
+      {/* Página 2: Programación de Contenidos - FORMATO HORIZONTAL */}
+      <Page size="A4" orientation="landscape" style={styles.page}>
         <Text style={styles.sectionTitle}>IV. PROGRAMACIÓN DE CONTENIDOS</Text>
 
         {data.unidadesDidacticas &&
@@ -364,7 +359,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                 </View>
                 <View
                   style={{
-                    width: "29%",
+                    width: "22%",
                     padding: "3pt",
                     borderRight: "1pt solid black",
                     justifyContent: "center",
@@ -398,7 +393,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                 </View>
                 <View
                   style={{
-                    width: "7.5%",
+                    width: "10%",
                     padding: "2pt 1pt",
                     borderRight: "1pt solid black",
                   }}
@@ -454,7 +449,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                     </View>
                   </View>
                 </View>
-                <View style={{ width: "7.5%", padding: "2pt 1pt" }}>
+                <View style={{ width: "12%", padding: "2pt 1pt" }}>
                   <Text
                     style={[
                       styles.textBold,
@@ -616,7 +611,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                     </View>
                     <View
                       style={{
-                        width: "29%",
+                        width: "22%",
                         padding: "3pt 4pt",
                         borderRight: "1pt solid black",
                       }}
@@ -781,7 +776,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                       </Text>
                     </View>
                     <View
-                      style={{ width: "7.5%", borderRight: "1pt solid black" }}
+                      style={{ width: "10%", borderRight: "1pt solid black" }}
                     >
                       <View
                         style={{
@@ -816,7 +811,7 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                         </View>
                       </View>
                     </View>
-                    <View style={{ width: "7.5%" }}>
+                    <View style={{ width: "12%" }}>
                       <View
                         style={{
                           flex: 1,
@@ -888,36 +883,77 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
               VII. EVALUACIÓN DEL APRENDIZAJE
             </Text>
 
-            {/* Plan de Evaluación */}
-            {data.evaluacionAprendizaje.planEvaluacion &&
-              data.evaluacionAprendizaje.planEvaluacion.length > 0 && (
-                <View style={{ marginTop: 4 }}>
-                  {data.evaluacionAprendizaje.planEvaluacion.map(
-                    (plan, idx) => (
-                      <Text key={idx} style={styles.text}>
-                        Semana {plan.semana} - {plan.instrumento} - Peso:{" "}
-                        {plan.peso}%
-                      </Text>
-                    ),
-                  )}
-                </View>
-              )}
+            {/* Descripción del promedio final */}
+            {data.evaluacionAprendizaje.descripcion && (
+              <Text style={[styles.text, { marginTop: 6, marginBottom: 4 }]}>
+                {data.evaluacionAprendizaje.descripcion}
+              </Text>
+            )}
 
-            {/* Fórmula */}
-            {data.evaluacionAprendizaje.formulaEvaluacion && (
+            {/* Fórmula PF */}
+            {data.evaluacionAprendizaje.formulaPF && (
               <Text
                 style={[
                   styles.text,
                   {
                     textAlign: "center",
                     fontFamily: "Helvetica-Bold",
-                    marginTop: 8,
+                    marginBottom: 6,
                   },
                 ]}
               >
-                {data.evaluacionAprendizaje.formulaEvaluacion}
+                {data.evaluacionAprendizaje.formulaPF}
               </Text>
             )}
+
+            {/* Componentes PF (Donde:) */}
+            {data.evaluacionAprendizaje.componentesPF &&
+              data.evaluacionAprendizaje.componentesPF.length > 0 && (
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={styles.text}>Donde:</Text>
+                  {data.evaluacionAprendizaje.componentesPF.map((comp, idx) => (
+                    <Text key={idx} style={[styles.text, { marginLeft: 10 }]}>
+                      {comp.codigo} = {comp.descripcion}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+            {/* Descripción PE */}
+            {data.evaluacionAprendizaje.descripcionPE && (
+              <Text style={[styles.text, { marginBottom: 4 }]}>
+                {data.evaluacionAprendizaje.descripcionPE}
+              </Text>
+            )}
+
+            {/* Fórmula PE */}
+            {data.evaluacionAprendizaje.formulaPE && (
+              <Text
+                style={[
+                  styles.text,
+                  {
+                    textAlign: "center",
+                    fontFamily: "Helvetica-Bold",
+                    marginBottom: 6,
+                  },
+                ]}
+              >
+                {data.evaluacionAprendizaje.formulaPE}
+              </Text>
+            )}
+
+            {/* Componentes PE (Donde:) */}
+            {data.evaluacionAprendizaje.componentesPE &&
+              data.evaluacionAprendizaje.componentesPE.length > 0 && (
+                <View style={{ marginBottom: 4 }}>
+                  <Text style={styles.text}>Donde:</Text>
+                  {data.evaluacionAprendizaje.componentesPE.map((comp, idx) => (
+                    <Text key={idx} style={[styles.text, { marginLeft: 10 }]}>
+                      {comp.codigo} = {comp.descripcion}
+                    </Text>
+                  ))}
+                </View>
+              )}
           </View>
         )}
 
@@ -937,11 +973,11 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                 <View key={tipo} style={{ marginTop: 4 }}>
                   <Text style={styles.textBold}>
                     {tipo === "LIBRO"
-                      ? "Libros"
+                      ? "Bibliograficas"
                       : tipo === "ARTICULO"
                         ? "Artículos"
                         : tipo === "WEB"
-                          ? "Fuentes Web"
+                          ? "Electronicas"
                           : "Otros"}
                   </Text>
                   {fuentesPorTipo.map((fuente, idx) => (
@@ -955,6 +991,138 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
             })}
           </View>
         )}
+
+        {/* IX. APORTE DE LA ASIGNATURA AL LOGRO DE RESULTADOS */}
+        {data.aportesResultadosPrograma &&
+          data.aportesResultadosPrograma.length > 0 && (
+            <View style={{ marginTop: 12 }}>
+              <Text style={styles.sectionTitle}>
+                IX. APORTE DE LA ASIGNATURA AL LOGRO DE RESULTADOS
+              </Text>
+
+              <Text style={[styles.text, { marginTop: 6, marginBottom: 8 }]}>
+                El aporte de la asignatura al logro de los Resultados del
+                Estudiante (
+                <Text style={styles.textItalic}>Student Outcomes</Text>) en la
+                formación del graduado en Ingeniería de Computación y Sistemas,
+                se establece en la tabla siguiente:
+              </Text>
+
+              <Text style={[styles.text, { marginBottom: 6 }]}>
+                <Text style={styles.textBold}>K</Text> = clave{" "}
+                <Text style={styles.textBold}>R</Text> = relacionado{" "}
+                <Text style={styles.textBold}>Recuadro vacío</Text> = no aplica
+              </Text>
+
+              {/* Tabla de aportes */}
+              <View
+                style={{
+                  border: "1pt solid black",
+                  marginTop: 4,
+                }}
+              >
+                {/* Fila de encabezado */}
+                <View
+                  style={{
+                    flexDirection: "row",
+                    borderBottom: "1pt solid black",
+                    backgroundColor: "#f0f0f0",
+                  }}
+                >
+                  <View
+                    style={{
+                      width: "8%",
+                      padding: "4pt",
+                      borderRight: "1pt solid black",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={[styles.textBold, { fontSize: 8 }]}>#</Text>
+                  </View>
+                  <View
+                    style={{
+                      width: "77%",
+                      padding: "4pt",
+                      borderRight: "1pt solid black",
+                    }}
+                  >
+                    <Text style={[styles.textBold, { fontSize: 8 }]}>
+                      RESULTADO DEL ESTUDIANTE
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      width: "15%",
+                      padding: "4pt",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <Text style={[styles.textBold, { fontSize: 8 }]}>
+                      APORTE
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Filas de datos */}
+                {data.aportesResultadosPrograma.map((aporte, idx) => (
+                  <View
+                    key={idx}
+                    style={{
+                      flexDirection: "row",
+                      borderBottom:
+                        idx < data.aportesResultadosPrograma.length - 1
+                          ? "1pt solid black"
+                          : "none",
+                    }}
+                  >
+                    <View
+                      style={{
+                        width: "8%",
+                        padding: "6pt 4pt",
+                        borderRight: "1pt solid black",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text style={{ fontSize: 8 }}>
+                        {aporte.resultadoCodigo}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        width: "77%",
+                        padding: "6pt 8pt",
+                        borderRight: "1pt solid black",
+                      }}
+                    >
+                      <Text style={{ fontSize: 8, lineHeight: 1.4 }}>
+                        {aporte.resultadoDescripcion}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        width: "15%",
+                        padding: "6pt 4pt",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <Text
+                        style={[
+                          aporte.aporteValor ? styles.textBold : {},
+                          { fontSize: 8 },
+                        ]}
+                      >
+                        {aporte.aporteValor || ""}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
       </Page>
     </Document>
   );

@@ -97,6 +97,20 @@ export interface AporteResultadoPrograma {
   aporteValor: "K" | "R" | "";
 }
 
+export interface ComponenteEvaluacion {
+  codigo: string;
+  descripcion: string;
+}
+
+export interface EvaluacionAprendizaje {
+  descripcion?: string;
+  formulaPF?: string;
+  componentesPF?: ComponenteEvaluacion[];
+  descripcionPE?: string;
+  formulaPE?: string;
+  componentesPE?: ComponenteEvaluacion[];
+}
+
 export interface CompleteSyllabus {
   datosGenerales: DatosGenerales;
   sumilla: string | null;
@@ -108,10 +122,7 @@ export interface CompleteSyllabus {
   unidadesDidacticas: UnidadDidactica[];
   estrategiasMetodologicas: string | null;
   recursosDidacticos: RecursoDidactico[];
-  evaluacionAprendizaje: {
-    planEvaluacion: PlanEvaluacion[];
-    formulaEvaluacion: string | null;
-  };
+  evaluacionAprendizaje: EvaluacionAprendizaje;
   fuentes: FuenteInformacion[];
   aportesResultadosPrograma: AporteResultadoPrograma[];
 }
