@@ -1,6 +1,6 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -123,17 +123,6 @@ export default function ReviewSyllabusDetail() {
     navigate("/coordinator/review-syllabus");
   };
 
-  // Función para guardar la revisión
-  const handleSaveReview = useCallback(() => {
-    // Aquí se enviará reviewData al backend
-    console.log("Guardando revisión:", reviewData);
-
-    // TODO: Implementar llamada al backend
-    // await saveReviewMutation.mutateAsync({ syllabusId: id, reviews: reviewData });
-
-    alert("✅ Revisión guardada correctamente");
-  }, [reviewData]);
-
   // Calcular estadísticas de revisión
   const reviewStats = useMemo(() => {
     const fields = Object.values(reviewData);
@@ -146,9 +135,13 @@ export default function ReviewSyllabusDetail() {
   }, [reviewData]);
 
   const handleFinalize = () => {
-    // Aquí se podría guardar reviewData al backend
-    console.log("Review data:", reviewData);
-    navigate(`/coordinator/review-syllabus/${id}/summary`);
+    // Guardar reviewData en sessionStorage para usarlo en el resumen
+    sessionStorage.setItem(`reviewData_${id}`, JSON.stringify(reviewData));
+
+    // Navegar al resumen con los parámetros
+    navigate(
+      `/coordinator/review-syllabus/${id}/summary?courseName=${encodeURIComponent(courseName)}&courseCode=${encodeURIComponent(courseCode)}&teacherName=${encodeURIComponent(teacherName)}`,
+    );
   };
 
   // Definir IDs y nombres de secciones (sin componentes)
@@ -252,7 +245,7 @@ export default function ReviewSyllabusDetail() {
                     </p>
                   </div>
 
-                  {/* Estadísticas y botón de guardar */}
+                  {/* Estadísticas */}
                   <div className="flex flex-col items-end gap-3">
                     {reviewStats.total > 0 && (
                       <div className="flex items-center gap-4 text-sm bg-gray-50 px-4 py-2 rounded-lg">
@@ -276,16 +269,6 @@ export default function ReviewSyllabusDetail() {
                         </div>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      data-review-button="true"
-                      onClick={handleSaveReview}
-                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                      title="Guardar revisión"
-                    >
-                      <Save size={18} />
-                      <span>Guardar Revisión</span>
-                    </button>
                   </div>
                 </div>
               </div>
