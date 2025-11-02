@@ -2,11 +2,13 @@ import { useState } from "react";
 import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import {
-  mockSyllabiInReview,
+  useSyllabusInReview,
   type SyllabusReview,
-} from "../data/mock-syllabus-review";
+} from "../hooks/syllabus-review-query";
+// Fallback a mock data si el backend no está disponible
+import { mockSyllabiInReview } from "../data/mock-syllabus-review";
 
-type SyllabusStatus = "ANALIZANDO" | "VALIDADO" | "DESAPROBADO";
+type SyllabusStatus = "ANALIZANDO" | "VALIDADO" | "DESAPROBADO" | "ASIGNADO";
 type FilterStatus = "ALL" | SyllabusStatus;
 
 export default function ReviewSyllabusList() {
@@ -14,11 +16,31 @@ export default function ReviewSyllabusList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("ALL");
 
+  // Intentar obtener datos del backend, fallback a mock si falla
+  const {
+    data: syllabusListFromAPI,
+    isLoading,
+    isError,
+  } = useSyllabusInReview();
+
+  // Usar datos del backend si están disponibles Y válidos, sino usar mock
+  // Asegurar que siempre sea un array con datos válidos
+  const syllabusList =
+    Array.isArray(syllabusListFromAPI) && syllabusListFromAPI.length > 0
+      ? syllabusListFromAPI
+      : mockSyllabiInReview;
+
   // Configuración de estados
   const statusConfig: Record<
     SyllabusStatus,
     { label: string; color: string; textColor: string; bgColor: string }
   > = {
+    ASIGNADO: {
+      label: "Asignado",
+      color: "bg-blue-500",
+      textColor: "text-blue-700",
+      bgColor: "bg-blue-50",
+    },
     ANALIZANDO: {
       label: "Analizado",
       color: "bg-yellow-500",
@@ -39,11 +61,17 @@ export default function ReviewSyllabusList() {
     },
   };
 
-  const filteredSyllabi = mockSyllabiInReview.filter((syllabus) => {
+  const filteredSyllabi = syllabusList.filter((syllabus) => {
+    // Validar que los campos existan antes de aplicar toLowerCase
+    const courseName = syllabus.courseName?.toLowerCase() || "";
+    const courseCode = syllabus.courseCode || "";
+    const teacherName = syllabus.teacherName?.toLowerCase() || "";
+    const searchLower = searchTerm.toLowerCase();
+
     const matchesSearch =
-      syllabus.courseName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      syllabus.courseCode.includes(searchTerm) ||
-      syllabus.teacherName.toLowerCase().includes(searchTerm.toLowerCase());
+      courseName.includes(searchLower) ||
+      courseCode.includes(searchTerm) ||
+      teacherName.includes(searchLower);
 
     const matchesStatus =
       selectedStatus === "ALL" || syllabus.status === selectedStatus;
@@ -64,6 +92,27 @@ export default function ReviewSyllabusList() {
         <h1 className="text-3xl font-bold text-gray-800 mb-6">
           Revisión de Sílabos
         </h1>
+
+        {/* Loading state - Solo mostrar si no hay datos en absoluto */}
+        {isLoading && !syllabusList.length && (
+          <div className="text-center py-12 text-gray-500">
+            Cargando sílabos...
+          </div>
+        )}
+
+        {/* Error state o usando mock data */}
+        {(isError ||
+          !syllabusListFromAPI ||
+          syllabusListFromAPI.length === 0) && (
+          <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-sm text-yellow-700">
+              {isError
+                ? "No se pudieron cargar los sílabos desde el servidor."
+                : "El servidor no devolvió datos."}{" "}
+              Mostrando datos de ejemplo.
+            </p>
+          </div>
+        )}
 
         {/* Search Bar */}
         <div className="relative flex-1 max-w-md mb-6">
@@ -92,14 +141,14 @@ export default function ReviewSyllabusList() {
           >
             <span className="text-sm">Todos</span>
             <span className="text-xs bg-white bg-opacity-20 px-2 py-1 rounded-full text-black">
-              {mockSyllabiInReview.length}
+              {syllabusList.length}
             </span>
           </button>
 
           {(Object.keys(statusConfig) as SyllabusStatus[]).map((key) => {
             const cfg = statusConfig[key];
-            const count = mockSyllabiInReview.filter(
-              (s) => s.status === key,
+            const count = syllabusList.filter(
+              (s) => s && s.status === key,
             ).length;
             const isSelected = selectedStatus === key;
             return (
@@ -140,17 +189,19 @@ export default function ReviewSyllabusList() {
                 <div className="w-3 h-3 bg-gray-400 rounded-full"></div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-800">
-                    {syllabus.courseName}
+                    {syllabus.courseName || "Sin nombre"}
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Código: {syllabus.courseCode}
+                    Código: {syllabus.courseCode || "N/A"}
                   </p>
                   <p className="text-sm text-gray-600">
-                    Docente: {syllabus.teacherName}
+                    Docente: {syllabus.teacherName || "No asignado"}
                   </p>
                   <p className="text-xs text-gray-500 mt-1">
                     Enviado:{" "}
-                    {new Date(syllabus.submittedDate).toLocaleDateString()}
+                    {syllabus.submittedDate
+                      ? new Date(syllabus.submittedDate).toLocaleDateString()
+                      : "N/A"}
                   </p>
                 </div>
               </div>
@@ -158,6 +209,7 @@ export default function ReviewSyllabusList() {
               <div className="flex items-center gap-3">
                 {(() => {
                   const cfg = statusConfig[syllabus.status];
+                  if (!cfg) return null;
                   return (
                     <div
                       className={`flex items-center gap-2 px-2 py-1 rounded ${cfg.bgColor} ${cfg.textColor}`}

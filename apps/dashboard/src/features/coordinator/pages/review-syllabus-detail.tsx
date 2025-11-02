@@ -15,7 +15,7 @@ import { StepsContext } from "../../syllabus/contexts/steps-context-provider";
 import { ReviewModeProvider } from "../contexts/review-mode-context";
 
 // Import permissions hook
-import type { Permission } from "../hooks/permissions-query";
+import { usePermissions, type Permission } from "../hooks/permissions-query";
 
 // Import step components
 import FirstStep from "../../syllabus/components/first-step";
@@ -74,12 +74,26 @@ export default function ReviewSyllabusDetail() {
   const courseCode = searchParams.get("courseCode") || "Código no disponible";
   const teacherName =
     searchParams.get("teacherName") || "Docente no disponible";
+  const syllabusId = searchParams.get("syllabusId");
+  const docenteIdParam = searchParams.get("docenteId");
 
-  // Mock de permisos - mostrar todas las secciones por defecto
-  // Cuando el backend esté listo, descomentar usePermissions y usar docenteId de la URL
-  const permissions: Permission[] = [];
-  const permissionsLoading = false;
-  const permissionsError = false;
+  // Obtener permisos del backend
+  const {
+    data: permissions = [],
+    isLoading: permissionsLoading,
+    isError: permissionsError,
+  } = usePermissions(
+    docenteIdParam && parseInt(docenteIdParam) > 0
+      ? parseInt(docenteIdParam)
+      : null,
+  );
+
+  // Debug: Ver qué permisos se obtuvieron
+  console.log("=== PERMISOS DE REVISIÓN ===");
+  console.log("docenteId:", docenteIdParam);
+  console.log("Permisos obtenidos:", permissions);
+  console.log("Loading:", permissionsLoading);
+  console.log("Error:", permissionsError);
 
   // Create a mock stepper context value
   // Mock de stepperValue para simular el contexto
@@ -153,7 +167,7 @@ export default function ReviewSyllabusDetail() {
 
     // Navegar al resumen con los parámetros
     navigate(
-      `/coordinator/review-syllabus/${id}/summary?courseName=${encodeURIComponent(courseName)}&courseCode=${encodeURIComponent(courseCode)}&teacherName=${encodeURIComponent(teacherName)}`,
+      `/coordinator/review-syllabus/${id}/summary?courseName=${encodeURIComponent(courseName)}&courseCode=${encodeURIComponent(courseCode)}&teacherName=${encodeURIComponent(teacherName)}&syllabusId=${syllabusId}`,
     );
   };
 
@@ -196,14 +210,19 @@ export default function ReviewSyllabusDetail() {
       return sectionDefinitions.map((s) => s.id); // Mostrar todas si no hay permisos o hay error
     }
 
-    return permissions.map((p) => String(p.numeroSeccion));
+    return permissions.map((p: Permission) => String(p.numeroSeccion));
   }, [permissions, permissionsLoading, permissionsError, sectionDefinitions]);
 
   // Obtener las definiciones de secciones permitidas
   const allowedSections = useMemo(() => {
-    return sectionDefinitions.filter((section) =>
+    const filtered = sectionDefinitions.filter((section) =>
       allowedSectionIds.includes(section.id),
     );
+    console.log(
+      "Secciones permitidas:",
+      filtered.map((s) => `${s.id}. ${s.name}`),
+    );
+    return filtered;
   }, [sectionDefinitions, allowedSectionIds]);
 
   // Actualizar la sección seleccionada cuando se carguen los permisos
