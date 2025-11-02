@@ -29,7 +29,16 @@ class SyllabusPDFService {
       );
     }
 
-    return res.json();
+    const response = await res.json();
+
+    // El backend devuelve: { success: true, message: '...', data: {...} }
+    // Extraemos solo el campo 'data' que contiene el sílabo
+    if (response.success && response.data) {
+      return response.data;
+    }
+
+    // Si no tiene la estructura esperada, devolver la respuesta completa
+    return response;
   }
 
   /**
@@ -149,26 +158,41 @@ class SyllabusPDFService {
       .join("\n");
     filledHtml = filledHtml.replace(/{{recursosDidacticos}}/g, recursosHtml);
 
-    // Plan de Evaluación
-    const planEvaluacionHtml = data.evaluacionAprendizaje.planEvaluacion
-      .map(
-        (plan) => `
-        <tr>
-          <td>${plan.semana}</td>
-          <td>${plan.instrumento}</td>
-          <td>${plan.descripcion || ""}</td>
-          <td>${plan.peso || 0}%</td>
-        </tr>
-      `,
-      )
-      .join("\n");
-    filledHtml = filledHtml.replace(/{{planEvaluacion}}/g, planEvaluacionHtml);
-
-    // Fórmula de Evaluación
+    // Evaluación del Aprendizaje - Descripción PF
     filledHtml = filledHtml.replace(
-      /{{formulaEvaluacion}}/g,
-      data.evaluacionAprendizaje.formulaEvaluacion || "",
+      /{{descripcionPF}}/g,
+      data.evaluacionAprendizaje.descripcion || "",
     );
+
+    // Fórmula PF
+    filledHtml = filledHtml.replace(
+      /{{formulaPF}}/g,
+      data.evaluacionAprendizaje.formulaPF || "",
+    );
+
+    // Componentes PF
+    const componentesPFHtml = (data.evaluacionAprendizaje.componentesPF || [])
+      .map((comp) => `<li>${comp.codigo} = ${comp.descripcion}</li>`)
+      .join("\n");
+    filledHtml = filledHtml.replace(/{{componentesPF}}/g, componentesPFHtml);
+
+    // Evaluación del Aprendizaje - Descripción PE
+    filledHtml = filledHtml.replace(
+      /{{descripcionPE}}/g,
+      data.evaluacionAprendizaje.descripcionPE || "",
+    );
+
+    // Fórmula PE
+    filledHtml = filledHtml.replace(
+      /{{formulaPE}}/g,
+      data.evaluacionAprendizaje.formulaPE || "",
+    );
+
+    // Componentes PE
+    const componentesPEHtml = (data.evaluacionAprendizaje.componentesPE || [])
+      .map((comp) => `<li>${comp.codigo} = ${comp.descripcion}</li>`)
+      .join("\n");
+    filledHtml = filledHtml.replace(/{{componentesPE}}/g, componentesPEHtml);
 
     // Fuentes de Información
     const fuentesHtml = data.fuentes

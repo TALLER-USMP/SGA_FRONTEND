@@ -23,7 +23,6 @@ import ReviewSyllabusList from "./features/coordinator/pages/review-syllabus-lis
 import ReviewSyllabusDetail from "./features/coordinator/pages/review-syllabus-detail";
 import ReviewSummary from "./features/coordinator/pages/review-summary";
 import SyllabusCatalog from "./features/coordinator/pages/syllabus-catalog";
-import { SyllabusPDFReactTest } from "./features/syllabus/components/syllabus-pdf-react-test";
 
 const queryClient = new QueryClient();
 
@@ -35,10 +34,6 @@ export default function App() {
           <CoordinatorProvider>
             <Toaster position="top-right" richColors closeButton />
             <Routes>
-              <Route
-                path="/test-pdf-react"
-                element={<SyllabusPDFReactTest />}
-              />
               <Route
                 path="/"
                 element={
