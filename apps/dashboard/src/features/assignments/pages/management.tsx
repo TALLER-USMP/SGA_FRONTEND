@@ -198,7 +198,6 @@ export default function Management() {
       }
 
       // PASO 1: Verificar que el mailToken existe ANTES de hacer nada
-      console.log("🔍 Verificando token de correo...");
       const mailToken = sessionStorage.getItem("mailToken");
       if (!mailToken) {
         toast.error(
@@ -207,12 +206,8 @@ export default function Management() {
         );
         return;
       }
-      console.log("✅ Token de correo disponible");
 
       // PASO 2: Enviar correo PRIMERO (antes de guardar en BD)
-      console.log("📧 Enviando correo de notificación...");
-      console.log("📧 Destinatario:", selectedTeacher.email);
-
       await sendEmail({
         teacherName: selectedTeacher.name,
         teacherEmail: selectedTeacher.email,
@@ -222,17 +217,7 @@ export default function Management() {
         additionalMessage: message.trim() || undefined,
       });
 
-      console.log("✅ Correo enviado exitosamente");
-
       // PASO 3: Solo si el correo se envió correctamente, guardar en BD
-      console.log("📝 Guardando asignación en la base de datos...");
-      console.log("📊 Datos de asignación:", {
-        teacherId,
-        syllabusId,
-        courseCode: courseCode.trim(),
-        academicPeriod: academicPeriod.trim(),
-      });
-
       const assignmentData = {
         teacherId,
         syllabusId,
@@ -241,9 +226,7 @@ export default function Management() {
         message: message.trim() || "",
       };
 
-      const assignmentResult =
-        await createAssignment.mutateAsync(assignmentData);
-      console.log("✅ Asignación guardada exitosamente:", assignmentResult);
+      await createAssignment.mutateAsync(assignmentData);
 
       // PASO 4: Mostrar mensaje de éxito
       toast.success(
@@ -260,10 +243,6 @@ export default function Management() {
       setMessage("");
       setCharCount(0);
     } catch (error) {
-      console.error(
-        "❌ Error en el proceso de asignación verifica que no dupliques asignaciones",
-      );
-
       const errorMessage =
         error instanceof Error ? error.message : String(error);
 
