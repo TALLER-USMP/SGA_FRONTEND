@@ -11,13 +11,9 @@ export default function Header({ user }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await authService.logout();
-      console.log("✅ Sesión cerrada correctamente");
-      window.location.reload();
+      window.location.href = import.meta.env.VITE_REDIRECT_LOGIN;
     } catch (error) {
-      console.error("❌ Error en el logout:", error);
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("mailToken");
-      window.location.reload();
+      console.error("error en el logout" + error);
     }
   };
 

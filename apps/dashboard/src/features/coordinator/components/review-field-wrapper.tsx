@@ -15,11 +15,17 @@ export const ReviewFieldWrapper: React.FC<ReviewFieldWrapperProps> = ({
   className = "",
   orientation = "horizontal",
 }) => {
-  const { isReviewMode, onFieldReview, onFieldComment } = useReviewMode();
+  const { isReviewMode, onFieldReview, onFieldComment, reviewData } =
+    useReviewMode();
 
   if (!isReviewMode) {
     return <>{children}</>;
   }
+
+  // Obtener datos de revisión previos para este campo
+  const fieldReviewData = reviewData?.[fieldId];
+  const initialStatus = fieldReviewData?.status || null;
+  const initialComment = fieldReviewData?.comment || "";
 
   if (orientation === "vertical") {
     return (
@@ -30,6 +36,8 @@ export const ReviewFieldWrapper: React.FC<ReviewFieldWrapperProps> = ({
             fieldId={fieldId}
             onStatusChange={onFieldReview}
             onCommentChange={onFieldComment}
+            initialStatus={initialStatus}
+            initialComment={initialComment}
           />
         </div>
       </div>
@@ -44,6 +52,8 @@ export const ReviewFieldWrapper: React.FC<ReviewFieldWrapperProps> = ({
           fieldId={fieldId}
           onStatusChange={onFieldReview}
           onCommentChange={onFieldComment}
+          initialStatus={initialStatus}
+          initialComment={initialComment}
         />
       </div>
     </div>

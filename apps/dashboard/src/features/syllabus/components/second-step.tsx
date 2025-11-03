@@ -4,14 +4,13 @@ import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
 import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
-import { toast } from "sonner";
 
 /**
  * Paso 2: formulario con validaciones básicas (no vacíos)
  */
 export default function SecondStep() {
   const { nextStep } = useSteps();
-  const { syllabusId, mode, courseName } = useSyllabusContext();
+  const { syllabusId, courseName } = useSyllabusContext();
   const [summary, setSummary] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
@@ -20,18 +19,9 @@ export default function SecondStep() {
   const { data, isLoading, isError, error } = useSumilla(syllabusId);
   const saveSumilla = useSaveSumilla();
 
-  // Determina si debe crear (POST) o actualizar (PUT)
-  // Si no hay datos previos (data es null) o es modo create sin ID, usa POST
-  const isCreating = !data || (mode === "create" && !syllabusId);
-
   useEffect(() => {
     if (isError) {
-      const errorMsg = error?.message ?? "Error cargando sumilla";
-      if (!errorMsg.includes("404")) {
-        toast.error("Error al cargar sumilla", {
-          description: errorMsg,
-        });
-      }
+      setApiError(error?.message ?? "Error cargando sumilla");
       return;
     }
     if (!data) return;
@@ -45,6 +35,8 @@ export default function SecondStep() {
     }
   }, [data, isError, error]);
 
+  // No need to define a raw mutation here, useSaveSumilla above
+
   const validateAndNext = async () => {
     const newErrors: Record<string, string> = {};
     if (!summary.trim()) newErrors.summary = "Campo obligatorio";
@@ -53,52 +45,18 @@ export default function SecondStep() {
       setApiError("");
       const id = syllabusId;
       if (!id) {
-        toast.error("Error", {
-          description:
-            "Id del sílabo no encontrado. Completa el primer paso antes de continuar.",
-        });
+        setApiError(
+          "Id del sílabo no encontrado. Completa el primer paso antes de continuar.",
+        );
         return;
       }
       try {
-        await saveSumilla.mutateAsync({
-          syllabusId: id,
-          data: { sumilla: summary },
-          isCreating,
-        });
-        toast.success("Sumilla guardada exitosamente");
+        await saveSumilla.mutateAsync({ id, sumilla: summary });
         nextStep();
       } catch (err: unknown) {
-        // Parsear error estructurado del backend
-        if (err instanceof Error) {
-          try {
-            // Intentar parsear el mensaje como JSON
-            const errorData = JSON.parse(err.message);
-
-            if (errorData.data && Array.isArray(errorData.data)) {
-              // Mostrar cada error de validación
-              errorData.data.forEach(
-                (validationError: { path: string[]; message: string }) => {
-                  toast.error("Error de validación", {
-                    description: validationError.message,
-                  });
-                },
-              );
-            } else {
-              toast.error("Error al guardar", {
-                description: errorData.message || err.message,
-              });
-            }
-          } catch {
-            // Si no es JSON, mostrar el mensaje directamente
-            toast.error("Error al guardar la sumilla", {
-              description: err.message,
-            });
-          }
-        } else {
-          toast.error("Error desconocido", {
-            description: String(err),
-          });
-        }
+        if (err instanceof Error)
+          setApiError(`Error al guardar la sumilla: ${err.message}`);
+        else setApiError(String(err));
       }
     } else {
       // enfocar primer campo con error

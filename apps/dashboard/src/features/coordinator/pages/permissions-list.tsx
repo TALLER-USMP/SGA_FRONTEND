@@ -34,6 +34,7 @@ export default function PermissionsList() {
     setSelectedDocenteId,
     setSelectedSilaboId,
     setSelectedDocenteName,
+    setSelectedDocenteEmail,
     setSelectedCourseName,
     setSelectedCourseCode,
   } = useCoordinator();
@@ -309,11 +310,12 @@ export default function PermissionsList() {
               setSelectedDocenteId(assignment.docenteId);
               setSelectedSilaboId(assignment.syllabusId ?? null);
               setSelectedDocenteName(assignment.nombreDocente ?? "Docente");
+              setSelectedDocenteEmail(assignment.docenteEmail ?? null);
               setSelectedCourseName(assignment.cursoNombre);
               setSelectedCourseCode(assignment.cursoCodigo);
 
               navigate(
-                `/coordinator/permissions/manage?courseName=${encodeURIComponent(assignment.cursoNombre)}&teacherName=${encodeURIComponent(assignment.nombreDocente || "Docente")}&courseCode=${encodeURIComponent(assignment.cursoCodigo)}`,
+                `/coordinator/permissions/manage?courseName=${encodeURIComponent(assignment.cursoNombre)}&teacherName=${encodeURIComponent(assignment.nombreDocente || "Docente")}&courseCode=${encodeURIComponent(assignment.cursoCodigo)}&teacherEmail=${encodeURIComponent(assignment.docenteEmail || "")}`,
               );
             }}
           >
