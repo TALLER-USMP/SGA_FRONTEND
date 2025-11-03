@@ -75,6 +75,14 @@ export default function App() {
                   </MainLayout>
                 }
               />
+              <Route
+                path="/approved-syllabus"
+                element={
+                  <MainLayout title="Sílabos Aprobados">
+                    <ApprovedSyllabiPage />
+                  </MainLayout>
+                }
+              />
 
               {/* Coordinator Routes */}
               <Route

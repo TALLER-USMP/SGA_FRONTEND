@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { getCurrentAcademicPeriod } from "../../../common/utils/academic-period";
 import { useToast } from "../../../common/hooks/use-toast";
-import TeacherSelect, { type Teacher } from "../components/teacher-select";
-import CourseSelect, { type Course } from "../components/course-select";
+import { useSendAssignmentEmail } from "../hooks/use-send-assignment-email";
+import { useTeachers, type Teacher } from "../hooks/use-teachers";
+import { useCourses, type Course } from "../hooks/use-courses";
+import { useCreateAssignment } from "../hooks/use-create-assignment";
+import TeacherSelect from "../components/teacher-select";
+import CourseSelect from "../components/course-select";
 import CourseCodeInput from "../components/course-code-input";
 import AcademicPeriodInput from "../components/academic-period-input";
 import MessageTextarea from "../components/message-textarea";
@@ -27,40 +31,48 @@ export default function Management() {
   const [courseSearch, setCourseSearch] = useState<string>("");
   const [showCourseDropdown, setShowCourseDropdown] = useState<boolean>(false);
 
-  // Mock data - reemplazar con datos reales del backend
-  const mockTeachers: Teacher[] = [
-    {
-      id: "1",
-      name: "Huapalla García Juan Manuel",
-      email: "jhuapalla@usmp.pe",
-    },
-    { id: "2", name: "García López María Elena", email: "mgarcia@usmp.pe" },
-    {
-      id: "3",
-      name: "Rodríguez Pérez Carlos Alberto",
-      email: "crodriguez@usmp.pe",
-    },
-    {
-      id: "4",
-      name: "Fernández Torres Ana Lucía",
-      email: "afernandez@usmp.pe",
-    },
-  ];
+  // Cargar docentes y cursos desde el backend
+  const {
+    data: teachers = [],
+    isError: isErrorTeachers,
+    error: teachersError,
+  } = useTeachers();
 
-  const mockCourses: Course[] = [
-    { id: "1", name: "Taller de Proyectos", code: "09072108042" },
-    { id: "2", name: "Programación Orientada a Objetos", code: "09072108043" },
-    { id: "3", name: "Base de Datos", code: "09072108044" },
-    { id: "4", name: "Ingeniería de Software", code: "09072108045" },
-  ];
+  const {
+    data: courses = [],
+    isError: isErrorCourses,
+    error: coursesError,
+  } = useCourses();
+
+  const createAssignment = useCreateAssignment();
+  const { sendEmail } = useSendAssignmentEmail();
+
+  // Mostrar errores de carga
+  useEffect(() => {
+    if (isErrorTeachers) {
+      toast.error(
+        "Error al cargar docentes",
+        teachersError?.message || "No se pudieron cargar los docentes",
+      );
+    }
+  }, [isErrorTeachers, teachersError, toast]);
+
+  useEffect(() => {
+    if (isErrorCourses) {
+      toast.error(
+        "Error al cargar cursos",
+        coursesError?.message || "No se pudieron cargar los cursos",
+      );
+    }
+  }, [isErrorCourses, coursesError, toast]);
 
   // Filtrar docentes
-  const filteredTeachers = mockTeachers.filter((teacher) =>
+  const filteredTeachers = teachers.filter((teacher) =>
     teacher.name.toLowerCase().includes(teacherSearch.toLowerCase()),
   );
 
   // Filtrar cursos
-  const filteredCourses = mockCourses.filter((course) =>
+  const filteredCourses = courses.filter((course) =>
     course.name.toLowerCase().includes(courseSearch.toLowerCase()),
   );
 
@@ -131,7 +143,6 @@ export default function Management() {
       const teacherId = parseInt(selectedTeacher.id);
       const syllabusId = parseInt(selectedCourse.id);
 
-      // Validar que sean números válidos
       if (isNaN(teacherId)) {
         toast.error(
           "ID de docente inválido",
@@ -148,7 +159,6 @@ export default function Management() {
         return;
       }
 
-      // PASO 1: Verificar que el mailToken existe ANTES de hacer nada
       const mailToken = sessionStorage.getItem("mailToken");
       if (!mailToken) {
         toast.error(
@@ -158,7 +168,6 @@ export default function Management() {
         return;
       }
 
-      // PASO 2: Enviar correo PRIMERO (antes de guardar en BD)
       await sendEmail({
         teacherName: selectedTeacher.name,
         teacherEmail: selectedTeacher.email,
@@ -168,18 +177,16 @@ export default function Management() {
         additionalMessage: message.trim() || undefined,
       });
 
-      // PASO 3: Solo si el correo se envió correctamente, guardar en BD
       const assignmentData = {
-        teacher: selectedTeacher,
-        course: selectedCourse,
-        courseCode,
-        academicPeriod,
-        message,
+        teacherId,
+        syllabusId,
+        courseCode: courseCode.trim(),
+        academicPeriod: academicPeriod.trim(),
+        message: message.trim() || undefined,
       };
 
       await createAssignment.mutateAsync(assignmentData);
 
-      // Simular llamada al backend
       await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success(
         "¡Asignación exitosa!",
