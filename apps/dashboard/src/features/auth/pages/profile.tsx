@@ -31,6 +31,7 @@ export default function Profile() {
     lastName: "",
     profession: "",
     email: "",
+    phone: "",
     photo: null,
   });
 
@@ -117,18 +118,26 @@ export default function Profile() {
                   { label: "Apellidos", field: "lastName" as const },
                   { label: "Profesión", field: "profession" as const },
                   { label: "Correo", field: "email" as const },
+                  { label: "Teléfono", field: "phone" as const },
                 ].map(({ label, field }) => (
                   <div key={field}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {label}
                     </label>
                     <input
-                      type={field === "email" ? "email" : "text"}
+                      type={
+                        field === "email"
+                          ? "email"
+                          : field === "phone"
+                            ? "tel"
+                            : "text"
+                      }
                       value={profileData[field] || ""}
                       onChange={(e) => handleInputChange(field, e.target.value)}
                       disabled={field === "email" ? true : !isEditing}
+                      placeholder={field === "phone" ? "999999999" : ""}
                       className={`w-full p-3 border border-gray-300 rounded-lg ${
-                        isEditing
+                        isEditing && field !== "email"
                           ? "bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                           : "bg-gray-100"
                       }`}

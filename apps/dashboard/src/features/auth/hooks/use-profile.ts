@@ -9,16 +9,23 @@ export interface ProfileData {
   lastName: string;
   profession: string;
   email: string;
+  phone: string;
   photo: string | null;
 }
 
 interface ProfileResponse {
   nombre?: string;
   Nombre?: string;
+  apellido?: string;
+  Apellido?: string;
   grado?: string;
   Grado?: string;
   correo?: string;
   Correo?: string;
+  telefono?: string;
+  Telefono?: string;
+  bachiller?: string;
+  Bachiller?: string;
 }
 
 /**
@@ -28,15 +35,32 @@ const formatProfileData = (
   data: ProfileResponse,
   userEmail?: string,
 ): ProfileData => {
+  // Procesar nombre completo o usar apellido si existe
   const nombreCompleto = data.nombre || data.Nombre || "";
-  const nombres = nombreCompleto.split(" ").filter(Boolean); // Elimina espacios vacíos
-  const apellidosIndex = Math.min(2, Math.ceil(nombres.length / 2));
+  const apellido = data.apellido || data.Apellido || "";
+
+  let firstName = "";
+  let lastName = "";
+
+  if (apellido) {
+    // Si hay apellido separado, usarlo directamente
+    firstName = nombreCompleto;
+    lastName = apellido;
+  } else if (nombreCompleto) {
+    // Si solo hay nombre completo, dividirlo
+    const nombres = nombreCompleto.split(" ").filter(Boolean);
+    const apellidosIndex = Math.min(2, Math.ceil(nombres.length / 2));
+    firstName = nombres.slice(0, apellidosIndex).join(" ");
+    lastName = nombres.slice(apellidosIndex).join(" ");
+  }
 
   return {
-    firstName: nombres.slice(0, apellidosIndex).join(" "),
-    lastName: nombres.slice(apellidosIndex).join(" "),
-    profession: data.grado || data.Grado || "",
+    firstName,
+    lastName,
+    profession:
+      data.grado || data.Grado || data.bachiller || data.Bachiller || "",
     email: data.correo || data.Correo || userEmail || "",
+    phone: data.telefono || data.Telefono || "",
     photo: null,
   };
 };
@@ -51,7 +75,7 @@ export function useProfile() {
     queryFn: async (): Promise<ProfileResponse> => {
       if (!user?.id) throw new Error("No user ID");
 
-      const response = await fetch(`${API_BASE}/docente/${user.id}`);
+      const response = await fetch(`${API_BASE}/teacher/${user.id}`);
 
       if (!response.ok) {
         throw new Error("Error al cargar perfil");
@@ -70,13 +94,15 @@ export function useProfile() {
     mutationFn: async (updatedData: ProfileData) => {
       if (!user?.id) throw new Error("No user ID");
 
-      const response = await fetch(`${API_BASE}/docente/${user.id}`, {
+      const response = await fetch(`${API_BASE}/teacher/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre: `${updatedData.firstName} ${updatedData.lastName}`.trim(),
+          nombre: updatedData.firstName.trim(),
+          apellido: updatedData.lastName.trim(),
           correo: updatedData.email,
-          grado: updatedData.profession,
+          grado: updatedData.profession || "",
+          telefono: updatedData.phone || "",
         }),
       });
 
