@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
@@ -42,7 +43,8 @@ interface DatosPorSemana {
 }
 
 const FourthStep: React.FC = () => {
-  const { cursoCodigo, syllabusId } = useSyllabusContext();
+  const { cursoCodigo, syllabusId, mode } = useSyllabusContext();
+  const [searchParams, setSearchParams] = useSearchParams();
   const silaboId = syllabusId ? Number(syllabusId) : 0;
   const { data, isLoading } = useGetProgramacion(cursoCodigo ?? "");
   const createProgramacion = useCreateProgramacion();
@@ -115,6 +117,36 @@ const FourthStep: React.FC = () => {
       setSelectedSemana(String(first.semanaInicio ?? ""));
     }
   }, [data]);
+
+  // Si estamos en modo create pero el GET ya devolvió datos,
+  // cambiamos automáticamente a modo edit y, si es posible, establecemos el id en la URL
+  useEffect(() => {
+    if (mode === "create" && Array.isArray(data) && data.length > 0) {
+      const currentMode = searchParams.get("mode");
+      const existingIdParam = searchParams.get("id");
+      const derivedSyllabusId =
+        syllabusId || (data[0] && (data[0] as ProgramacionResponse).silaboId);
+
+      if (currentMode !== "edit") {
+        const newParams: Record<string, string> = {
+          codigo: cursoCodigo ?? "",
+          mode: "edit",
+        };
+        if (derivedSyllabusId) newParams.id = String(derivedSyllabusId);
+        setSearchParams(newParams);
+        toast.info(
+          "Se encontró programación existente. Cambiamos a modo edición.",
+        );
+      } else if (!existingIdParam && derivedSyllabusId) {
+        // Si ya estamos en edit pero no hay id en la URL y lo podemos inferir
+        setSearchParams({
+          codigo: cursoCodigo ?? "",
+          id: String(derivedSyllabusId),
+          mode: "edit",
+        });
+      }
+    }
+  }, [mode, data, syllabusId, cursoCodigo, searchParams, setSearchParams]);
   // Efecto para cambiar de unidad
   useEffect(() => {
     if (!Array.isArray(data) || !selectedUnidad) return;
@@ -204,6 +236,14 @@ const FourthStep: React.FC = () => {
 
   const handleSave = async () => {
     try {
+      // Validar que exista silaboId (se necesita para POST/PUT correctos)
+      if (!silaboId || Number.isNaN(silaboId)) {
+        toast.error(
+          "Id del sílabo no encontrado. Completa el primer paso antes de continuar.",
+        );
+        return;
+      }
+
       // Primero guardar los datos de la semana actual
       guardarDatosLocales();
 
@@ -216,6 +256,13 @@ const FourthStep: React.FC = () => {
           unidadesConCambios.add(Number(match[1]));
         }
       });
+
+      // Determinar si debemos crear o actualizar según el modo y existencia de datos
+      const hasProgramacion = Array.isArray(data) && data.length > 0;
+      // Guía del paso 2 (sumilla):
+      // - En modo "edit": GET + PUT siempre.
+      // - En modo "create": hacer GET; si no retorna nada => POST; si retorna algo => PUT.
+      const shouldCreate = mode === "create" && !hasProgramacion;
 
       // Por cada unidad, consolidar los cambios de todas sus semanas
       for (const numeroUnidad of Array.from(unidadesConCambios)) {
@@ -261,51 +308,62 @@ const FourthStep: React.FC = () => {
             : undefined;
 
         // Preparar el payload
-        if (unidad.id) {
-          // Actualizar existente
-          const updatePayload: Partial<UpdateProgramacionBody> = {
-            silaboId,
-            numero: numeroUnidad,
-            titulo: unidad.titulo,
-            capacidadesText: unidad.capacidadesText as string | undefined,
-            semanaInicio: range[0],
-            semanaFin: range[1],
-            contenidosConceptuales:
-              contenidosConceptuales.join("\n\n") ||
-              unidad.contenidosConceptuales,
-            contenidosProcedimentales:
-              contenidosProcedimentales.join("\n\n") ||
-              unidad.contenidosProcedimentales,
-            actividadesAprendizaje: actividadesString,
-            horasLectivasTeoria: unidad.horasLectivasTeoria,
-            horasLectivasPractica: unidad.horasLectivasPractica,
-            horasNoLectivasTeoria: unidad.horasNoLectivasTeoria,
-            horasNoLectivasPractica: unidad.horasNoLectivasPractica,
-          };
-          await updateProgramacion.mutateAsync({
-            id: String(unidad.id),
-            payload: updatePayload,
-          });
+        // Construir payloads comunes
+        const updatePayload: Partial<UpdateProgramacionBody> = {
+          silaboId,
+          numero: numeroUnidad,
+          titulo: unidad.titulo,
+          capacidadesText: unidad.capacidadesText as string | undefined,
+          semanaInicio: range[0],
+          semanaFin: range[1],
+          contenidosConceptuales:
+            contenidosConceptuales.join("\n\n") ||
+            unidad.contenidosConceptuales,
+
+          contenidosProcedimentales:
+            contenidosProcedimentales.join("\n\n") ||
+            unidad.contenidosProcedimentales,
+          actividadesAprendizaje: actividadesString,
+          horasLectivasTeoria: unidad.horasLectivasTeoria,
+          horasLectivasPractica: unidad.horasLectivasPractica,
+          horasNoLectivasTeoria: unidad.horasNoLectivasTeoria,
+          horasNoLectivasPractica: unidad.horasNoLectivasPractica,
+        };
+        const createBody: CreateProgramacionBody = {
+          silaboId,
+          numero: numeroUnidad,
+          titulo: unidad.titulo || `Unidad ${numeroUnidad}`,
+          capacidadesText: unidad.capacidadesText as string | undefined,
+          semanaInicio: range[0],
+          semanaFin: range[1],
+          contenidosConceptuales:
+            contenidosConceptuales.join("\n\n") || undefined,
+          contenidosProcedimentales:
+            contenidosProcedimentales.join("\n\n") || undefined,
+          actividadesAprendizaje: actividadesString,
+          horasLectivasTeoria: unidad.horasLectivasTeoria,
+          horasLectivasPractica: unidad.horasLectivasPractica,
+          horasNoLectivasTeoria: unidad.horasNoLectivasTeoria,
+          horasNoLectivasPractica: unidad.horasNoLectivasPractica,
+        };
+
+        if (shouldCreate) {
+          // Modo create y GET vacío: POST
+          await createProgramacion.mutateAsync(createBody);
         } else {
-          // Crear nuevo
-          const body: CreateProgramacionBody = {
-            silaboId,
-            numero: numeroUnidad,
-            titulo: unidad.titulo || `Unidad ${numeroUnidad}`,
-            capacidadesText: unidad.capacidadesText as string | undefined,
-            semanaInicio: range[0],
-            semanaFin: range[1],
-            contenidosConceptuales:
-              contenidosConceptuales.join("\n\n") || undefined,
-            contenidosProcedimentales:
-              contenidosProcedimentales.join("\n\n") || undefined,
-            actividadesAprendizaje: actividadesString,
-            horasLectivasTeoria: unidad.horasLectivasTeoria,
-            horasLectivasPractica: unidad.horasLectivasPractica,
-            horasNoLectivasTeoria: unidad.horasNoLectivasTeoria,
-            horasNoLectivasPractica: unidad.horasNoLectivasPractica,
-          };
-          await createProgramacion.mutateAsync(body);
+          // Modo edit, o create con GET con datos: PUT
+          if (unidad.id) {
+            await updateProgramacion.mutateAsync({
+              id: String(unidad.id),
+              payload: updatePayload,
+            });
+          } else {
+            // No hay id para actualizar: fallback seguro a crear y advertir
+            toast.warning(
+              `No se encontró registro para la Unidad ${numeroUnidad}. Se creará uno nuevo.`,
+            );
+            await createProgramacion.mutateAsync(createBody);
+          }
         }
       }
 
