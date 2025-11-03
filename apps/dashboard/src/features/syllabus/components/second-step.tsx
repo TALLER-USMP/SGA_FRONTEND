@@ -3,13 +3,22 @@ import { useSaveSumilla, useSumilla } from "../hooks/second-step-query";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
+import { toast } from "sonner";
 
 /**
- * Paso 2: formulario con validaciones básicas (no vacíos)
+ * Paso 2: Formulario de Sumilla con validaciones básicas
+ *
+ * Lógica de modo:
+ * - mode="edit": Consume GET para cargar sumilla existente
+ *   - Si GET retorna data: usa PUT para actualizar
+ *   - Si GET retorna null (404): usa POST para crear
+ * - mode="create": Valida si existe data
+ *   - Si GET retorna data: usa PUT para actualizar
+ *   - Si GET retorna null: usa POST para crear nuevo registro
  */
 export default function SecondStep() {
   const { nextStep } = useSteps();
-  const { syllabusId, courseName } = useSyllabusContext();
+  const { syllabusId, mode, courseName } = useSyllabusContext();
   const [summary, setSummary] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
@@ -18,9 +27,24 @@ export default function SecondStep() {
   const { data, isLoading, isError, error } = useSumilla(syllabusId);
   const saveSumilla = useSaveSumilla();
 
+  // Determina si debe crear (POST) o actualizar (PUT)
+  // - En mode="edit": siempre consumir GET primero
+  //   - Si GET retorna data: usar PUT
+  //   - Si GET retorna null (404): usar POST
+  // - En mode="create":
+  //   - Si GET retorna data (ya existe): usar PUT
+  //   - Si GET retorna null: usar POST
+  const isCreating = mode === "edit" ? !data : !data;
+
   useEffect(() => {
     if (isError) {
-      setApiError(error?.message ?? "Error cargando sumilla");
+      const errorMsg = error?.message ?? "Error cargando sumilla";
+      // 404 es esperado cuando no existe sumilla aún, no mostrar error
+      if (!errorMsg.includes("404")) {
+        toast.error("Error al cargar sumilla", {
+          description: errorMsg,
+        });
+      }
       return;
     }
     if (!data) return;
@@ -34,8 +58,6 @@ export default function SecondStep() {
     }
   }, [data, isError, error]);
 
-  // No need to define a raw mutation here, useSaveSumilla above
-
   const validateAndNext = async () => {
     const newErrors: Record<string, string> = {};
     if (!summary.trim()) newErrors.summary = "Campo obligatorio";
@@ -44,18 +66,58 @@ export default function SecondStep() {
       setApiError("");
       const id = syllabusId;
       if (!id) {
-        setApiError(
-          "Id del sílabo no encontrado. Completa el primer paso antes de continuar.",
-        );
+        toast.error("Error", {
+          description:
+            "Id del sílabo no encontrado. Completa el primer paso antes de continuar.",
+        });
         return;
       }
       try {
-        await saveSumilla.mutateAsync({ id, sumilla: summary });
+        await saveSumilla.mutateAsync({
+          syllabusId: id,
+          data: { sumilla: summary },
+          isCreating,
+        });
+
+        // Mensaje diferenciado según la operación realizada
+        const successMessage = isCreating
+          ? "Sumilla creada exitosamente"
+          : "Sumilla actualizada exitosamente";
+
+        toast.success(successMessage);
         nextStep();
       } catch (err: unknown) {
-        if (err instanceof Error)
-          setApiError(`Error al guardar la sumilla: ${err.message}`);
-        else setApiError(String(err));
+        // Parsear error estructurado del backend
+        if (err instanceof Error) {
+          try {
+            // Intentar parsear el mensaje como JSON
+            const errorData = JSON.parse(err.message);
+
+            if (errorData.data && Array.isArray(errorData.data)) {
+              // Mostrar cada error de validación
+              errorData.data.forEach(
+                (validationError: { path: string[]; message: string }) => {
+                  toast.error("Error de validación", {
+                    description: validationError.message,
+                  });
+                },
+              );
+            } else {
+              toast.error("Error al guardar", {
+                description: errorData.message || err.message,
+              });
+            }
+          } catch {
+            // Si no es JSON, mostrar el mensaje directamente
+            toast.error("Error al guardar la sumilla", {
+              description: err.message,
+            });
+          }
+        } else {
+          toast.error("Error desconocido", {
+            description: String(err),
+          });
+        }
       }
     } else {
       // enfocar primer campo con error

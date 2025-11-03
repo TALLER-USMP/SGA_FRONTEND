@@ -72,7 +72,7 @@ export default function FirstStep() {
   const [practiceTotal, setPracticeTotal] = useState<number>(0);
   const [totalHours, setTotalHours] = useState<number>(0);
 
-  const { data, isLoading, isError, error } = useSyllabusGeneral(syllabusId);
+  const { data, isLoading, isError, error } = useSyllabusGeneral(draftKey);
 
   useEffect(() => {
     if (isError) {
