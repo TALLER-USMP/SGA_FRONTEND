@@ -21,7 +21,8 @@ export default function MyAssignments() {
     | "APROBADO"
     | "ANALIZANDO"
     | "DESAPROBADO"
-    | "ASIGNADO";
+    | "ASIGNADO"
+    | "NUEVO";
   type FilterStatus = "ALL" | AssignmentStatus;
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("ALL");
   const navigate = useNavigate();
@@ -55,6 +56,12 @@ export default function MyAssignments() {
       textColor: "text-blue-700",
       bgColor: "bg-blue-50",
     },
+    NUEVO: {
+      label: "Nuevo",
+      color: "bg-purple-500",
+      textColor: "text-purple-700",
+      bgColor: "bg-purple-50",
+    },
   };
 
   const filteredAssignments = assignments.filter((assignment: Assignment) => {
@@ -70,10 +77,19 @@ export default function MyAssignments() {
     setSelectedAssignment(assignment);
   };
 
-  const handleEditAssignment = (codigo: string, syllabusId?: number) => {
+  const handleEditAssignment = (
+    codigo: string,
+    estado: string,
+    syllabusId?: number,
+  ) => {
+    // Si es NUEVO, usar mode=create
+    // Si es DESAPROBADO o ASIGNADO, usar mode=edit
+    const mode = estado === "NUEVO" ? "create" : "edit";
+
     const url = syllabusId
-      ? `/syllabus?codigo=${codigo}&id=${syllabusId}`
-      : `/syllabus?codigo=${codigo}`;
+      ? `/syllabus?codigo=${codigo}&id=${syllabusId}&mode=${mode}`
+      : `/syllabus?codigo=${codigo}&mode=${mode}`;
+
     navigate(url);
   };
 
@@ -204,13 +220,15 @@ export default function MyAssignments() {
                   );
                 })()}
 
-                {/* Editar solo si está desaprobado o asignado */}
+                {/* Editar solo si está desaprobado, asignado o nuevo */}
                 {(assignment.estadoRevision === "DESAPROBADO" ||
-                  assignment.estadoRevision === "ASIGNADO") && (
+                  assignment.estadoRevision === "ASIGNADO" ||
+                  assignment.estadoRevision === "NUEVO") && (
                   <button
                     onClick={() =>
                       handleEditAssignment(
                         assignment.cursoCodigo,
+                        assignment.estadoRevision,
                         assignment.syllabusId,
                       )
                     }
