@@ -8,10 +8,8 @@ export const SessionProvider = ({
 }: {
   children: React.ReactNode;
 }) => {
-  const [token, setToken] = React.useState<string | undefined>(() => {
-    // Intentar obtener el token guardado al inicializar
-    return sessionStorage.getItem("authToken") || undefined;
-  });
+  const [token, setToken] = React.useState<string | undefined>();
+  const [shouldFetch, setShouldFetch] = React.useState(false);
 
   React.useLayoutEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -19,49 +17,51 @@ export const SessionProvider = ({
     const mailToken = urlParams.get("mailToken");
 
     if (tokenFromUrl && mailToken) {
-      // Guardar el token en sessionStorage para persistencia
-      sessionStorage.setItem("authToken", tokenFromUrl);
-      sessionStorage.setItem("mailToken", mailToken);
       setToken(tokenFromUrl);
-
-      // Limpiar la URL
+      sessionStorage.setItem("token", tokenFromUrl);
+      sessionStorage.setItem("mailToken", mailToken);
       const clear = window.location.origin + window.location.pathname;
       window.history.replaceState({}, document.title, clear);
+    } else {
+      const savedToken = sessionStorage.getItem("token");
+      if (savedToken) {
+        setToken(savedToken);
+      }
     }
+    setShouldFetch(true);
   }, []);
 
   const getSession = useQuery({
     queryKey: ["session", token],
     queryFn: () => authService.fetchSession(token),
-    enabled: !!token,
-    retry: 2, // Intentar 2 veces más antes de marcar como error
-    retryDelay: 1000, // Esperar 1 segundo antes de reintentar
-    staleTime: 5 * 60 * 1000, // 5 minutos
-    gcTime: 10 * 60 * 1000, // 10 minutos en caché
-    refetchOnWindowFocus: false, // No refetch al cambiar de ventana
-    refetchOnMount: false, // No refetch al montar si hay datos en caché
-    refetchOnReconnect: true, // Sí refetch cuando se recupera la conexión
+    enabled: shouldFetch,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
   });
 
-  // Limpiar token si la sesión falló definitivamente
   React.useEffect(() => {
-    if (getSession.isError && token && getSession.failureCount >= 2) {
-      console.warn("Sesión inválida, limpiando token...");
-      sessionStorage.removeItem("authToken");
+    if (getSession.isError && shouldFetch) {
+      sessionStorage.removeItem("token");
       sessionStorage.removeItem("mailToken");
-      setToken(undefined);
+      console.log("❌ Sesión inválida - tokens eliminados");
     }
-  }, [getSession.isError, getSession.failureCount, token]);
-
-  // Si no hay token guardado, marcar como error
-  const hasNoToken = !token;
+  }, [getSession.isError, shouldFetch]);
 
   return (
     <SessionContext.Provider
       value={{
-        user: getSession.data?.user,
-        isLoading: getSession.isLoading || getSession.isFetching,
-        isError: hasNoToken || getSession.isError,
+        user: (
+          getSession.data as {
+            user?: {
+              id: number;
+              name?: string;
+              email?: string;
+              role?: number;
+            };
+          }
+        )?.user,
+        isLoading: getSession.isLoading,
+        isError: getSession.isError,
       }}
     >
       {children}
