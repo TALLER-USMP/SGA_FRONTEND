@@ -7,6 +7,7 @@ import {
 import { Toaster } from "sonner";
 import MyAssignmentsPage from "./features/assignments/pages/my-assignments";
 import ManagementPage from "./features/assignments/pages/management";
+import ApprovedSyllabiPage from "./features/assignments/pages/approved-syllabus";
 import SyllabusProcessPage from "./features/syllabus/pages/syllabus-process";
 import { SessionProvider } from "./features/auth/contexts/session-provider";
 import { CoordinatorProvider } from "./features/coordinator/contexts/coordinator-context";

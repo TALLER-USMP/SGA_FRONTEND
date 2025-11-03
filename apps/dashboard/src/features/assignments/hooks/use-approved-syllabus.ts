@@ -5,28 +5,31 @@ export interface ApprovedSyllabus {
   codigo: string;
   asignatura: string;
   fechaAprobacion: string;
-  ciclo?: number;
+  ciclo?: string;
   escuela?: string;
-  docente?: string;
-  syllabusId?: number;
+  estadoRevision: string;
 }
 
-interface BackendSyllabusResponse {
+interface SyllabusBackendResponse {
   id: number;
   cursoCodigo: string;
   cursoNombre: string;
-  estadoRevision: string;
-  fechaAprobacion?: string;
-  ciclo?: number;
+  ciclo?: string;
   escuelaProfesional?: string;
-  docenteNombre?: string;
-  syllabusId?: number;
+  estadoRevision: "APROBADO" | "ASIGNADO" | "REPROBADO" | "EN REVISION";
+  fechaAprobacion?: string;
+}
+
+interface ApiResponse {
+  success: boolean;
+  message: string;
+  data: SyllabusBackendResponse[];
 }
 
 async function fetchApprovedSyllabi(): Promise<ApprovedSyllabus[]> {
   const apiBase =
     import.meta.env.VITE_API_BASE_URL ?? "http://localhost:7071/api";
-  const url = `${apiBase}/assignments`;
+  const url = `${apiBase}/assignments/courses`;
 
   const res = await fetch(url, {
     credentials: "include", // Para enviar cookie sessionSGA
@@ -40,20 +43,24 @@ async function fetchApprovedSyllabi(): Promise<ApprovedSyllabus[]> {
     throw new Error(`Error ${res.status}: ${text}`);
   }
 
-  const data: BackendSyllabusResponse[] = await res.json();
+  const response: ApiResponse = await res.json();
 
-  // Filtrar solo los aprobados y mapear
-  return data
-    .filter((item) => item.estadoRevision === "APROBADO")
-    .map((item) => ({
-      id: item.id,
-      codigo: item.cursoCodigo,
-      asignatura: item.cursoNombre,
-      fechaAprobacion: item.fechaAprobacion || "N/A",
-      ciclo: item.ciclo,
-      escuela: item.escuelaProfesional,
-      docente: item.docenteNombre,
-      syllabusId: item.syllabusId,
+  // Verificar que la respuesta sea exitosa y tenga datos
+  if (!response.success || !Array.isArray(response.data)) {
+    throw new Error(response.message || "Error al obtener sílabos");
+  }
+
+  // Filtrar solo los APROBADOS y mapear
+  return response.data
+    .filter((silabo) => silabo.estadoRevision === "APROBADO")
+    .map((silabo) => ({
+      id: silabo.id,
+      codigo: silabo.cursoCodigo,
+      asignatura: silabo.cursoNombre,
+      ciclo: silabo.ciclo,
+      escuela: silabo.escuelaProfesional,
+      estadoRevision: silabo.estadoRevision,
+      fechaAprobacion: silabo.fechaAprobacion || new Date().toISOString(),
     }));
 }
 

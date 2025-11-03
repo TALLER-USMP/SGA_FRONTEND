@@ -128,6 +128,47 @@ export default function Management() {
     }
 
     try {
+      const teacherId = parseInt(selectedTeacher.id);
+      const syllabusId = parseInt(selectedCourse.id);
+
+      // Validar que sean números válidos
+      if (isNaN(teacherId)) {
+        toast.error(
+          "ID de docente inválido",
+          "El ID del docente seleccionado no es válido",
+        );
+        return;
+      }
+
+      if (isNaN(syllabusId)) {
+        toast.error(
+          "ID de curso inválido",
+          "El ID del curso seleccionado no es válido",
+        );
+        return;
+      }
+
+      // PASO 1: Verificar que el mailToken existe ANTES de hacer nada
+      const mailToken = sessionStorage.getItem("mailToken");
+      if (!mailToken) {
+        toast.error(
+          "Token de correo no disponible",
+          "No se puede enviar el correo de notificación. Por favor, cierra sesión y vuelve a iniciar sesión.",
+        );
+        return;
+      }
+
+      // PASO 2: Enviar correo PRIMERO (antes de guardar en BD)
+      await sendEmail({
+        teacherName: selectedTeacher.name,
+        teacherEmail: selectedTeacher.email,
+        courseName: selectedCourse.name,
+        courseCode: courseCode.trim(),
+        academicPeriod: academicPeriod.trim(),
+        additionalMessage: message.trim() || undefined,
+      });
+
+      // PASO 3: Solo si el correo se envió correctamente, guardar en BD
       const assignmentData = {
         teacher: selectedTeacher,
         course: selectedCourse,
@@ -136,7 +177,7 @@ export default function Management() {
         message,
       };
 
-      console.log("Asignación creada:", assignmentData);
+      await createAssignment.mutateAsync(assignmentData);
 
       // Simular llamada al backend
       await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -156,11 +197,44 @@ export default function Management() {
         setCharCount(0);
       }, 1500);
     } catch (error) {
-      console.error("Error al crear asignación:", error);
-      toast.error(
-        "Error al asignar docente",
-        "Ocurrió un error al procesar la asignación. Por favor intenta nuevamente.",
-      );
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      // Detectar error de duplicado en la base de datos
+      if (
+        errorMessage.includes("duplicate key") ||
+        errorMessage.includes("unique constraint") ||
+        errorMessage.includes("already exists")
+      ) {
+        toast.error(
+          "Asignación duplicada",
+          `Este docente ya está asignado a este curso. Por favor, verifica las asignaciones existentes.`,
+        );
+      } else if (
+        errorMessage.includes("Token de correo") ||
+        errorMessage.includes("mailToken") ||
+        errorMessage.includes("Microsoft Graph") ||
+        errorMessage.includes("InvalidAuthenticationToken")
+      ) {
+        toast.error(
+          "Error al enviar correo",
+          `No se pudo enviar el correo de notificación. La asignación NO se guardó. ${errorMessage}`,
+        );
+      } else if (
+        errorMessage.includes("Failed query") ||
+        errorMessage.includes("insert into")
+      ) {
+        // Error de base de datos
+        toast.error(
+          "Error al guardar asignación",
+          `Ocurrió un error al guardar en la base de datos. El correo se envió pero la asignación no se guardó. Por favor, contacta al administrador.`,
+        );
+      } else {
+        toast.error(
+          "Error al procesar asignación",
+          `Ocurrió un error: ${errorMessage}`,
+        );
+      }
     }
   };
 
