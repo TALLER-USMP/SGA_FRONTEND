@@ -4,6 +4,11 @@ export interface Teacher {
   id: string;
   name: string;
   email: string;
+  grado?: string | null;
+  categoria?: string | null;
+  categoriaId?: number;
+  activo?: boolean;
+  ultimoAcceso?: string | null;
 }
 
 interface TeacherSelectProps {

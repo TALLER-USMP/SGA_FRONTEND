@@ -2,6 +2,7 @@ import { useState } from "react";
 import type HeaderProps from "../types/headerProps";
 import { Link } from "react-router-dom";
 import { authService } from "../../features/auth/services/auth-service";
+import { UserAvatar } from "@/components/ui/UserAvatar";
 
 export default function Header({ user }: HeaderProps) {
   const displayName = user?.name || user?.email || "Docente";
@@ -10,9 +11,13 @@ export default function Header({ user }: HeaderProps) {
   const handleLogout = async () => {
     try {
       await authService.logout();
-      window.location.href = import.meta.env.VITE_REDIRECT_LOGIN;
+      console.log("✅ Sesión cerrada correctamente");
+      window.location.reload();
     } catch (error) {
-      console.error("error en el logout" + error);
+      console.error("❌ Error en el logout:", error);
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("mailToken");
+      window.location.reload();
     }
   };
 
@@ -23,6 +28,7 @@ export default function Header({ user }: HeaderProps) {
           onClick={() => setOpen(!open)}
           className="bg-white text-black px-4 py-1 rounded shadow flex items-center gap-2"
         >
+          <UserAvatar className="w-8 h-8 -ml-1 mr-1" />
           {displayName} ⬇
         </button>
 

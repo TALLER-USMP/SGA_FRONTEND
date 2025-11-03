@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { getCurrentAcademicPeriod } from "../../../common/utils/academic-period";
 import { useToast } from "../../../common/hooks/use-toast";
-import TeacherSelect, { type Teacher } from "../components/teacher-select";
-import CourseSelect, { type Course } from "../components/course-select";
+import { useSendAssignmentEmail } from "../hooks/use-send-assignment-email";
+import { useTeachers, type Teacher } from "../hooks/use-teachers";
+import { useCourses, type Course } from "../hooks/use-courses";
+import { useCreateAssignment } from "../hooks/use-create-assignment";
+import TeacherSelect from "../components/teacher-select";
+import CourseSelect from "../components/course-select";
 import CourseCodeInput from "../components/course-code-input";
 import AcademicPeriodInput from "../components/academic-period-input";
 import MessageTextarea from "../components/message-textarea";
@@ -27,40 +31,53 @@ export default function Management() {
   const [courseSearch, setCourseSearch] = useState<string>("");
   const [showCourseDropdown, setShowCourseDropdown] = useState<boolean>(false);
 
-  // Mock data - reemplazar con datos reales del backend
-  const mockTeachers: Teacher[] = [
-    {
-      id: "1",
-      name: "Huapalla García Juan Manuel",
-      email: "jhuapalla@usmp.pe",
-    },
-    { id: "2", name: "García López María Elena", email: "mgarcia@usmp.pe" },
-    {
-      id: "3",
-      name: "Rodríguez Pérez Carlos Alberto",
-      email: "crodriguez@usmp.pe",
-    },
-    {
-      id: "4",
-      name: "Fernández Torres Ana Lucía",
-      email: "afernandez@usmp.pe",
-    },
-  ];
+  // Cargar docentes y cursos desde el backend
+  const {
+    data: teachers = [],
+    isLoading: isLoadingTeachers,
+    isError: isErrorTeachers,
+    error: teachersError,
+  } = useTeachers();
 
-  const mockCourses: Course[] = [
-    { id: "1", name: "Taller de Proyectos", code: "09072108042" },
-    { id: "2", name: "Programación Orientada a Objetos", code: "09072108043" },
-    { id: "3", name: "Base de Datos", code: "09072108044" },
-    { id: "4", name: "Ingeniería de Software", code: "09072108045" },
-  ];
+  const {
+    data: courses = [],
+    isLoading: isLoadingCourses,
+    isError: isErrorCourses,
+    error: coursesError,
+  } = useCourses();
+
+  const createAssignment = useCreateAssignment();
+  const { sendEmail, isSending } = useSendAssignmentEmail();
+
+  // Estado para prevenir doble ejecución
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Mostrar errores de carga
+  useEffect(() => {
+    if (isErrorTeachers) {
+      toast.error(
+        "Error al cargar docentes",
+        teachersError?.message || "No se pudieron cargar los docentes",
+      );
+    }
+  }, [isErrorTeachers, teachersError, toast]);
+
+  useEffect(() => {
+    if (isErrorCourses) {
+      toast.error(
+        "Error al cargar cursos",
+        coursesError?.message || "No se pudieron cargar los cursos",
+      );
+    }
+  }, [isErrorCourses, coursesError, toast]);
 
   // Filtrar docentes
-  const filteredTeachers = mockTeachers.filter((teacher) =>
+  const filteredTeachers = teachers.filter((teacher) =>
     teacher.name.toLowerCase().includes(teacherSearch.toLowerCase()),
   );
 
   // Filtrar cursos
-  const filteredCourses = mockCourses.filter((course) =>
+  const filteredCourses = courses.filter((course) =>
     course.name.toLowerCase().includes(courseSearch.toLowerCase()),
   );
 
@@ -103,6 +120,22 @@ export default function Management() {
   };
 
   const handleSubmit = async () => {
+    // Prevenir doble ejecución
+    if (isProcessing || isSending || createAssignment.isPending) {
+      console.warn("⚠️ Proceso ya en ejecución, ignorando...");
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      await executeAssignment();
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const executeAssignment = async () => {
     // Validaciones
     if (!selectedTeacher) {
       toast.error(
@@ -120,6 +153,22 @@ export default function Management() {
       return;
     }
 
+    if (!courseCode.trim()) {
+      toast.error(
+        "Código de curso requerido",
+        "Por favor ingresa el código del curso",
+      );
+      return;
+    }
+
+    if (!academicPeriod.trim()) {
+      toast.error(
+        "Periodo académico requerido",
+        "Por favor ingresa el periodo académico",
+      );
+      return;
+    }
+
     if (!message.trim()) {
       toast.warning(
         "Mensaje vacío",
@@ -128,39 +177,131 @@ export default function Management() {
     }
 
     try {
+      const teacherId = parseInt(selectedTeacher.id);
+      const syllabusId = parseInt(selectedCourse.id);
+
+      // Validar que sean números válidos
+      if (isNaN(teacherId)) {
+        toast.error(
+          "ID de docente inválido",
+          "El ID del docente seleccionado no es válido",
+        );
+        return;
+      }
+
+      if (isNaN(syllabusId)) {
+        toast.error(
+          "ID de curso inválido",
+          "El ID del curso seleccionado no es válido",
+        );
+        return;
+      }
+
+      // PASO 1: Verificar que el mailToken existe ANTES de hacer nada
+      console.log("🔍 Verificando token de correo...");
+      const mailToken = sessionStorage.getItem("mailToken");
+      if (!mailToken) {
+        toast.error(
+          "Token de correo no disponible",
+          "No se puede enviar el correo de notificación. Por favor, cierra sesión y vuelve a iniciar sesión.",
+        );
+        return;
+      }
+      console.log("✅ Token de correo disponible");
+
+      // PASO 2: Enviar correo PRIMERO (antes de guardar en BD)
+      console.log("📧 Enviando correo de notificación...");
+      console.log("📧 Destinatario:", selectedTeacher.email);
+
+      await sendEmail({
+        teacherName: selectedTeacher.name,
+        teacherEmail: selectedTeacher.email,
+        courseName: selectedCourse.name,
+        courseCode: courseCode.trim(),
+        academicPeriod: academicPeriod.trim(),
+        additionalMessage: message.trim() || undefined,
+      });
+
+      console.log("✅ Correo enviado exitosamente");
+
+      // PASO 3: Solo si el correo se envió correctamente, guardar en BD
+      console.log("📝 Guardando asignación en la base de datos...");
+      console.log("📊 Datos de asignación:", {
+        teacherId,
+        syllabusId,
+        courseCode: courseCode.trim(),
+        academicPeriod: academicPeriod.trim(),
+      });
+
       const assignmentData = {
-        teacher: selectedTeacher,
-        course: selectedCourse,
-        courseCode,
-        academicPeriod,
-        message,
+        teacherId,
+        syllabusId,
+        courseCode: courseCode.trim(),
+        academicPeriod: academicPeriod.trim(),
+        message: message.trim() || "",
       };
 
-      console.log("Asignación creada:", assignmentData);
+      const assignmentResult =
+        await createAssignment.mutateAsync(assignmentData);
+      console.log("✅ Asignación guardada exitosamente:", assignmentResult);
 
-      // Simular llamada al backend
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // PASO 4: Mostrar mensaje de éxito
       toast.success(
-        "¡Asignación exitosa!",
-        `Se asignó ${selectedCourse.name} a ${selectedTeacher.name} para el periodo ${academicPeriod}`,
+        "Asignación completada",
+        `Se ha notificado a ${selectedTeacher.name} por correo electrónico y se guardó la asignación`,
       );
 
-      // Limpiar formulario después de éxito
-      setTimeout(() => {
-        setSelectedTeacher(null);
-        setSelectedCourse(null);
-        setTeacherSearch("");
-        setCourseSearch("");
-        setCourseCode("");
-        setMessage("");
-        setCharCount(0);
-      }, 1500);
+      // PASO 5: Limpiar formulario
+      setSelectedTeacher(null);
+      setSelectedCourse(null);
+      setTeacherSearch("");
+      setCourseSearch("");
+      setCourseCode("");
+      setMessage("");
+      setCharCount(0);
     } catch (error) {
-      console.error("Error al crear asignación:", error);
-      toast.error(
-        "Error al asignar docente",
-        "Ocurrió un error al procesar la asignación. Por favor intenta nuevamente.",
+      console.error(
+        "❌ Error en el proceso de asignación verifica que no dupliques asignaciones",
       );
+
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+
+      // Detectar error de duplicado en la base de datos
+      if (
+        errorMessage.includes("duplicate key") ||
+        errorMessage.includes("unique constraint") ||
+        errorMessage.includes("already exists")
+      ) {
+        toast.error(
+          "Asignación duplicada",
+          `Este docente ya está asignado a este curso. Por favor, verifica las asignaciones existentes.`,
+        );
+      } else if (
+        errorMessage.includes("Token de correo") ||
+        errorMessage.includes("mailToken") ||
+        errorMessage.includes("Microsoft Graph") ||
+        errorMessage.includes("InvalidAuthenticationToken")
+      ) {
+        toast.error(
+          "Error al enviar correo",
+          `No se pudo enviar el correo de notificación. La asignación NO se guardó. ${errorMessage}`,
+        );
+      } else if (
+        errorMessage.includes("Failed query") ||
+        errorMessage.includes("insert into")
+      ) {
+        // Error de base de datos
+        toast.error(
+          "Error al guardar asignación",
+          `Ocurrió un error al guardar en la base de datos. El correo se envió pero la asignación no se guardó. Por favor, contacta al administrador.`,
+        );
+      } else {
+        toast.error(
+          "Error al procesar asignación",
+          `Ocurrió un error: ${errorMessage}`,
+        );
+      }
     }
   };
 
@@ -171,6 +312,12 @@ export default function Management() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
+        {(isLoadingTeachers || isLoadingCourses) && (
+          <div className="mb-4 text-center text-sm text-gray-600">
+            Cargando datos...
+          </div>
+        )}
+
         <TeacherSelect
           selectedTeacher={selectedTeacher}
           teacherSearch={teacherSearch}
@@ -204,7 +351,17 @@ export default function Management() {
           maxChars={maxChars}
         />
 
-        <FormActions onGoBack={handleGoBack} onSubmit={handleSubmit} />
+        <FormActions
+          onGoBack={handleGoBack}
+          onSubmit={handleSubmit}
+          isDisabled={
+            !selectedTeacher ||
+            !selectedCourse ||
+            !courseCode.trim() ||
+            !academicPeriod.trim()
+          }
+          isLoading={isProcessing || isSending || createAssignment.isPending}
+        />
       </div>
     </div>
   );
