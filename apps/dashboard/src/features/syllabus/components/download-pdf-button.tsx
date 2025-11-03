@@ -1,10 +1,9 @@
-import { Download, FileText, Loader2 } from "lucide-react";
+import { Download, Eye, Loader2 } from "lucide-react";
 import { useSyllabusPDF } from "../hooks/use-syllabus-pdf";
 import { toast } from "sonner";
 
 interface DownloadPDFButtonProps {
   syllabusId: number;
-  templateName?: string;
   variant?: "primary" | "secondary" | "outline";
   showPreview?: boolean;
   className?: string;
@@ -12,13 +11,11 @@ interface DownloadPDFButtonProps {
 
 export function DownloadPDFButton({
   syllabusId,
-  templateName,
   variant = "primary",
   showPreview = false,
   className = "",
 }: DownloadPDFButtonProps) {
-  const { generatePDF, previewHTML, isGenerating, error } = useSyllabusPDF({
-    templateName,
+  const { generatePDF, previewPDF, isGenerating, error } = useSyllabusPDF({
     onSuccess: () => {
       toast.success("PDF generado exitosamente", {
         description: "El archivo se ha descargado correctamente",
@@ -36,7 +33,7 @@ export function DownloadPDFButton({
   };
 
   const handlePreview = () => {
-    previewHTML(syllabusId);
+    previewPDF(syllabusId);
   };
 
   const baseClasses =
@@ -82,9 +79,9 @@ export function DownloadPDFButton({
           onClick={handlePreview}
           disabled={isGenerating}
           className={`${baseClasses} ${variantClasses.outline}`}
-          title="Previsualizar HTML"
+          title="Previsualizar PDF"
         >
-          <FileText className="w-5 h-5" />
+          <Eye className="w-5 h-5" />
           <span>Vista previa</span>
         </button>
       )}
