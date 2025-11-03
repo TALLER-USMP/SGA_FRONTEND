@@ -140,9 +140,12 @@ export function SyllabusGeneratePDFBackend({
           <h2 className="text-2xl font-bold text-gray-800 mb-2">
             Generar PDF desde Backend
           </h2>
-          <p className="text-gray-600">
-            Datos cargados desde el API - Sílabo ID: {syllabusId}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="text-gray-600">Datos cargados desde el API</p>
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-semibold">
+              Sílabo ID: {syllabusId}
+            </span>
+          </div>
         </div>
 
         {/* Información del Sílabo */}

@@ -30,28 +30,37 @@ interface ProfileResponse {
 
 /**
  * 🔧 Formatea los datos del perfil del backend al formato del frontend
+ * GET: Divide el nombre completo en nombre y apellidos
  */
 const formatProfileData = (
   data: ProfileResponse,
   userEmail?: string,
 ): ProfileData => {
-  // Procesar nombre completo o usar apellido si existe
-  const nombreCompleto = data.nombre || data.Nombre || "";
-  const apellido = data.apellido || data.Apellido || "";
+  // Extraer nombre y apellido del backend
+  const nombreBackend = (data.nombre || data.Nombre || "").trim();
+  const apellidoBackend = (data.apellido || data.Apellido || "").trim();
 
   let firstName = "";
   let lastName = "";
 
-  if (apellido) {
-    // Si hay apellido separado, usarlo directamente
-    firstName = nombreCompleto;
-    lastName = apellido;
-  } else if (nombreCompleto) {
-    // Si solo hay nombre completo, dividirlo
-    const nombres = nombreCompleto.split(" ").filter(Boolean);
-    const apellidosIndex = Math.min(2, Math.ceil(nombres.length / 2));
-    firstName = nombres.slice(0, apellidosIndex).join(" ");
-    lastName = nombres.slice(apellidosIndex).join(" ");
+  // Si el backend envía nombre y apellido separados
+  if (nombreBackend && apellidoBackend) {
+    firstName = nombreBackend;
+    lastName = apellidoBackend;
+  }
+  // Si solo hay nombre (nombre completo), dividirlo
+  else if (nombreBackend && !apellidoBackend) {
+    const palabras = nombreBackend.split(" ").filter(Boolean);
+
+    if (palabras.length <= 1) {
+      firstName = palabras[0] || "";
+      lastName = "";
+    } else {
+      // Dividir en la mitad: primeras palabras = nombre, últimas = apellidos
+      const mitad = Math.ceil(palabras.length / 2);
+      firstName = palabras.slice(0, mitad).join(" ");
+      lastName = palabras.slice(mitad).join(" ");
+    }
   }
 
   return {
@@ -90,16 +99,20 @@ export function useProfile() {
   });
 
   // 📤 Mutation para actualizar el perfil
+  // PUT: Une firstName y lastName en un solo campo nombre
   const updateProfileMutation = useMutation({
     mutationFn: async (updatedData: ProfileData) => {
       if (!user?.id) throw new Error("No user ID");
+
+      // 🔥 COMBINAR nombre y apellido en un solo campo "nombre"
+      const nombreCompleto =
+        `${updatedData.firstName.trim()} ${updatedData.lastName.trim()}`.trim();
 
       const response = await fetch(`${API_BASE}/teacher/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          nombre: updatedData.firstName.trim(),
-          apellido: updatedData.lastName.trim(),
+          nombre: nombreCompleto, // 🔥 Backend guarda todo en nombre
           correo: updatedData.email,
           grado: updatedData.profession || "",
           telefono: updatedData.phone || "",
