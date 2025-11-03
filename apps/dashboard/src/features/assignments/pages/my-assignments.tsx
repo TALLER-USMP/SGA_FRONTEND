@@ -1,8 +1,11 @@
-import { useState } from "react";
-import { Search, Eye, Edit, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Eye, Edit, X, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useSession } from "../../auth/hooks/use-session";
 import { useAssignments, type Assignment } from "../hooks/assignments-query";
+import { pdf } from "@react-pdf/renderer";
+import { syllabusPDFService } from "../../syllabus/services/syllabus-pdf-service";
+import { SyllabusPDFDocument } from "../../syllabus/components/SyllabusPDFDocument";
 
 export default function MyAssignments() {
   const { user, isLoading: sessionLoading } = useSession();
@@ -17,6 +20,10 @@ export default function MyAssignments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [isLoadingPdf, setIsLoadingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
   type AssignmentStatus =
     | "APROBADO"
     | "ANALIZANDO"
@@ -73,8 +80,39 @@ export default function MyAssignments() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleViewAssignment = (assignment: Assignment) => {
+  const handleViewAssignment = async (assignment: Assignment) => {
     setSelectedAssignment(assignment);
+    setPdfUrl(null);
+    setPdfError(null);
+
+    // Solo generar preview si tiene syllabusId
+    if (!assignment.syllabusId) {
+      setPdfError("No hay sílabo disponible para previsualizar");
+      return;
+    }
+
+    setIsLoadingPdf(true);
+
+    try {
+      console.log(`📥 Cargando sílabo ID: ${assignment.syllabusId}...`);
+      const data = await syllabusPDFService.fetchCompleteSyllabus(
+        assignment.syllabusId,
+      );
+
+      console.log(`📄 Generando PDF blob...`);
+      const blob = await pdf(<SyllabusPDFDocument data={data} />).toBlob();
+      const url = URL.createObjectURL(blob);
+
+      setPdfUrl(url);
+      console.log("✅ PDF generado exitosamente");
+    } catch (err) {
+      console.error("❌ Error al generar PDF:", err);
+      setPdfError(
+        err instanceof Error ? err.message : "Error al cargar el sílabo",
+      );
+    } finally {
+      setIsLoadingPdf(false);
+    }
   };
 
   const handleEditAssignment = (
@@ -93,7 +131,24 @@ export default function MyAssignments() {
     navigate(url);
   };
 
-  const closeModal = () => setSelectedAssignment(null);
+  const closeModal = () => {
+    // Limpiar URL del PDF para liberar memoria
+    if (pdfUrl) {
+      URL.revokeObjectURL(pdfUrl);
+    }
+    setSelectedAssignment(null);
+    setPdfUrl(null);
+    setPdfError(null);
+  };
+
+  // Limpiar URL del PDF cuando el componente se desmonte
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+      }
+    };
+  }, [pdfUrl]);
 
   if (sessionLoading || isLoading) {
     return (
@@ -259,37 +314,95 @@ export default function MyAssignments() {
 
       {/* Modal */}
       {selectedAssignment && (
-        <div className="fixed inset-0 bg-black/45 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-96 h-96 p-6 relative">
+        <div className="fixed inset-0 bg-black/45 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl h-[90vh] flex flex-col relative">
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition-colors"
+              className="absolute top-4 right-4 z-10 text-gray-500 hover:text-gray-700 transition-colors bg-white rounded-full p-2 shadow-md"
             >
               <X size={24} />
             </button>
-            <div className="h-full flex flex-col">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
+
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-xl font-bold text-gray-800 mb-2">
                 {selectedAssignment.cursoNombre}
               </h2>
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center text-gray-500">
-                  <div className="mb-4">
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg mx-auto flex items-center justify-center">
-                      <Eye size={32} className="text-gray-400" />
-                    </div>
-                  </div>
-                  <p className="text-lg font-medium">Vista previa del sílabo</p>
-                  <p className="text-sm mt-2">
-                    Contenido del sílabo aparecerá aquí
-                  </p>
-                  <p className="text-xs mt-4 text-gray-400">
-                    Estado:{" "}
-                    <span className="font-medium">
-                      {selectedAssignment.estadoRevision}
-                    </span>
-                  </p>
-                </div>
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <span>Código: {selectedAssignment.cursoCodigo}</span>
+                <span>•</span>
+                <span>
+                  Estado:{" "}
+                  <span
+                    className={`font-medium ${statusConfig[selectedAssignment.estadoRevision as AssignmentStatus]?.textColor || "text-gray-700"}`}
+                  >
+                    {
+                      statusConfig[
+                        selectedAssignment.estadoRevision as AssignmentStatus
+                      ]?.label
+                    }
+                  </span>
+                </span>
+                {selectedAssignment.syllabusId && (
+                  <>
+                    <span>•</span>
+                    <span>Sílabo ID: {selectedAssignment.syllabusId}</span>
+                  </>
+                )}
               </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-hidden">
+              {isLoadingPdf ? (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+                    <p className="text-lg font-medium text-gray-700">
+                      Generando vista previa del PDF...
+                    </p>
+                    <p className="text-sm text-gray-500 mt-2">
+                      Esto puede tomar unos segundos
+                    </p>
+                  </div>
+                </div>
+              ) : pdfError ? (
+                <div className="h-full flex items-center justify-center p-6">
+                  <div className="text-center max-w-md">
+                    <div className="w-16 h-16 bg-red-100 rounded-lg mx-auto flex items-center justify-center mb-4">
+                      <X size={32} className="text-red-600" />
+                    </div>
+                    <p className="text-lg font-medium text-red-700 mb-2">
+                      Error al cargar el sílabo
+                    </p>
+                    <p className="text-sm text-gray-600">{pdfError}</p>
+                  </div>
+                </div>
+              ) : pdfUrl ? (
+                <iframe
+                  src={pdfUrl}
+                  className="w-full h-full"
+                  title="Vista previa del PDF"
+                />
+              ) : (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center text-gray-500">
+                    <div className="mb-4">
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg mx-auto flex items-center justify-center">
+                        <Eye size={32} className="text-gray-400" />
+                      </div>
+                    </div>
+                    <p className="text-lg font-medium">
+                      Vista previa del sílabo
+                    </p>
+                    <p className="text-sm mt-2">
+                      {selectedAssignment.syllabusId
+                        ? "Cargando..."
+                        : "No hay sílabo disponible para este curso"}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

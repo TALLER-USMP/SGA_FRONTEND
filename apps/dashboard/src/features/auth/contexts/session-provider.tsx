@@ -3,6 +3,9 @@ import React from "react";
 import { authService } from "../services/auth-service";
 import { SessionContext } from "./session-context";
 
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:7071/api";
+
 export const SessionProvider = ({
   children,
 }: {
@@ -39,6 +42,24 @@ export const SessionProvider = ({
     staleTime: 5 * 60 * 1000,
   });
 
+  // Query para obtener el perfil completo del docente
+  const getTeacherProfile = useQuery({
+    queryKey: ["teacher-profile", getSession.data?.user?.id],
+    queryFn: async () => {
+      const userId = getSession.data?.user?.id;
+      if (!userId) return null;
+
+      const response = await fetch(`${API_BASE}/teacher/${userId}`);
+      if (!response.ok) return null;
+
+      const data = await response.json();
+      return data.data || data;
+    },
+    enabled: !!getSession.data?.user?.id,
+    retry: 1,
+    staleTime: 5 * 60 * 1000,
+  });
+
   React.useEffect(() => {
     if (getSession.isError && shouldFetch) {
       sessionStorage.removeItem("token");
@@ -47,20 +68,40 @@ export const SessionProvider = ({
     }
   }, [getSession.isError, shouldFetch]);
 
+  // Combinar nombre y apellido para obtener el nombre completo
+  const getUserWithFullName = () => {
+    const sessionUser = getSession.data?.user;
+    if (!sessionUser) return undefined;
+
+    const profileData = getTeacherProfile.data;
+    if (profileData) {
+      const nombre = (profileData.nombre || profileData.Nombre || "").trim();
+      const apellido = (
+        profileData.apellido ||
+        profileData.Apellido ||
+        ""
+      ).trim();
+
+      // Combinar nombre y apellido para el nombre completo
+      const fullName =
+        nombre && apellido
+          ? `${nombre} ${apellido}`
+          : nombre || apellido || sessionUser.name;
+
+      return {
+        ...sessionUser,
+        name: fullName,
+      };
+    }
+
+    return sessionUser;
+  };
+
   return (
     <SessionContext.Provider
       value={{
-        user: (
-          getSession.data as {
-            user?: {
-              id: number;
-              name?: string;
-              email?: string;
-              role?: number;
-            };
-          }
-        )?.user,
-        isLoading: getSession.isLoading,
+        user: getUserWithFullName(),
+        isLoading: getSession.isLoading || getTeacherProfile.isLoading,
         isError: getSession.isError,
       }}
     >
