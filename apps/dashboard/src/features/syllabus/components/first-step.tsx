@@ -4,7 +4,6 @@ import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
 import { useSyllabusGeneral } from "../hooks/first-step-query";
 import type { SyllabusGeneral } from "../hooks/first-step-query";
-import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
 
 export default function FirstStep() {
   const { nextStep } = useSteps();
@@ -244,26 +243,20 @@ export default function FirstStep() {
               Error cargando datos: {apiError}
             </div>
           )}
-          <ReviewFieldWrapper fieldId="nombreAsignatura" orientation="vertical">
-            <div className="mb-6">
-              <div className="w-full h-12 rounded-md px-4 flex items-center text-lg bg-blue-50 border border-blue-100">
-                {form.nombreAsignatura || "TALLER DE PROYECTOS"}
-              </div>
-              {errors["nombreAsignatura"] && (
-                <div className="text-red-600 text-sm mt-1">
-                  {errors["nombreAsignatura"]}
-                </div>
-              )}
+          <div className="mb-6">
+            <div className="w-full h-12 rounded-md px-4 flex items-center text-lg bg-blue-50 border border-blue-100">
+              {form.nombreAsignatura || "TALLER DE PROYECTOS"}
             </div>
-          </ReviewFieldWrapper>
+            {errors["nombreAsignatura"] && (
+              <div className="text-red-600 text-sm mt-1">
+                {errors["nombreAsignatura"]}
+              </div>
+            )}
+          </div>
 
           <div className="grid gap-4">
             {fields.map(([label, name]) => (
-              <ReviewFieldWrapper
-                key={name}
-                fieldId={name}
-                orientation="horizontal"
-              >
+              <div key={name}>
                 <div className="grid grid-cols-[250px_24px_1fr] items-start gap-2 py-2 border-b last:border-b-0">
                   <div className="text-sm text-gray-700 flex items-center">
                     <div className="px-3 py-2 bg-gray-100 border border-gray-300 rounded w-full text-center">
@@ -375,7 +368,7 @@ export default function FirstStep() {
                     )}
                   </div>
                 </div>
-              </ReviewFieldWrapper>
+              </div>
             ))}
           </div>
         </div>

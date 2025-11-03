@@ -3,7 +3,7 @@ import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
 import { X, Plus } from "lucide-react";
-import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
+
 import {
   Select,
   SelectContent,
@@ -174,11 +174,7 @@ export default function ThirdStep() {
           </h3>
           <div className="space-y-3">
             {formData.competencias.map((item) => (
-              <ReviewFieldWrapper
-                key={item.id}
-                fieldId={`competencia-${item.id}`}
-                orientation="vertical"
-              >
+              <div key={item.id}>
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
                     <textarea
@@ -218,7 +214,7 @@ export default function ThirdStep() {
                     <X size={20} />
                   </button>
                 </div>
-              </ReviewFieldWrapper>
+              </div>
             ))}
             <div className="flex justify-end pt-2">
               <button
@@ -239,11 +235,7 @@ export default function ThirdStep() {
           </h3>
           <div className="space-y-3">
             {formData.componentes.map((item) => (
-              <ReviewFieldWrapper
-                key={item.id}
-                fieldId={`componente-${item.id}`}
-                orientation="vertical"
-              >
+              <div key={item.id}>
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
                     <textarea
@@ -283,7 +275,7 @@ export default function ThirdStep() {
                     <X size={20} />
                   </button>
                 </div>
-              </ReviewFieldWrapper>
+              </div>
             ))}
             <div className="flex justify-end pt-2">
               <button
@@ -304,11 +296,7 @@ export default function ThirdStep() {
           </h3>
           <div className="space-y-3">
             {formData.contenidosActitudinales.map((item) => (
-              <ReviewFieldWrapper
-                key={item.id}
-                fieldId={`contenido-actitudinal-${item.id}`}
-                orientation="vertical"
-              >
+              <div key={item.id}>
                 <div className="flex items-start gap-3">
                   <div className="flex-1">
                     <textarea
@@ -358,7 +346,7 @@ export default function ThirdStep() {
                     <X size={20} />
                   </button>
                 </div>
-              </ReviewFieldWrapper>
+              </div>
             ))}
             <div className="flex justify-end pt-2">
               <button

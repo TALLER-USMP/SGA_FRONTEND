@@ -64,8 +64,21 @@ export default function ReviewSyllabusSummary() {
         const parsedData: Record<string, ReviewItem> = JSON.parse(savedData);
         setReviewData(parsedData);
 
-        // Mapeo de patrones de fieldId a número de sección
-        const getSection = (fieldId: string): string | null => {
+        // Mapeo de fieldId a número de sección (puede devolver array para manejar casos donde un step mapea a múltiples secciones)
+        // Ahora se usan IDs de paso: step-1, step-2, etc.
+        // Nota: step-5 se usa para ambas secciones 5 y 6
+        const getSections = (fieldId: string): string[] => {
+          // Nuevo formato: step-X
+          if (fieldId === "step-1") return ["1"];
+          if (fieldId === "step-2") return ["2"];
+          if (fieldId === "step-3") return ["3"];
+          if (fieldId === "step-4") return ["4"];
+          if (fieldId === "step-5") return ["5", "6"]; // Cubre ambas secciones
+          if (fieldId === "step-6") return ["7"];
+          if (fieldId === "step-7") return ["8"];
+          if (fieldId === "step-8") return ["9"];
+
+          // Mantener compatibilidad con formato antiguo (por si hay datos guardados)
           // Sección 1: Datos generales
           if (
             fieldId === "nombreAsignatura" ||
@@ -76,10 +89,10 @@ export default function ReviewSyllabusSummary() {
             fieldId.startsWith("prerequisitos-") ||
             fieldId.startsWith("docente-")
           )
-            return "1";
+            return ["1"];
 
           // Sección 2: Sumilla
-          if (fieldId === "sumilla") return "2";
+          if (fieldId === "sumilla") return ["2"];
 
           // Sección 3: Competencias y componentes
           if (
@@ -87,43 +100,43 @@ export default function ReviewSyllabusSummary() {
             fieldId.startsWith("componente-") ||
             fieldId.startsWith("contenido-actitudinal-")
           )
-            return "3";
+            return ["3"];
 
           // Sección 4: Programación del contenido
           if (fieldId.startsWith("unit-") && fieldId.includes("-week-"))
-            return "4";
+            return ["4"];
 
           // Sección 5: Estrategias metodológicas
-          if (fieldId.startsWith("strategy-")) return "5";
+          if (fieldId.startsWith("strategy-")) return ["5"];
 
           // Sección 6: Recursos didácticos
-          if (fieldId.startsWith("resource-")) return "6";
+          if (fieldId.startsWith("resource-")) return ["6"];
 
           // Sección 7: Evaluación de aprendizaje
           if (
             fieldId === "evaluation-main-formula" ||
             fieldId.startsWith("evaluation-")
           )
-            return "7";
+            return ["7"];
 
           // Sección 8: Fuentes de consulta
           if (
             fieldId.startsWith("bibliography-") ||
             fieldId.startsWith("electronic-resource-")
           )
-            return "8";
+            return ["8"];
 
           // Sección 9: Resultados (outcomes)
-          if (fieldId.startsWith("outcome-")) return "9";
+          if (fieldId.startsWith("outcome-")) return ["9"];
 
-          return null; // fieldId no reconocido
+          return []; // fieldId no reconocido
         };
 
         // Procesar cada sección para determinar si tiene aprobaciones y comentarios
         const processedSections = sectionDefinitions.map((section) => {
           // Filtrar solo los campos que pertenecen a esta sección
-          const sectionFields = Object.entries(parsedData).filter(
-            ([fieldId]) => getSection(fieldId) === section.id,
+          const sectionFields = Object.entries(parsedData).filter(([fieldId]) =>
+            getSections(fieldId).includes(section.id),
           );
 
           // Si no hay campos en esta sección, no mostrar nada
