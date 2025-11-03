@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
 import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
-import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
 import {
   Select,
   SelectContent,
@@ -288,46 +287,36 @@ export default function FourthStep() {
               <>
                 <div className="grid grid-cols-2 gap-4">
                   {/* Contenidos Conceptuales */}
-                  <ReviewFieldWrapper
-                    fieldId={`unit-${selectedUnit}-week-${selectedWeek}-conceptual`}
-                    orientation="vertical"
-                  >
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Contenidos conceptuales
-                      </label>
-                      <textarea
-                        value={currentWeek.conceptualContent}
-                        readOnly
-                        className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-100 text-gray-600"
-                        placeholder="Contenidos conceptuales..."
-                      />
-                      <div className="text-right text-sm text-gray-500 mt-1">
-                        {currentWeek.conceptualContent.length}/400
-                      </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contenidos conceptuales
+                    </label>
+                    <textarea
+                      value={currentWeek.conceptualContent}
+                      readOnly
+                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-100 text-gray-600"
+                      placeholder="Contenidos conceptuales..."
+                    />
+                    <div className="text-right text-sm text-gray-500 mt-1">
+                      {currentWeek.conceptualContent.length}/400
                     </div>
-                  </ReviewFieldWrapper>
+                  </div>
 
                   {/* Contenidos Procedimentales */}
-                  <ReviewFieldWrapper
-                    fieldId={`unit-${selectedUnit}-week-${selectedWeek}-procedural`}
-                    orientation="vertical"
-                  >
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Contenidos Procedimentales
-                      </label>
-                      <textarea
-                        value={currentWeek.proceduralContent}
-                        readOnly
-                        className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-100 text-gray-600"
-                        placeholder="Contenidos procedimentales..."
-                      />
-                      <div className="text-right text-sm text-gray-500 mt-1">
-                        {currentWeek.proceduralContent.length}/400
-                      </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Contenidos Procedimentales
+                    </label>
+                    <textarea
+                      value={currentWeek.proceduralContent}
+                      readOnly
+                      className="w-full h-32 px-4 py-3 border border-gray-300 rounded-lg resize-none bg-gray-100 text-gray-600"
+                      placeholder="Contenidos procedimentales..."
+                    />
+                    <div className="text-right text-sm text-gray-500 mt-1">
+                      {currentWeek.proceduralContent.length}/400
                     </div>
-                  </ReviewFieldWrapper>
+                  </div>
                 </div>
 
                 {/* Actividades de Aprendizaje */}

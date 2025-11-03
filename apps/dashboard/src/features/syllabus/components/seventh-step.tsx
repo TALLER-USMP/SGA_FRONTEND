@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
 import { Plus, X } from "lucide-react";
-import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
 
 // Tipos
 interface Bibliography {
@@ -125,11 +124,7 @@ export default function SeventhStep() {
           <h2 className="text-2xl font-bold mb-4">8.1. Bibliográficas</h2>
           <div className="space-y-3">
             {bibliographies.map((biblio) => (
-              <ReviewFieldWrapper
-                key={biblio.id}
-                fieldId={`bibliography-${biblio.id}`}
-                orientation="vertical"
-              >
+              <div key={biblio.id}>
                 <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-3">
                   <div className="flex-1 flex items-center gap-3">
                     <div className="bg-gray-300 px-4 py-2 rounded-lg text-sm">
@@ -149,7 +144,7 @@ export default function SeventhStep() {
                     <X className="w-5 h-5 text-red-600" />
                   </button>
                 </div>
-              </ReviewFieldWrapper>
+              </div>
             ))}
 
             {/* Formulario para agregar nueva bibliografía */}
@@ -205,11 +200,7 @@ export default function SeventhStep() {
           <h2 className="text-2xl font-bold mb-4">8.2. Electrónicas</h2>
           <div className="space-y-3">
             {electronicResources.map((resource) => (
-              <ReviewFieldWrapper
-                key={resource.id}
-                fieldId={`electronic-resource-${resource.id}`}
-                orientation="vertical"
-              >
+              <div key={resource.id}>
                 <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-3">
                   <div className="flex-1 flex items-center gap-3">
                     <div className="bg-gray-300 px-4 py-2 rounded-lg text-sm flex-1">
@@ -226,7 +217,7 @@ export default function SeventhStep() {
                     <X className="w-5 h-5 text-red-600" />
                   </button>
                 </div>
-              </ReviewFieldWrapper>
+              </div>
             ))}
 
             {/* Formulario para agregar nuevo recurso electrónico */}

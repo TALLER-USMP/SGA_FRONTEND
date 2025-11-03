@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
 import { X, Plus } from "lucide-react";
-import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
 
 // Tipos
 interface MethodologicalStrategy {
@@ -147,11 +146,7 @@ export default function FifthStep() {
           <div className="bg-white border border-gray-300 rounded-lg p-6">
             <div className="space-y-4">
               {methodologicalStrategies.map((strategy) => (
-                <ReviewFieldWrapper
-                  key={strategy.id}
-                  fieldId={`strategy-${strategy.id}`}
-                  orientation="vertical"
-                >
+                <div key={strategy.id}>
                   <div className="p-4 border border-gray-200 rounded-lg space-y-3">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 space-y-3">
@@ -201,7 +196,7 @@ export default function FifthStep() {
                       </button>
                     </div>
                   </div>
-                </ReviewFieldWrapper>
+                </div>
               ))}
               <button
                 onClick={addStrategy}
@@ -225,11 +220,7 @@ export default function FifthStep() {
           <div className="bg-white border border-gray-300 rounded-lg p-6">
             <div className="space-y-4">
               {didacticResources.map((resource) => (
-                <ReviewFieldWrapper
-                  key={resource.id}
-                  fieldId={`resource-${resource.id}`}
-                  orientation="vertical"
-                >
+                <div key={resource.id}>
                   <div className="p-4 border border-gray-200 rounded-lg space-y-3">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 space-y-3">
@@ -279,7 +270,7 @@ export default function FifthStep() {
                       </button>
                     </div>
                   </div>
-                </ReviewFieldWrapper>
+                </div>
               ))}
               <button
                 onClick={addResource}
