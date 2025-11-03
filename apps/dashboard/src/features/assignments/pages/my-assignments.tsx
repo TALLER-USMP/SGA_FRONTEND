@@ -1,12 +1,8 @@
-import { useState, useEffect } from "react";
-import { Search, Eye, Edit, X, Download } from "lucide-react";
+import { useState } from "react";
+import { Search, Eye, Edit, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { pdf, PDFViewer } from "@react-pdf/renderer";
 import { useSession } from "../../auth/hooks/use-session";
 import { useAssignments, type Assignment } from "../hooks/assignments-query";
-import { syllabusPDFService } from "../../syllabus/services/syllabus-pdf-service";
-import { SyllabusPDFDocument } from "../../syllabus/components/SyllabusPDFDocument";
-import type { CompleteSyllabus } from "../../syllabus/types/complete-syllabus";
 
 export default function MyAssignments() {
   const { user, isLoading: sessionLoading } = useSession();
@@ -21,22 +17,16 @@ export default function MyAssignments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
-  const [isDownloadingPDF, setIsDownloadingPDF] = useState(false);
-  const [syllabusData, setSyllabusData] = useState<CompleteSyllabus | null>(
-    null,
-  );
-  const [isLoadingSyllabus, setIsLoadingSyllabus] = useState(false);
-  const [syllabusError, setSyllabusError] = useState<string | null>(null);
   type AssignmentStatus =
     | "APROBADO"
     | "ANALIZANDO"
     | "DESAPROBADO"
-    | "ASIGNADO"
-    | "NUEVO";
+    | "ASIGNADO";
   type FilterStatus = "ALL" | AssignmentStatus;
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("ALL");
   const navigate = useNavigate();
 
+  // Config visual por estado
   const statusConfig: Record<
     AssignmentStatus,
     { label: string; color: string; textColor: string; bgColor: string }
@@ -65,12 +55,6 @@ export default function MyAssignments() {
       textColor: "text-blue-700",
       bgColor: "bg-blue-50",
     },
-    NUEVO: {
-      label: "Nuevo",
-      color: "bg-purple-500",
-      textColor: "text-purple-700",
-      bgColor: "bg-purple-50",
-    },
   };
 
   const filteredAssignments = assignments.filter((assignment: Assignment) => {
@@ -86,87 +70,14 @@ export default function MyAssignments() {
     setSelectedAssignment(assignment);
   };
 
-  useEffect(() => {
-    const loadSyllabusData = async () => {
-      if (!selectedAssignment?.syllabusId) {
-        setSyllabusData(null);
-        return;
-      }
-
-      setIsLoadingSyllabus(true);
-      setSyllabusError(null);
-      try {
-        console.log(
-          `📥 Cargando sílabo ID: ${selectedAssignment.syllabusId}...`,
-        );
-        const data = await syllabusPDFService.fetchCompleteSyllabus(
-          selectedAssignment.syllabusId,
-        );
-        setSyllabusData(data);
-        console.log("✅ Datos del sílabo cargados");
-      } catch (err) {
-        const errorMsg =
-          err instanceof Error ? err.message : "Error al cargar sílabo";
-        setSyllabusError(errorMsg);
-        console.error("❌ Error:", errorMsg);
-      } finally {
-        setIsLoadingSyllabus(false);
-      }
-    };
-
-    loadSyllabusData();
-  }, [selectedAssignment?.syllabusId]);
-
-  const handleEditAssignment = (
-    codigo: string,
-    syllabusId?: number,
-    estado?: string,
-  ) => {
-    if (estado === "NUEVO") {
-      navigate(`/syllabus?codigo=${codigo}&mode=create`);
-    } else if (syllabusId) {
-      navigate(`/syllabus?codigo=${codigo}&id=${syllabusId}&mode=edit`);
-    } else {
-      navigate(`/syllabus?codigo=${codigo}&mode=edit`);
-    }
+  const handleEditAssignment = (codigo: string, syllabusId?: number) => {
+    const url = syllabusId
+      ? `/syllabus?codigo=${codigo}&id=${syllabusId}`
+      : `/syllabus?codigo=${codigo}`;
+    navigate(url);
   };
 
-  const handleDownloadPDF = async () => {
-    if (!syllabusData) {
-      alert("No hay datos del sílabo cargados");
-      return;
-    }
-
-    setIsDownloadingPDF(true);
-    try {
-      console.log("� Generando PDF para descarga...");
-      const blob = await pdf(
-        <SyllabusPDFDocument data={syllabusData} />,
-      ).toBlob();
-
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `silabo-${selectedAssignment?.cursoNombre.replace(/\s+/g, "-")}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
-
-      console.log("✅ PDF descargado exitosamente");
-    } catch (err) {
-      console.error("❌ Error al generar PDF:", err);
-      alert(
-        "Error al generar PDF: " + (err instanceof Error ? err.message : ""),
-      );
-    } finally {
-      setIsDownloadingPDF(false);
-    }
-  };
-
-  const closeModal = () => {
-    setSelectedAssignment(null);
-    setSyllabusData(null);
-    setSyllabusError(null);
-  };
+  const closeModal = () => setSelectedAssignment(null);
 
   if (sessionLoading || isLoading) {
     return (
@@ -186,11 +97,13 @@ export default function MyAssignments() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
+      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">
           Mis Asignaciones
         </h1>
 
+        {/* Search Bar */}
         <div className="relative flex-1 max-w-md mb-6">
           <Search
             className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -205,7 +118,9 @@ export default function MyAssignments() {
           />
         </div>
 
+        {/* Filtros por estado */}
         <div className="flex gap-2 mb-6 flex-wrap">
+          {/* Todos */}
           <button
             onClick={() => setSelectedStatus("ALL")}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
@@ -251,6 +166,7 @@ export default function MyAssignments() {
         </div>
       </div>
 
+      {/* Assignments List */}
       <div className="space-y-4">
         {filteredAssignments.map((assignment: Assignment) => (
           <div
@@ -266,6 +182,7 @@ export default function MyAssignments() {
               </div>
 
               <div className="flex items-center gap-3">
+                {/* Estado con badge coloreado */}
                 {(() => {
                   const cfg = statusConfig[
                     assignment.estadoRevision as AssignmentStatus
@@ -287,30 +204,23 @@ export default function MyAssignments() {
                   );
                 })()}
 
+                {/* Editar solo si está desaprobado o asignado */}
                 {(assignment.estadoRevision === "DESAPROBADO" ||
-                  assignment.estadoRevision === "ASIGNADO" ||
-                  assignment.estadoRevision === "NUEVO") && (
+                  assignment.estadoRevision === "ASIGNADO") && (
                   <button
                     onClick={() =>
                       handleEditAssignment(
                         assignment.cursoCodigo,
                         assignment.syllabusId,
-                        assignment.estadoRevision,
                       )
                     }
                     className="p-2 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors"
-                    title={
-                      assignment.estadoRevision === "NUEVO"
-                        ? "Crear nuevo sílabo"
-                        : assignment.estadoRevision === "DESAPROBADO"
-                          ? "Corregir sílabo desaprobado"
-                          : "Editar sílabo asignado"
-                    }
                   >
                     <Edit size={18} />
                   </button>
                 )}
 
+                {/* Ver */}
                 <button
                   onClick={() => handleViewAssignment(assignment)}
                   className="p-2 text-gray-500 hover:bg-gray-50 rounded-lg transition-colors"
@@ -329,135 +239,40 @@ export default function MyAssignments() {
         </div>
       )}
 
+      {/* Modal */}
       {selectedAssignment && (
-        <div className="fixed inset-0 bg-black/45 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl h-[90vh] p-6 relative flex flex-col">
+        <div className="fixed inset-0 bg-black/45 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-96 h-96 p-6 relative">
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition-colors z-10"
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 transition-colors"
             >
               <X size={24} />
             </button>
-
-            <div className="mb-4 pr-10">
-              <h2 className="text-xl font-bold text-gray-800 mb-2">
+            <div className="h-full flex flex-col">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
                 {selectedAssignment.cursoNombre}
               </h2>
-              <div className="flex items-center gap-4 text-sm text-gray-600">
-                <span>
-                  Estado:{" "}
-                  <span className="font-medium">
-                    {selectedAssignment.estadoRevision}
-                  </span>
-                </span>
-                {selectedAssignment.syllabusId && (
-                  <span>ID: {selectedAssignment.syllabusId}</span>
-                )}
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center text-gray-500">
+                  <div className="mb-4">
+                    <div className="w-16 h-16 bg-gray-200 rounded-lg mx-auto flex items-center justify-center">
+                      <Eye size={32} className="text-gray-400" />
+                    </div>
+                  </div>
+                  <p className="text-lg font-medium">Vista previa del sílabo</p>
+                  <p className="text-sm mt-2">
+                    Contenido del sílabo aparecerá aquí
+                  </p>
+                  <p className="text-xs mt-4 text-gray-400">
+                    Estado:{" "}
+                    <span className="font-medium">
+                      {selectedAssignment.estadoRevision}
+                    </span>
+                  </p>
+                </div>
               </div>
             </div>
-
-            <div className="flex-1 overflow-hidden flex flex-col">
-              {isLoadingSyllabus && (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Cargando vista previa...</p>
-                  </div>
-                </div>
-              )}
-
-              {syllabusError && !isLoadingSyllabus && (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center text-red-500">
-                    <div className="mb-4">
-                      <div className="w-16 h-16 bg-red-100 rounded-lg mx-auto flex items-center justify-center">
-                        <X size={32} className="text-red-500" />
-                      </div>
-                    </div>
-                    <p className="text-lg font-medium">
-                      Error al cargar sílabo
-                    </p>
-                    <p className="text-sm mt-2">{syllabusError}</p>
-                  </div>
-                </div>
-              )}
-
-              {!selectedAssignment.syllabusId && !isLoadingSyllabus && (
-                <div className="flex-1 flex items-center justify-center">
-                  <div className="text-center text-gray-500">
-                    <div className="mb-4">
-                      <div className="w-16 h-16 bg-gray-200 rounded-lg mx-auto flex items-center justify-center">
-                        <Eye size={32} className="text-gray-400" />
-                      </div>
-                    </div>
-                    <p className="text-lg font-medium">
-                      No hay sílabo disponible
-                    </p>
-                    <p className="text-sm mt-2">
-                      Este curso no tiene un sílabo asignado
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {syllabusData && !isLoadingSyllabus && !syllabusError && (
-                <div className="flex-1 border border-gray-300 rounded-lg overflow-hidden">
-                  <PDFViewer
-                    width="100%"
-                    height="100%"
-                    showToolbar={true}
-                    className="rounded-lg"
-                  >
-                    <SyllabusPDFDocument data={syllabusData} />
-                  </PDFViewer>
-                </div>
-              )}
-            </div>
-
-            {syllabusData && !syllabusError && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <button
-                  onClick={handleDownloadPDF}
-                  disabled={isDownloadingPDF}
-                  className={`w-full flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-white transition-all ${
-                    isDownloadingPDF
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700 hover:shadow-lg"
-                  }`}
-                >
-                  {isDownloadingPDF ? (
-                    <>
-                      <svg
-                        className="animate-spin h-5 w-5"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      <span>Generando PDF...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download size={18} />
-                      <span>Descargar PDF</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}

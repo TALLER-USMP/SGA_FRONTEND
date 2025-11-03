@@ -1,5 +1,10 @@
 import React, { createContext, useContext } from "react";
 
+interface ReviewItem {
+  status: "approved" | "rejected" | null;
+  comment: string;
+}
+
 interface ReviewModeContextType {
   isReviewMode: boolean;
   onFieldReview?: (
@@ -7,6 +12,7 @@ interface ReviewModeContextType {
     status: "approved" | "rejected" | null,
   ) => void;
   onFieldComment?: (fieldId: string, comment: string) => void;
+  reviewData?: Record<string, ReviewItem>;
 }
 
 const ReviewModeContext = createContext<ReviewModeContextType>({
@@ -24,6 +30,7 @@ interface ReviewModeProviderProps {
     status: "approved" | "rejected" | null,
   ) => void;
   onFieldComment?: (fieldId: string, comment: string) => void;
+  reviewData?: Record<string, ReviewItem>;
 }
 
 export const ReviewModeProvider: React.FC<ReviewModeProviderProps> = ({
@@ -31,6 +38,7 @@ export const ReviewModeProvider: React.FC<ReviewModeProviderProps> = ({
   isReviewMode = false,
   onFieldReview,
   onFieldComment,
+  reviewData,
 }) => {
   return (
     <ReviewModeContext.Provider
@@ -38,6 +46,7 @@ export const ReviewModeProvider: React.FC<ReviewModeProviderProps> = ({
         isReviewMode,
         onFieldReview,
         onFieldComment,
+        reviewData,
       }}
     >
       {children}

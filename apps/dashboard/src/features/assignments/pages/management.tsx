@@ -1,12 +1,8 @@
 import { useState, useEffect } from "react";
 import { getCurrentAcademicPeriod } from "../../../common/utils/academic-period";
 import { useToast } from "../../../common/hooks/use-toast";
-import { useSendAssignmentEmail } from "../hooks/use-send-assignment-email";
-import { useTeachers, type Teacher } from "../hooks/use-teachers";
-import { useCourses, type Course } from "../hooks/use-courses";
-import { useCreateAssignment } from "../hooks/use-create-assignment";
-import TeacherSelect from "../components/teacher-select";
-import CourseSelect from "../components/course-select";
+import TeacherSelect, { type Teacher } from "../components/teacher-select";
+import CourseSelect, { type Course } from "../components/course-select";
 import CourseCodeInput from "../components/course-code-input";
 import AcademicPeriodInput from "../components/academic-period-input";
 import MessageTextarea from "../components/message-textarea";
@@ -31,53 +27,40 @@ export default function Management() {
   const [courseSearch, setCourseSearch] = useState<string>("");
   const [showCourseDropdown, setShowCourseDropdown] = useState<boolean>(false);
 
-  // Cargar docentes y cursos desde el backend
-  const {
-    data: teachers = [],
-    isLoading: isLoadingTeachers,
-    isError: isErrorTeachers,
-    error: teachersError,
-  } = useTeachers();
+  // Mock data - reemplazar con datos reales del backend
+  const mockTeachers: Teacher[] = [
+    {
+      id: "1",
+      name: "Huapalla García Juan Manuel",
+      email: "jhuapalla@usmp.pe",
+    },
+    { id: "2", name: "García López María Elena", email: "mgarcia@usmp.pe" },
+    {
+      id: "3",
+      name: "Rodríguez Pérez Carlos Alberto",
+      email: "crodriguez@usmp.pe",
+    },
+    {
+      id: "4",
+      name: "Fernández Torres Ana Lucía",
+      email: "afernandez@usmp.pe",
+    },
+  ];
 
-  const {
-    data: courses = [],
-    isLoading: isLoadingCourses,
-    isError: isErrorCourses,
-    error: coursesError,
-  } = useCourses();
-
-  const createAssignment = useCreateAssignment();
-  const { sendEmail, isSending } = useSendAssignmentEmail();
-
-  // Estado para prevenir doble ejecución
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // Mostrar errores de carga
-  useEffect(() => {
-    if (isErrorTeachers) {
-      toast.error(
-        "Error al cargar docentes",
-        teachersError?.message || "No se pudieron cargar los docentes",
-      );
-    }
-  }, [isErrorTeachers, teachersError, toast]);
-
-  useEffect(() => {
-    if (isErrorCourses) {
-      toast.error(
-        "Error al cargar cursos",
-        coursesError?.message || "No se pudieron cargar los cursos",
-      );
-    }
-  }, [isErrorCourses, coursesError, toast]);
+  const mockCourses: Course[] = [
+    { id: "1", name: "Taller de Proyectos", code: "09072108042" },
+    { id: "2", name: "Programación Orientada a Objetos", code: "09072108043" },
+    { id: "3", name: "Base de Datos", code: "09072108044" },
+    { id: "4", name: "Ingeniería de Software", code: "09072108045" },
+  ];
 
   // Filtrar docentes
-  const filteredTeachers = teachers.filter((teacher) =>
+  const filteredTeachers = mockTeachers.filter((teacher) =>
     teacher.name.toLowerCase().includes(teacherSearch.toLowerCase()),
   );
 
   // Filtrar cursos
-  const filteredCourses = courses.filter((course) =>
+  const filteredCourses = mockCourses.filter((course) =>
     course.name.toLowerCase().includes(courseSearch.toLowerCase()),
   );
 
@@ -120,22 +103,6 @@ export default function Management() {
   };
 
   const handleSubmit = async () => {
-    // Prevenir doble ejecución
-    if (isProcessing || isSending || createAssignment.isPending) {
-      console.warn("⚠️ Proceso ya en ejecución, ignorando...");
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      await executeAssignment();
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const executeAssignment = async () => {
     // Validaciones
     if (!selectedTeacher) {
       toast.error(
@@ -149,22 +116,6 @@ export default function Management() {
       toast.error(
         "Asignatura requerida",
         "Por favor selecciona una asignatura antes de continuar",
-      );
-      return;
-    }
-
-    if (!courseCode.trim()) {
-      toast.error(
-        "Código de curso requerido",
-        "Por favor ingresa el código del curso",
-      );
-      return;
-    }
-
-    if (!academicPeriod.trim()) {
-      toast.error(
-        "Periodo académico requerido",
-        "Por favor ingresa el periodo académico",
       );
       return;
     }
@@ -219,29 +170,32 @@ export default function Management() {
 
       // PASO 3: Solo si el correo se envió correctamente, guardar en BD
       const assignmentData = {
-        teacherId,
-        syllabusId,
-        courseCode: courseCode.trim(),
-        academicPeriod: academicPeriod.trim(),
-        message: message.trim() || "",
+        teacher: selectedTeacher,
+        course: selectedCourse,
+        courseCode,
+        academicPeriod,
+        message,
       };
 
       await createAssignment.mutateAsync(assignmentData);
 
-      // PASO 4: Mostrar mensaje de éxito
+      // Simular llamada al backend
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       toast.success(
-        "Asignación completada",
-        `Se ha notificado a ${selectedTeacher.name} por correo electrónico y se guardó la asignación`,
+        "¡Asignación exitosa!",
+        `Se asignó ${selectedCourse.name} a ${selectedTeacher.name} para el periodo ${academicPeriod}`,
       );
 
-      // PASO 5: Limpiar formulario
-      setSelectedTeacher(null);
-      setSelectedCourse(null);
-      setTeacherSearch("");
-      setCourseSearch("");
-      setCourseCode("");
-      setMessage("");
-      setCharCount(0);
+      // Limpiar formulario después de éxito
+      setTimeout(() => {
+        setSelectedTeacher(null);
+        setSelectedCourse(null);
+        setTeacherSearch("");
+        setCourseSearch("");
+        setCourseCode("");
+        setMessage("");
+        setCharCount(0);
+      }, 1500);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -291,12 +245,6 @@ export default function Management() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8">
-        {(isLoadingTeachers || isLoadingCourses) && (
-          <div className="mb-4 text-center text-sm text-gray-600">
-            Cargando datos...
-          </div>
-        )}
-
         <TeacherSelect
           selectedTeacher={selectedTeacher}
           teacherSearch={teacherSearch}
@@ -330,17 +278,7 @@ export default function Management() {
           maxChars={maxChars}
         />
 
-        <FormActions
-          onGoBack={handleGoBack}
-          onSubmit={handleSubmit}
-          isDisabled={
-            !selectedTeacher ||
-            !selectedCourse ||
-            !courseCode.trim() ||
-            !academicPeriod.trim()
-          }
-          isLoading={isProcessing || isSending || createAssignment.isPending}
-        />
+        <FormActions onGoBack={handleGoBack} onSubmit={handleSubmit} />
       </div>
     </div>
   );

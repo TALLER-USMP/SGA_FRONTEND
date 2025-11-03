@@ -2,11 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 export const useUserPhoto = () => {
-  const token = sessionStorage.getItem("mailToken");
-
   const query = useQuery({
     queryKey: ["userPhoto"],
     queryFn: async () => {
+      const token = sessionStorage.getItem("mailToken");
       if (!token) throw new Error("No hay token en sessionStorage");
 
       const response = await fetch(
@@ -32,7 +31,6 @@ export const useUserPhoto = () => {
       const blob = await response.blob();
       return URL.createObjectURL(blob);
     },
-    enabled: !!token, // Solo ejecutar si hay token disponible
     staleTime: 1000 * 60 * 10, // 10 minutos
     gcTime: 1000 * 60 * 10, // Mantener en caché por 10 minutos
     retry: 0, // No reintentamos si falla

@@ -13,6 +13,8 @@ interface CoordinatorContextType {
   setSelectedSilaboId: (id: number | null) => void;
   selectedDocenteName: string | null;
   setSelectedDocenteName: (name: string | null) => void;
+  selectedDocenteEmail: string | null;
+  setSelectedDocenteEmail: (email: string | null) => void;
   selectedCourseName: string | null;
   setSelectedCourseName: (name: string | null) => void;
   selectedCourseCode: string | null;
@@ -35,6 +37,9 @@ export function CoordinatorProvider({ children }: { children: ReactNode }) {
   const [selectedDocenteName, setSelectedDocenteName] = useState<string | null>(
     null,
   );
+  const [selectedDocenteEmail, setSelectedDocenteEmail] = useState<
+    string | null
+  >(null);
   const [selectedCourseName, setSelectedCourseName] = useState<string | null>(
     null,
   );
@@ -58,6 +63,8 @@ export function CoordinatorProvider({ children }: { children: ReactNode }) {
         setSelectedSilaboId,
         selectedDocenteName,
         setSelectedDocenteName,
+        selectedDocenteEmail,
+        setSelectedDocenteEmail,
         selectedCourseName,
         setSelectedCourseName,
         selectedCourseCode,

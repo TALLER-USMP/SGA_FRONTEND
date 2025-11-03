@@ -17,6 +17,8 @@ export default function PermissionsManage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const teacherName = searchParams.get("teacherName") || "Docente";
+  const courseCode = searchParams.get("courseCode") || "";
+  const teacherEmail = searchParams.get("teacherEmail") || "";
   const { user, isLoading: sessionLoading } = useSession();
 
   // Validar que el usuario sea coordinadora
@@ -133,7 +135,7 @@ export default function PermissionsManage() {
 
       // Navegar a la siguiente pantalla
       navigate(
-        `/coordinator/send-email?teacherName=${encodeURIComponent(teacherName)}&courseCode=${searchParams.get("courseCode") || ""}`,
+        `/coordinator/send-email?courseCode=${encodeURIComponent(courseCode)}&teacherEmail=${encodeURIComponent(teacherEmail)}`,
       );
     } catch (error) {
       console.error("Error al guardar permisos:", error);

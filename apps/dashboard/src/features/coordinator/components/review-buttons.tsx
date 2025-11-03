@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Check, X, MessageSquare } from "lucide-react";
 
 interface ReviewButtonsProps {
@@ -24,6 +24,18 @@ export function ReviewButtons({
   );
   const [showCommentBox, setShowCommentBox] = useState(false);
   const [comment, setComment] = useState(initialComment);
+
+  // Sincronizar con initialStatus e initialComment cuando cambien
+  useEffect(() => {
+    setStatus(initialStatus);
+  }, [initialStatus]);
+
+  useEffect(() => {
+    setComment(initialComment);
+    if (initialComment && initialComment.trim() !== "") {
+      setShowCommentBox(true);
+    }
+  }, [initialComment]);
 
   const handleApprove = () => {
     const newStatus = status === "approved" ? null : "approved";

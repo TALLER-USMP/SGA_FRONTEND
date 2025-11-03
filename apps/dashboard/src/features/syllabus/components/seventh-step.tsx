@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
 import { Plus, X } from "lucide-react";
+import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
 
 // Tipos
 interface Bibliography {
@@ -124,28 +125,31 @@ export default function SeventhStep() {
           <h2 className="text-2xl font-bold mb-4">8.1. Bibliográficas</h2>
           <div className="space-y-3">
             {bibliographies.map((biblio) => (
-              <div
+              <ReviewFieldWrapper
                 key={biblio.id}
-                className="flex items-center gap-3 bg-gray-100 rounded-lg p-3"
+                fieldId={`bibliography-${biblio.id}`}
+                orientation="vertical"
               >
-                <div className="flex-1 flex items-center gap-3">
-                  <div className="bg-gray-300 px-4 py-2 rounded-lg text-sm">
-                    {biblio.authors}
+                <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-3">
+                  <div className="flex-1 flex items-center gap-3">
+                    <div className="bg-gray-300 px-4 py-2 rounded-lg text-sm">
+                      {biblio.authors}
+                    </div>
+                    <div className="bg-gray-300 px-3 py-2 rounded-lg text-sm">
+                      ({biblio.year})
+                    </div>
+                    <div className="flex-1 bg-gray-300 px-4 py-2 rounded-lg text-sm">
+                      {biblio.title}
+                    </div>
                   </div>
-                  <div className="bg-gray-300 px-3 py-2 rounded-lg text-sm">
-                    ({biblio.year})
-                  </div>
-                  <div className="flex-1 bg-gray-300 px-4 py-2 rounded-lg text-sm">
-                    {biblio.title}
-                  </div>
+                  <button
+                    onClick={() => handleRemoveBibliography(biblio.id)}
+                    className="p-2 hover:bg-red-100 rounded-lg flex-shrink-0"
+                  >
+                    <X className="w-5 h-5 text-red-600" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleRemoveBibliography(biblio.id)}
-                  className="p-2 hover:bg-red-100 rounded-lg flex-shrink-0"
-                >
-                  <X className="w-5 h-5 text-red-600" />
-                </button>
-              </div>
+              </ReviewFieldWrapper>
             ))}
 
             {/* Formulario para agregar nueva bibliografía */}
@@ -201,25 +205,28 @@ export default function SeventhStep() {
           <h2 className="text-2xl font-bold mb-4">8.2. Electrónicas</h2>
           <div className="space-y-3">
             {electronicResources.map((resource) => (
-              <div
+              <ReviewFieldWrapper
                 key={resource.id}
-                className="flex items-center gap-3 bg-gray-100 rounded-lg p-3"
+                fieldId={`electronic-resource-${resource.id}`}
+                orientation="vertical"
               >
-                <div className="flex-1 flex items-center gap-3">
-                  <div className="bg-gray-300 px-4 py-2 rounded-lg text-sm flex-1">
-                    {resource.source}
+                <div className="flex items-center gap-3 bg-gray-100 rounded-lg p-3">
+                  <div className="flex-1 flex items-center gap-3">
+                    <div className="bg-gray-300 px-4 py-2 rounded-lg text-sm flex-1">
+                      {resource.source}
+                    </div>
+                    <div className="flex-1 bg-gray-300 px-4 py-2 rounded-lg text-sm">
+                      {resource.url}
+                    </div>
                   </div>
-                  <div className="flex-1 bg-gray-300 px-4 py-2 rounded-lg text-sm">
-                    {resource.url}
-                  </div>
+                  <button
+                    onClick={() => handleRemoveElectronic(resource.id)}
+                    className="p-2 hover:bg-red-100 rounded-lg flex-shrink-0"
+                  >
+                    <X className="w-5 h-5 text-red-600" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleRemoveElectronic(resource.id)}
-                  className="p-2 hover:bg-red-100 rounded-lg flex-shrink-0"
-                >
-                  <X className="w-5 h-5 text-red-600" />
-                </button>
-              </div>
+              </ReviewFieldWrapper>
             ))}
 
             {/* Formulario para agregar nuevo recurso electrónico */}
