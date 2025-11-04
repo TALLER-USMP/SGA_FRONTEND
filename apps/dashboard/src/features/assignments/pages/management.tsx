@@ -66,10 +66,13 @@ export default function Management() {
     }
   }, [isErrorCourses, coursesError, toast]);
 
-  // Filtrar docentes
-  const filteredTeachers = teachers.filter((teacher) =>
-    teacher.name.toLowerCase().includes(teacherSearch.toLowerCase()),
-  );
+  // Filtrar docentes por nombre o correo
+  const filteredTeachers = teachers.filter((teacher) => {
+    const searchLower = teacherSearch.toLowerCase();
+    const matchesName = teacher.name.toLowerCase().includes(searchLower);
+    const matchesEmail = teacher.email.toLowerCase().includes(searchLower);
+    return matchesName || matchesEmail;
+  });
 
   // Filtrar cursos
   const filteredCourses = courses.filter((course) =>

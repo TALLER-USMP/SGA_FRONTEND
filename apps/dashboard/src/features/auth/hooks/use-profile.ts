@@ -100,23 +100,59 @@ export function useProfile() {
 
   // 📤 Mutation para actualizar el perfil
   // PUT: Une firstName y lastName en un solo campo nombre
+  // Solo envía los campos que han sido modificados
   const updateProfileMutation = useMutation({
     mutationFn: async (updatedData: ProfileData) => {
       if (!user?.id) throw new Error("No user ID");
 
-      // 🔥 COMBINAR nombre y apellido en un solo campo "nombre"
+      // Obtener datos actuales del perfil
+      const currentProfile = getProfile.data
+        ? formatProfileData(getProfile.data, user?.email)
+        : null;
+
+      // Construir objeto solo con campos modificados
+      const updatePayload: Record<string, string> = {};
+
+      // 🔥 COMBINAR nombre y apellido en un solo campo "nombre" solo si cambiaron
       const nombreCompleto =
         `${updatedData.firstName.trim()} ${updatedData.lastName.trim()}`.trim();
+      const nombreActual = currentProfile
+        ? `${currentProfile.firstName.trim()} ${currentProfile.lastName.trim()}`.trim()
+        : "";
+
+      if (nombreCompleto && nombreCompleto !== nombreActual) {
+        updatePayload.nombre = nombreCompleto;
+      }
+
+      // Solo incluir profesión si cambió
+      if (
+        updatedData.profession.trim() &&
+        updatedData.profession !== currentProfile?.profession
+      ) {
+        updatePayload.grado = updatedData.profession.trim();
+      }
+
+      // Solo incluir teléfono si cambió
+      if (
+        updatedData.phone.trim() &&
+        updatedData.phone !== currentProfile?.phone
+      ) {
+        updatePayload.telefono = updatedData.phone.trim();
+      }
+
+      // El correo siempre se envía (aunque no se puede modificar en el frontend)
+      updatePayload.correo = updatedData.email;
+
+      // Si no hay cambios, no hacer la petición
+      if (Object.keys(updatePayload).length === 1) {
+        // Solo tiene correo
+        throw new Error("No hay cambios para guardar");
+      }
 
       const response = await fetch(`${API_BASE}/teacher/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          nombre: nombreCompleto, // 🔥 Backend guarda todo en nombre
-          correo: updatedData.email,
-          grado: updatedData.profession || "",
-          telefono: updatedData.phone || "",
-        }),
+        body: JSON.stringify(updatePayload),
       });
 
       if (!response.ok) {

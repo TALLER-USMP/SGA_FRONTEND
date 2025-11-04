@@ -4,7 +4,7 @@ export interface ApprovedSyllabus {
   id: number;
   codigo: string;
   asignatura: string;
-  fechaAprobacion: string;
+  fechaAprobacion?: string;
   ciclo?: string;
   escuela?: string;
   estadoRevision: string;
@@ -12,10 +12,10 @@ export interface ApprovedSyllabus {
 
 interface SyllabusBackendResponse {
   id: number;
-  cursoCodigo: string;
-  cursoNombre: string;
+  code: string;
+  name: string;
   ciclo?: string;
-  escuelaProfesional?: string;
+  escuela?: string;
   estadoRevision: "APROBADO" | "ASIGNADO" | "REPROBADO" | "EN REVISION";
   fechaAprobacion?: string;
 }
@@ -55,12 +55,12 @@ async function fetchApprovedSyllabi(): Promise<ApprovedSyllabus[]> {
     .filter((silabo) => silabo.estadoRevision === "APROBADO")
     .map((silabo) => ({
       id: silabo.id,
-      codigo: silabo.cursoCodigo,
-      asignatura: silabo.cursoNombre,
+      codigo: silabo.code,
+      asignatura: silabo.name,
       ciclo: silabo.ciclo,
-      escuela: silabo.escuelaProfesional,
+      escuela: silabo.escuela,
       estadoRevision: silabo.estadoRevision,
-      fechaAprobacion: silabo.fechaAprobacion || new Date().toISOString(),
+      fechaAprobacion: silabo.fechaAprobacion,
     }));
 }
 
