@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
 import { X, Plus } from "lucide-react";
-
+import { toast } from "sonner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../common/components/ui/select";
+  useThirdStepData,
+  useUpdateCompetencias,
+  useUpdateActitudes,
+  useUpdateComponentes,
+  useSaveCompetencias,
+  useSaveActitudes,
+} from "../hooks/third-step-query";
 
 interface CompetenciaItem {
   id: string;
@@ -41,52 +42,89 @@ export default function ThirdStep() {
   const { syllabusId, courseName } = useSyllabusContext();
   console.log("Syllabus ID in ThirdStep:", syllabusId, "Course:", courseName);
 
-  // Generar opciones de códigos de la A a la Z
-  const codeOptions = Array.from({ length: 26 }, (_, i) =>
-    String.fromCharCode(65 + i),
+  // Obtener datos del backend
+  const { data: thirdStepData, isLoading } = useThirdStepData(
+    syllabusId ? Number(syllabusId) : null,
   );
 
+  // Hooks de mutación - UPDATE (PUT) - Para sincronización completa
+  const updateCompetencias = useUpdateCompetencias();
+  const updateComponentes = useUpdateComponentes();
+  const updateActitudes = useUpdateActitudes();
+
+  // Hooks de mutación - CREATE (POST) - Solo para primera creación
+  const createCompetencias = useSaveCompetencias();
+  const createActitudes = useSaveActitudes();
+
   const [formData, setFormData] = useState<FormData>({
-    competencias: [
-      {
-        id: "1",
-        text: "Elabora y gestiona proyectos de diversa índole, vinculados a profesión.",
-        code: "G",
-      },
-      {
-        id: "2",
-        text: "Analizar un sistema complejo de computación y aplicar principios de computación y otras disciplinas relevantes para identificar soluciones.",
-        code: "I",
-      },
-    ],
-    componentes: [
-      {
-        id: "1",
-        text: "Elabora trabajos de aplicación a proyectos vinculados a la especialidad",
-        code: "A",
-      },
-      {
-        id: "2",
-        text: "Gestiona proyectos de diversa índole, vinculados a la especialidad",
-        code: "B",
-      },
-    ],
-    contenidosActitudinales: [
-      { id: "1", text: "Búsqueda de la verdad.", code: "A" },
-      { id: "2", text: "Compromiso ético en todo su quehacer.", code: "B" },
-    ],
+    competencias: [],
+    componentes: [],
+    contenidosActitudinales: [],
   });
 
-  // Add new item to a section
+  // Guardar datos originales para detectar cambios
+  const originalDataRef = useRef<FormData>({
+    competencias: [],
+    componentes: [],
+    contenidosActitudinales: [],
+  });
+
+  // Cargar datos del backend cuando estén disponibles
+  useEffect(() => {
+    if (thirdStepData) {
+      console.log("📊 Datos del backend recibidos:", thirdStepData);
+
+      const mappedData = {
+        competencias: thirdStepData.competenciasPrincipales.map((item) => ({
+          id: String(item.id || `temp-${Date.now()}`),
+          text: item.text,
+          code: item.code || "",
+        })),
+        componentes: thirdStepData.componentes.map((item) => ({
+          id: String(item.id || `temp-${Date.now()}`),
+          text: item.text,
+          code: item.code || "",
+        })),
+        contenidosActitudinales: thirdStepData.actitudinales.map((item) => ({
+          id: String(item.id || `temp-${Date.now()}`),
+          text: item.text,
+          code: item.code || "",
+        })),
+      };
+
+      console.log("✅ Datos mapeados para el formulario:", mappedData);
+      setFormData(mappedData);
+      originalDataRef.current = JSON.parse(JSON.stringify(mappedData));
+    }
+  }, [thirdStepData]);
+
+  // Agregar item con ID temporal
   const addItem = (section: keyof FormData) => {
-    const newId = Date.now().toString();
+    const newId = `temp-${Date.now()}`;
+
+    // Asignar código por defecto según la sección
+    let defaultCode = "";
+    if (section === "componentes") {
+      // Para componentes, usar formato g.1, a.1, etc.
+      const nextIndex = formData[section].length + 1;
+      defaultCode = `g.${nextIndex}`;
+    } else if (section === "contenidosActitudinales") {
+      // Para actitudinales, usar una letra sola
+      const nextIndex = formData[section].length;
+      const letter = String.fromCharCode(65 + (nextIndex % 26)); // A, B, C...
+      defaultCode = letter;
+    } else {
+      // Para competencias, permitir código vacío o asignar uno por defecto
+      defaultCode = "A";
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [section]: [...prev[section], { id: newId, text: "", code: "A" }],
+      [section]: [...prev[section], { id: newId, text: "", code: defaultCode }],
     }));
   };
 
-  // Remove item from a section
+  // Eliminar item
   const removeItem = (section: keyof FormData, id: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -94,7 +132,7 @@ export default function ThirdStep() {
     }));
   };
 
-  // Update item text
+  // Actualizar texto del item
   const updateItem = (section: keyof FormData, id: string, text: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -104,7 +142,7 @@ export default function ThirdStep() {
     }));
   };
 
-  // Update item code
+  // Actualizar código del item
   const updateItemCode = (
     section: keyof FormData,
     id: string,
@@ -118,36 +156,269 @@ export default function ThirdStep() {
     }));
   };
 
-  // Submit handler - prepare data for backend
-  const handleSubmit = () => {
-    const dataForBackend = {
-      step: 3,
-      title: "COMPETENCIAS Y SUS COMPONENTES COMPRENDIDOS EN LA ASIGNATURA",
-      sections: {
-        competencias: {
-          title: "3.1 Competencia",
-          items: formData.competencias
-            .map((item) => item.text)
-            .filter((text) => text.trim() !== ""),
-        },
-        componentes: {
-          title: "3.2. Componentes",
-          items: formData.componentes
-            .map((item) => item.text)
-            .filter((text) => text.trim() !== ""),
-        },
-        contenidosActitudinales: {
-          title: "3.3. Contenidos actitudinales",
-          items: formData.contenidosActitudinales
-            .map((item) => item.text)
-            .filter((text) => text.trim() !== ""),
-        },
-      },
-      timestamp: new Date().toISOString(),
-    };
+  // Detectar cambios reales en el contenido
+  const hasRealChanges = (section: keyof FormData): boolean => {
+    const current = formData[section];
+    const original = originalDataRef.current[section];
 
-    console.log("Data prepared for backend:", dataForBackend);
-    nextStep();
+    if (current.length !== original.length) return true;
+
+    for (let i = 0; i < current.length; i++) {
+      const curr = current[i];
+      const orig = original[i];
+
+      if (curr.text !== orig?.text || curr.code !== orig?.code) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Determinar si es operación de creación (POST) o actualización (PUT)
+  const isCreateOperation = (section: keyof FormData): boolean => {
+    // Si no hay datos originales del backend
+    if (originalDataRef.current[section].length === 0) return true;
+
+    // Si todos los items son temporales (nuevos)
+    const allTemporary = formData[section].every((item) =>
+      item.id.startsWith("temp-"),
+    );
+
+    return allTemporary;
+  };
+
+  // Detectar si se eliminaron todos los items
+  const wereAllItemsDeleted = (section: keyof FormData): boolean => {
+    const hadOriginalData = originalDataRef.current[section].length > 0;
+    const hasCurrentData = formData[section].length > 0;
+
+    return hadOriginalData && !hasCurrentData;
+  };
+
+  // Manejar el envío del formulario
+  const handleSubmit = async () => {
+    if (!syllabusId) {
+      toast.error("No se encontró el ID del sílabo");
+      return;
+    }
+
+    const numSyllabusId = Number(syllabusId);
+    const promises: Promise<{ message?: string }>[] = [];
+    let toastId: string | number | undefined;
+
+    try {
+      // ========== 1. COMPETENCIAS ==========
+      if (hasRealChanges("competencias")) {
+        const isCreate = isCreateOperation("competencias");
+        const allDeleted = wereAllItemsDeleted("competencias");
+
+        console.log(
+          `🔄 Competencias: ${allDeleted ? "PUT con items:[] (eliminar todos)" : isCreate ? "POST (crear)" : "PUT (sincronizar)"}`,
+        );
+
+        // Si NO hay datos originales Y NO hay items actuales -> no hacer nada (nunca se creó)
+        if (
+          originalDataRef.current["competencias"].length === 0 &&
+          formData.competencias.length === 0
+        ) {
+          console.log("⚠️ No hay competencias para crear ni sincronizar");
+        } else {
+          const competenciasPayload = {
+            items: formData.competencias.map((item, index) => {
+              // Para competencias, permitir código vacío o validar formato
+              // Si hay código, usarlo; si no, generar uno por defecto
+              const validCode =
+                item.code && item.code.trim() !== ""
+                  ? item.code.trim()
+                  : String.fromCharCode(65 + (index % 26)); // A, B, C... por defecto
+
+              const baseItem = {
+                text: item.text,
+                code: validCode,
+                order: index + 1,
+              };
+
+              // Incluir ID solo si no es temporal y estamos actualizando
+              if (!isCreate && !item.id.startsWith("temp-")) {
+                return { ...baseItem, id: Number(item.id) };
+              }
+
+              return baseItem;
+            }),
+          };
+
+          if (isCreate) {
+            promises.push(
+              createCompetencias.mutateAsync({
+                syllabusId: numSyllabusId,
+                data: competenciasPayload,
+              }),
+            );
+          } else {
+            // Usar PUT para sincronizar (incluso con items:[] para eliminar todos)
+            promises.push(
+              updateCompetencias.mutateAsync({
+                syllabusId: numSyllabusId,
+                data: competenciasPayload,
+              }),
+            );
+          }
+        }
+      }
+
+      // ========== 2. COMPONENTES (siempre usar PUT) ==========
+      if (hasRealChanges("componentes")) {
+        const allDeleted = wereAllItemsDeleted("componentes");
+
+        console.log(
+          `🔄 Componentes: ${allDeleted ? "PUT con items:[] (eliminar todos)" : "PUT (sincronizar)"}`,
+        );
+
+        // Si NO hay datos originales Y NO hay items actuales -> no hacer nada
+        if (
+          originalDataRef.current["componentes"].length === 0 &&
+          formData.componentes.length === 0
+        ) {
+          console.log("⚠️ No hay componentes para crear ni sincronizar");
+        } else {
+          const componentesPayload = {
+            items: formData.componentes.map((item, index) => {
+              // Validar o generar código en formato g.1, a.2, etc.
+              const codePattern = /^[a-zA-Z]\.\d+$/;
+              const validCode =
+                item.code && codePattern.test(item.code.trim())
+                  ? item.code.trim()
+                  : `g.${index + 1}`; // Generar código por defecto si está vacío o inválido
+
+              const baseItem = {
+                text: item.text,
+                code: validCode,
+                order: index + 1,
+              };
+
+              // Incluir ID si no es temporal
+              if (!item.id.startsWith("temp-")) {
+                return { ...baseItem, id: Number(item.id) };
+              }
+
+              return baseItem;
+            }),
+          };
+
+          // Siempre usar PUT para componentes (maneja crear, actualizar, eliminar)
+          // Incluso con items:[] para eliminar todos
+          promises.push(
+            updateComponentes.mutateAsync({
+              syllabusId: numSyllabusId,
+              data: componentesPayload,
+            }),
+          );
+        }
+      }
+
+      // ========== 3. ACTITUDES ==========
+      if (hasRealChanges("contenidosActitudinales")) {
+        const isCreate = isCreateOperation("contenidosActitudinales");
+        const allDeleted = wereAllItemsDeleted("contenidosActitudinales");
+
+        console.log(
+          `🔄 Actitudes: ${allDeleted ? "PUT con items:[] (eliminar todos)" : isCreate ? "POST (crear)" : "PUT (sincronizar)"}`,
+        );
+
+        // Si NO hay datos originales Y NO hay items actuales -> no hacer nada
+        if (
+          originalDataRef.current["contenidosActitudinales"].length === 0 &&
+          formData.contenidosActitudinales.length === 0
+        ) {
+          console.log("⚠️ No hay actitudes para crear ni sincronizar");
+        } else {
+          const actitudesPayload = {
+            items: formData.contenidosActitudinales.map((item, index) => {
+              // Validar que el código sea solo una letra (A-Z, a-z)
+              const codePattern = /^[a-zA-Z]$/;
+              const validCode =
+                item.code && codePattern.test(item.code.trim())
+                  ? item.code.trim().toUpperCase()
+                  : String.fromCharCode(65 + (index % 26)); // A, B, C... por defecto
+
+              const baseItem = {
+                text: item.text,
+                code: validCode,
+                order: index + 1,
+              };
+
+              // Incluir ID solo si no es temporal y estamos actualizando
+              if (!isCreate && !item.id.startsWith("temp-")) {
+                return { ...baseItem, id: Number(item.id) };
+              }
+
+              return baseItem;
+            }),
+          };
+
+          if (isCreate) {
+            promises.push(
+              createActitudes.mutateAsync({
+                syllabusId: numSyllabusId,
+                data: actitudesPayload,
+              }),
+            );
+          } else {
+            // Usar PUT para sincronizar (incluso con items:[] para eliminar todos)
+            promises.push(
+              updateActitudes.mutateAsync({
+                syllabusId: numSyllabusId,
+                data: actitudesPayload,
+              }),
+            );
+          }
+        }
+      }
+
+      // ========== EJECUTAR PETICIONES ==========
+      if (promises.length > 0) {
+        toastId = toast.loading("Guardando cambios...");
+        const results = await Promise.all(promises);
+
+        toast.dismiss(toastId);
+
+        // Mostrar resultados
+        results.forEach((result) => {
+          console.log("✅ Resultado:", result);
+          toast.success(result.message || "Cambios guardados correctamente");
+        });
+
+        // Actualizar referencia original después de guardar exitosamente
+        originalDataRef.current = JSON.parse(JSON.stringify(formData));
+      } else {
+        console.log("ℹ️ No hay cambios para guardar");
+        toast.info("No hay cambios para guardar");
+      } // Avanzar al siguiente paso
+      nextStep();
+    } catch (error) {
+      if (toastId) {
+        toast.dismiss(toastId);
+      }
+
+      console.error("❌ Error al guardar:", error);
+
+      // Extraer mensaje de error legible
+      let errorMessage = "Error al guardar los cambios";
+
+      if (error instanceof Error) {
+        // Intentar parsear si el mensaje es JSON
+        try {
+          const errorObj = JSON.parse(error.message);
+          errorMessage = errorObj.message || errorObj.error || error.message;
+        } catch {
+          // Si no es JSON, usar el mensaje tal cual
+          errorMessage = error.message;
+        }
+      }
+
+      toast.error(errorMessage);
+    }
   };
 
   return (
@@ -166,6 +437,13 @@ export default function ThirdStep() {
             {courseName || "TALLER DE PROYECTOS"}
           </div>
         </div>
+
+        {/* Indicador de carga */}
+        {isLoading && (
+          <div className="flex justify-center items-center py-8">
+            <div className="text-gray-500">Cargando datos...</div>
+          </div>
+        )}
 
         {/* 3.1 Competencia */}
         <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -188,23 +466,16 @@ export default function ThirdStep() {
                     />
                   </div>
                   <div className="w-24">
-                    <Select
+                    <input
+                      type="text"
                       value={item.code}
-                      onValueChange={(value) =>
-                        updateItemCode("competencias", item.id, value)
+                      onChange={(e) =>
+                        updateItemCode("competencias", item.id, e.target.value)
                       }
-                    >
-                      <SelectTrigger className="w-full bg-white">
-                        <SelectValue placeholder="Código" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {codeOptions.map((code) => (
-                          <SelectItem key={code} value={code}>
-                            {code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                      placeholder="Código"
+                      maxLength={10}
+                    />
                   </div>
                   <button
                     onClick={() => removeItem("competencias", item.id)}
@@ -249,23 +520,16 @@ export default function ThirdStep() {
                     />
                   </div>
                   <div className="w-24">
-                    <Select
+                    <input
+                      type="text"
                       value={item.code}
-                      onValueChange={(value) =>
-                        updateItemCode("componentes", item.id, value)
+                      onChange={(e) =>
+                        updateItemCode("componentes", item.id, e.target.value)
                       }
-                    >
-                      <SelectTrigger className="w-full bg-white">
-                        <SelectValue placeholder="Código" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {codeOptions.map((code) => (
-                          <SelectItem key={code} value={code}>
-                            {code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                      placeholder="Código"
+                      maxLength={10}
+                    />
                   </div>
                   <button
                     onClick={() => removeItem("componentes", item.id)}
@@ -314,34 +578,26 @@ export default function ThirdStep() {
                     />
                   </div>
                   <div className="w-24">
-                    <Select
+                    <input
+                      type="text"
                       value={item.code}
-                      onValueChange={(value) =>
+                      onChange={(e) =>
                         updateItemCode(
                           "contenidosActitudinales",
                           item.id,
-                          value,
+                          e.target.value,
                         )
                       }
-                    >
-                      <SelectTrigger className="w-full bg-white">
-                        <SelectValue placeholder="Código" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {codeOptions.map((code) => (
-                          <SelectItem key={code} value={code}>
-                            {code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                      placeholder="Código"
+                      maxLength={10}
+                    />
                   </div>
                   <button
                     onClick={() =>
                       removeItem("contenidosActitudinales", item.id)
                     }
                     className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                    disabled={formData.contenidosActitudinales.length <= 1}
                   >
                     <X size={20} />
                   </button>

@@ -28,39 +28,51 @@ interface ProfileResponse {
   Bachiller?: string;
 }
 
-/**
- * 🔧 Formatea los datos del perfil del backend al formato del frontend
- * GET: Divide el nombre completo en nombre y apellidos
- */
 const formatProfileData = (
   data: ProfileResponse,
   userEmail?: string,
 ): ProfileData => {
-  // Extraer nombre y apellido del backend
   const nombreBackend = (data.nombre || data.Nombre || "").trim();
   const apellidoBackend = (data.apellido || data.Apellido || "").trim();
 
   let firstName = "";
   let lastName = "";
 
-  // Si el backend envía nombre y apellido separados
+  // CASO 1: Backend tiene nombre y apellido separados
   if (nombreBackend && apellidoBackend) {
     firstName = nombreBackend;
     lastName = apellidoBackend;
   }
-  // Si solo hay nombre (nombre completo), dividirlo
+  // CASO 2: Solo hay nombre completo (necesita división)
   else if (nombreBackend && !apellidoBackend) {
     const palabras = nombreBackend.split(" ").filter(Boolean);
 
-    if (palabras.length <= 1) {
-      firstName = palabras[0] || "";
+    if (palabras.length === 0) {
+      firstName = "";
       lastName = "";
+    } else if (palabras.length === 1) {
+      // Solo un nombre
+      firstName = palabras[0];
+      lastName = "";
+    } else if (palabras.length === 2) {
+      // Nombre y apellido
+      firstName = palabras[0];
+      lastName = palabras[1];
+    } else if (palabras.length === 3) {
+      // Asume: Nombre + Apellido Paterno + Apellido Materno
+      firstName = palabras[0];
+      lastName = palabras.slice(1).join(" ");
     } else {
-      // Dividir en la mitad: primeras palabras = nombre, últimas = apellidos
-      const mitad = Math.ceil(palabras.length / 2);
-      firstName = palabras.slice(0, mitad).join(" ");
-      lastName = palabras.slice(mitad).join(" ");
+      // 4+ palabras: Asume primeras 2 son nombres, resto apellidos
+      // Ejemplo: "Juan Carlos Pérez García" → "Juan Carlos" + "Pérez García"
+      firstName = palabras.slice(0, 2).join(" ");
+      lastName = palabras.slice(2).join(" ");
     }
+  }
+  // CASO 3: Solo hay apellido (raro, pero posible)
+  else if (!nombreBackend && apellidoBackend) {
+    firstName = "";
+    lastName = apellidoBackend;
   }
 
   return {
@@ -95,12 +107,10 @@ export function useProfile() {
     },
     enabled: !!user?.id,
     retry: 1,
-    staleTime: 5 * 60 * 1000, // 5 minutos
+    staleTime: 5 * 60 * 1000,
   });
 
   // 📤 Mutation para actualizar el perfil
-  // PUT: Une firstName y lastName en un solo campo nombre
-  // Solo envía los campos que han sido modificados
   const updateProfileMutation = useMutation({
     mutationFn: async (updatedData: ProfileData) => {
       if (!user?.id) throw new Error("No user ID");
@@ -110,44 +120,44 @@ export function useProfile() {
         ? formatProfileData(getProfile.data, user?.email)
         : null;
 
+      if (!currentProfile) {
+        throw new Error("No se pudo cargar el perfil actual");
+      }
+
       // Construir objeto solo con campos modificados
       const updatePayload: Record<string, string> = {};
 
-      // 🔥 COMBINAR nombre y apellido en un solo campo "nombre" solo si cambiaron
+      // 🔥 COMBINAR nombre y apellido en un solo campo "nombre"
       const nombreCompleto =
         `${updatedData.firstName.trim()} ${updatedData.lastName.trim()}`.trim();
-      const nombreActual = currentProfile
-        ? `${currentProfile.firstName.trim()} ${currentProfile.lastName.trim()}`.trim()
-        : "";
+      const nombreActual =
+        `${currentProfile.firstName.trim()} ${currentProfile.lastName.trim()}`.trim();
 
-      if (nombreCompleto && nombreCompleto !== nombreActual) {
+      if (nombreCompleto !== nombreActual) {
+        // ✅ Permitir vaciar el nombre (aunque no es recomendable)
         updatePayload.nombre = nombreCompleto;
       }
 
-      // Solo incluir profesión si cambió
-      if (
-        updatedData.profession.trim() &&
-        updatedData.profession !== currentProfile?.profession
-      ) {
+      // ✅ Profesión: Permitir vaciar (detecta cambio a string vacío)
+      if (updatedData.profession !== currentProfile.profession) {
         updatePayload.grado = updatedData.profession.trim();
       }
 
-      // Solo incluir teléfono si cambió
-      if (
-        updatedData.phone.trim() &&
-        updatedData.phone !== currentProfile?.phone
-      ) {
+      // ✅ Teléfono: Permitir vaciar (detecta cambio a string vacío)
+      if (updatedData.phone !== currentProfile.phone) {
         updatePayload.telefono = updatedData.phone.trim();
       }
 
-      // El correo siempre se envía (aunque no se puede modificar en el frontend)
-      updatePayload.correo = updatedData.email;
+      //El correo NO se puede modificar (el campo está disabled en el frontend)
+      // Solo se incluye si el backend lo requiere
+      // updatePayload.correo = updatedData.email;
 
-      // Si no hay cambios, no hacer la petición
-      if (Object.keys(updatePayload).length === 1) {
-        // Solo tiene correo
+      // Verificar si hay cambios reales
+      if (Object.keys(updatePayload).length === 0) {
         throw new Error("No hay cambios para guardar");
       }
+
+      console.log("📤 Enviando al backend:", updatePayload);
 
       const response = await fetch(`${API_BASE}/teacher/${user.id}`, {
         method: "PUT",
@@ -170,22 +180,22 @@ export function useProfile() {
   });
 
   return {
-    // 📊 Datos formateados
+    // Datos formateados
     profile: getProfile.data
       ? formatProfileData(getProfile.data, user?.email)
       : null,
 
-    // 🔄 Estados de carga
+    // Estados de carga
     isLoading: getProfile.isLoading,
     isError: getProfile.isError,
     error: getProfile.error,
 
-    // 💾 Mutación de actualización
+    // Mutación de actualización
     updateProfile: updateProfileMutation.mutate,
     isUpdating: updateProfileMutation.isPending,
     updateError: updateProfileMutation.error,
 
-    // 🔄 Funciones auxiliares
+    // Funciones auxiliares
     refetch: getProfile.refetch,
   };
 }

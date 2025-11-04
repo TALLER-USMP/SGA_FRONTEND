@@ -1,6 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-const API_BASE = "http://localhost:7071";
+const getApiBase = (baseUrl?: string): string => {
+  return (
+    baseUrl ?? import.meta.env.VITE_API_BASE_URL ?? "http://localhost:7071/api"
+  );
+};
 
 export interface CreateProgramacionBody {
   silaboId: number;
@@ -52,45 +56,60 @@ function buildError(res: Response): Promise<Error> {
     .catch(() => new Error(`Error ${res.status}`));
 }
 
-// GET: Obtener programación por asignatura
-export const useGetProgramacion = (asignaturaId: string) => {
+// GET: Obtener unidades por syllabusId
+export const useGetProgramacion = (syllabusId: string) => {
   return useQuery<ProgramacionResponse[]>({
-    queryKey: ["programacion", asignaturaId],
+    queryKey: ["syllabus", syllabusId, "unidades"],
     queryFn: async () => {
+      const apiBase = getApiBase();
       const res = await fetch(
-        `${API_BASE}/api/programacion-contenidos/${encodeURIComponent(asignaturaId)}`,
+        `${apiBase}/syllabus/${encodeURIComponent(syllabusId)}/unidades`,
       );
+      if (res.status === 404) {
+        return [];
+      }
       if (!res.ok) throw await buildError(res);
-      return (await res.json()) as ProgramacionResponse[];
+      const response = await res.json();
+
+      // Manejar diferentes formatos de respuesta
+      if (response.data) {
+        return Array.isArray(response.data) ? response.data : [];
+      }
+      return Array.isArray(response) ? response : [];
     },
-    enabled: !!asignaturaId,
+    enabled: !!syllabusId && syllabusId !== "0",
     staleTime: 1000 * 60 * 5,
+    retry: false,
+    throwOnError: false,
   });
 };
 
-// POST: Crear nueva programación
+// POST: Crear nueva unidad
 export const useCreateProgramacion = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: CreateProgramacionBody) => {
-      const res = await fetch(`${API_BASE}/api/programacion-contenidos/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const apiBase = getApiBase();
+      const res = await fetch(
+        `${apiBase}/syllabus/${payload.silaboId}/unidades`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
       if (!res.ok) throw await buildError(res);
       return (await res.json()) as ProgramacionResponse;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["programacion"],
-        exact: false,
+        queryKey: ["syllabus", String(variables.silaboId), "unidades"],
       });
     },
   });
 };
 
-// PUT: Actualizar programación existente
+// PUT: Actualizar unidad existente
 export const useUpdateProgramacion = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -101,8 +120,10 @@ export const useUpdateProgramacion = () => {
       id: string;
       payload: Partial<UpdateProgramacionBody>;
     }) => {
+      const apiBase = getApiBase();
+      const syllabusId = payload.silaboId;
       const res = await fetch(
-        `${API_BASE}/api/programacion-contenidos/${encodeURIComponent(id)}`,
+        `${apiBase}/syllabus/${syllabusId}/unidades/${encodeURIComponent(id)}`,
         {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -112,11 +133,16 @@ export const useUpdateProgramacion = () => {
       if (!res.ok) throw await buildError(res);
       return (await res.json()) as ProgramacionResponse;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["programacion"],
-        exact: false,
-      });
+    onSuccess: (_, variables) => {
+      if (variables.payload.silaboId) {
+        queryClient.invalidateQueries({
+          queryKey: [
+            "syllabus",
+            String(variables.payload.silaboId),
+            "unidades",
+          ],
+        });
+      }
     },
   });
 };

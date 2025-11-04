@@ -76,8 +76,9 @@ export default function FirstStep() {
   const [totalHours, setTotalHours] = useState<number>(0);
 
   // En modo revisión, usar datos del contexto; de lo contrario, usar el query normal
+  // Usar syllabusId directamente en lugar de draftKey
   const { data, isLoading, isError, error } = useSyllabusGeneral(
-    isReviewMode ? null : draftKey,
+    isReviewMode ? null : syllabusId,
   );
 
   // Efecto para cargar datos desde el API (modo normal)
