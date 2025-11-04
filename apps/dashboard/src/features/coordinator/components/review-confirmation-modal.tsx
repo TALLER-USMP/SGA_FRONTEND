@@ -15,11 +15,11 @@ export function ReviewConfirmationModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none animate-in fade-in duration-200"
       onClick={onClose}
     >
       <div
-        className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full mx-4 animate-in zoom-in-95 duration-300"
+        className="bg-white rounded-2xl shadow-2xl p-10 max-w-md w-full mx-4 animate-in zoom-in-95 duration-300 pointer-events-auto"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Title */}

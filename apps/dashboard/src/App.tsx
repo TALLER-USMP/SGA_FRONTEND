@@ -83,6 +83,14 @@ export default function App() {
                   </MainLayout>
                 }
               />
+              <Route
+                path="/silabus"
+                element={
+                  <MainLayout title="Sílabo Aprobados">
+                    <ApprovedSyllabiPage />
+                  </MainLayout>
+                }
+              />
 
               {/* Coordinator Routes */}
               <Route

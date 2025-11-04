@@ -65,7 +65,17 @@ export default function Profile() {
       },
       onError: (error: Error) => {
         console.error("❌ Error al guardar perfil:", error);
-        toast.error("Error", "No se pudo actualizar el perfil ⚠️");
+
+        // Mostrar mensaje específico si no hay cambios
+        if (error.message.includes("No hay cambios")) {
+          toast.info("Sin cambios", "No se detectaron cambios para guardar");
+          setIsEditing(false);
+        } else {
+          toast.error(
+            "Error",
+            error.message || "No se pudo actualizar el perfil ⚠️",
+          );
+        }
       },
     });
   };
@@ -112,6 +122,14 @@ export default function Profile() {
 
             {/* Datos */}
             <div className="flex-1">
+              {isEditing && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    Solo modifica los campos que deseas actualizar. No es
+                    necesario llenar todos los campos.
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
                   { label: "Nombre", field: "firstName" as const },

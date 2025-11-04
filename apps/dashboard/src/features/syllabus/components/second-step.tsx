@@ -2,9 +2,10 @@ import { useState, useEffect } from "react";
 import { useSaveSumilla, useSumilla } from "../hooks/second-step-query";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
+import { useReviewMode } from "../../coordinator/contexts/review-mode-context";
 import { Step } from "./step";
-import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
 import { toast } from "sonner";
+import type { SumillaResponse } from "../../coordinator/hooks/syllabus-section-data-query";
 
 /**
  * Paso 2: Formulario de Sumilla con validaciones básicas
@@ -16,16 +17,20 @@ import { toast } from "sonner";
  * - mode="create": Valida si existe data
  *   - Si GET retorna data: usa PUT para actualizar
  *   - Si GET retorna null: usa POST para crear nuevo registro
+ * - mode="review": Carga datos del contexto de revisión (solo lectura con posibilidad de comentarios)
  */
 export default function SecondStep() {
   const { nextStep } = useSteps();
   const { syllabusId, mode, courseName } = useSyllabusContext();
+  const { isReviewMode, sectionData } = useReviewMode();
   const [summary, setSummary] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
 
-  // Load existing sumilla via query
-  const { data, isLoading, isError, error } = useSumilla(syllabusId);
+  // Load existing sumilla via query (solo en modo normal, no en revisión)
+  const { data, isLoading, isError, error } = useSumilla(
+    isReviewMode ? null : syllabusId,
+  );
   const saveSumilla = useSaveSumilla();
 
   // Determina si debe crear (POST) o actualizar (PUT)
@@ -37,7 +42,10 @@ export default function SecondStep() {
   //   - Si GET retorna null: usar POST
   const isCreating = mode === "edit" ? !data : !data;
 
+  // Efecto para cargar datos desde el API (modo normal)
   useEffect(() => {
+    if (isReviewMode) return; // No cargar desde API en modo revisión
+
     if (isError) {
       const errorMsg = error?.message ?? "Error cargando sumilla";
       // 404 es esperado cuando no existe sumilla aún, no mostrar error
@@ -57,7 +65,17 @@ export default function SecondStep() {
         /* ignore */
       }
     }
-  }, [data, isError, error]);
+  }, [data, isError, error, isReviewMode]);
+
+  // Efecto para cargar datos desde el contexto de revisión
+  useEffect(() => {
+    if (!isReviewMode || !sectionData) return;
+
+    const reviewData = sectionData as SumillaResponse;
+    if (reviewData.content && reviewData.content.length > 0) {
+      setSummary(reviewData.content[0].sumilla);
+    }
+  }, [isReviewMode, sectionData]);
 
   const validateAndNext = async () => {
     const newErrors: Record<string, string> = {};
@@ -161,22 +179,20 @@ export default function SecondStep() {
           </div>
         </div>
 
-        <ReviewFieldWrapper fieldId="sumilla" orientation="vertical">
-          <div>
-            <textarea
-              name="summary"
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="Escribe la sumilla aquí..."
-              rows={8}
-              disabled={isLoading}
-              className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-white border resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.summary ? "border-red-500" : "border-gray-300"} ${isLoading ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`}
-            />
-            {errors.summary && (
-              <div className="text-red-600 text-sm mt-1">{errors.summary}</div>
-            )}
-          </div>
-        </ReviewFieldWrapper>
+        <div>
+          <textarea
+            name="summary"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="Escribe la sumilla aquí..."
+            rows={8}
+            disabled={isLoading}
+            className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-white border resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.summary ? "border-red-500" : "border-gray-300"} ${isLoading ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`}
+          />
+          {errors.summary && (
+            <div className="text-red-600 text-sm mt-1">{errors.summary}</div>
+          )}
+        </div>
 
         {apiError && (
           <div className="text-red-600 text-sm mt-3">{apiError}</div>

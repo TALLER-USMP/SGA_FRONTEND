@@ -14,8 +14,9 @@ import { SyllabusProvider } from "../../syllabus/contexts/syllabus-context";
 import { StepsContext } from "../../syllabus/contexts/steps-context-provider";
 import { ReviewModeProvider } from "../contexts/review-mode-context";
 
-// Import permissions hook
-import { usePermissions, type Permission } from "../hooks/permissions-query";
+// Import hooks
+import { useSyllabusSections } from "../hooks/syllabus-sections-query";
+import { useSyllabusSectionData } from "../hooks/syllabus-section-data-query";
 
 // Import step components
 import FirstStep from "../../syllabus/components/first-step";
@@ -77,23 +78,39 @@ export default function ReviewSyllabusDetail() {
   const syllabusId = searchParams.get("syllabusId");
   const docenteIdParam = searchParams.get("docenteId");
 
-  // Obtener permisos del backend
+  // Obtener secciones disponibles del backend
   const {
-    data: permissions = [],
-    isLoading: permissionsLoading,
-    isError: permissionsError,
-  } = usePermissions(
-    docenteIdParam && parseInt(docenteIdParam) > 0
-      ? parseInt(docenteIdParam)
-      : null,
+    data: syllabusSections = [],
+    isLoading: sectionsLoading,
+    isError: sectionsError,
+  } = useSyllabusSections(
+    syllabusId ? parseInt(syllabusId) : null,
+    docenteIdParam ? parseInt(docenteIdParam) : null,
   );
 
-  // Debug: Ver qué permisos se obtuvieron
-  console.log("=== PERMISOS DE REVISIÓN ===");
-  console.log("docenteId:", docenteIdParam);
-  console.log("Permisos obtenidos:", permissions);
-  console.log("Loading:", permissionsLoading);
-  console.log("Error:", permissionsError);
+  // Obtener los datos de la sección seleccionada
+  const {
+    data: sectionData,
+    isLoading: sectionDataLoading,
+    isError: sectionDataError,
+  } = useSyllabusSectionData(
+    syllabusId ? parseInt(syllabusId) : null,
+    selectedSection,
+  );
+
+  // Información de secciones disponible para UI
+
+  // Actualizar selectedSection cuando se carguen las secciones
+  useEffect(() => {
+    if (
+      Array.isArray(syllabusSections) &&
+      syllabusSections.length > 0 &&
+      !selectedSection
+    ) {
+      // Seleccionar la primera sección disponible
+      setSelectedSection(syllabusSections[0].seccion.toString());
+    }
+  }, [syllabusSections, selectedSection]);
 
   // Create a mock stepper context value
   // Mock de stepperValue para simular el contexto
@@ -204,47 +221,47 @@ export default function ReviewSyllabusDetail() {
     return componentMap[id];
   };
 
-  // Filtrar IDs de secciones según permisos asignados
-  const allowedSectionIds = useMemo(() => {
-    if (permissionsLoading || permissionsError || permissions.length === 0) {
-      return sectionDefinitions.map((s) => s.id); // Mostrar todas si no hay permisos o hay error
+  // Filtrar secciones disponibles según lo que devuelve el backend
+  const availableSections = useMemo(() => {
+    // Si está cargando, no mostrar secciones aún
+    if (sectionsLoading) {
+      return [];
     }
 
-    return permissions.map((p: Permission) => String(p.numeroSeccion));
-  }, [permissions, permissionsLoading, permissionsError, sectionDefinitions]);
-
-  // Obtener las definiciones de secciones permitidas
-  const allowedSections = useMemo(() => {
-    const filtered = sectionDefinitions.filter((section) =>
-      allowedSectionIds.includes(section.id),
-    );
-    console.log(
-      "Secciones permitidas:",
-      filtered.map((s) => `${s.id}. ${s.name}`),
-    );
-    return filtered;
-  }, [sectionDefinitions, allowedSectionIds]);
-
-  // Actualizar la sección seleccionada cuando se carguen los permisos
-  useEffect(() => {
+    // Si hay error o no hay secciones, mostrar mensaje
     if (
-      !permissionsLoading &&
-      !permissionsError &&
-      allowedSectionIds.length > 0
+      sectionsError ||
+      !syllabusSections ||
+      !Array.isArray(syllabusSections) ||
+      syllabusSections.length === 0
     ) {
-      // Si la sección actual no está permitida, seleccionar la primera permitida
-      if (!allowedSectionIds.includes(selectedSection)) {
-        setSelectedSection(allowedSectionIds[0]);
+      return [];
+    }
+
+    // Filtrar sectionDefinitions para incluir solo las secciones permitidas
+    const allowedSectionNumbers = syllabusSections.map((s) =>
+      s.seccion.toString(),
+    );
+
+    return sectionDefinitions.filter((section) =>
+      allowedSectionNumbers.includes(section.id),
+    );
+  }, [syllabusSections, sectionsLoading, sectionsError, sectionDefinitions]);
+
+  // Actualizar la sección seleccionada cuando se carguen las secciones desde la API
+  useEffect(() => {
+    if (!sectionsLoading && !sectionsError && availableSections.length > 0) {
+      // Si la sección actual no está en las disponibles, seleccionar la primera disponible
+      const availableSectionIds = availableSections.map((s) => s.id);
+      if (!availableSectionIds.includes(selectedSection)) {
+        setSelectedSection(availableSections[0].id);
       }
     }
-  }, [
-    allowedSectionIds,
-    permissionsLoading,
-    permissionsError,
-    selectedSection,
-  ]);
+  }, [availableSections, sectionsLoading, sectionsError, selectedSection]);
 
-  const currentSection = allowedSections.find((s) => s.id === selectedSection);
+  const currentSection = availableSections.find(
+    (s) => s.id === selectedSection,
+  );
 
   return (
     <SyllabusProvider>
@@ -253,6 +270,9 @@ export default function ReviewSyllabusDetail() {
         onFieldReview={handleFieldReview}
         onFieldComment={handleFieldComment}
         reviewData={reviewData}
+        sectionData={sectionData}
+        sectionDataLoading={sectionDataLoading}
+        sectionDataError={sectionDataError}
       >
         <StepsContext.Provider value={stepperValue}>
           <div className="p-6 w-full mx-auto" style={{ maxWidth: "1600px" }}>
@@ -311,18 +331,18 @@ export default function ReviewSyllabusDetail() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Seleccionar Sección
                 </label>
-                {permissionsLoading ? (
+                {sectionsLoading ? (
                   <div className="text-gray-500 text-sm">
-                    Cargando permisos...
+                    Cargando secciones disponibles...
                   </div>
-                ) : permissionsError ? (
+                ) : sectionsError ? (
                   <div className="text-red-500 text-sm">
-                    Error al cargar permisos
+                    Error al cargar las secciones del sílabo
                   </div>
-                ) : allowedSections.length === 0 ? (
+                ) : availableSections.length === 0 ? (
                   <div className="text-yellow-600 text-sm bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                    No hay secciones con permisos de revisión asignados para
-                    este docente.
+                    Este curso no tiene permisos para revisar ninguna sección
+                    del sílabo.
                   </div>
                 ) : (
                   <Select
@@ -340,7 +360,7 @@ export default function ReviewSyllabusDetail() {
                       translate="no"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {allowedSections.map((section) => (
+                      {availableSections.map((section) => (
                         <SelectItem
                           key={section.id}
                           value={section.id}

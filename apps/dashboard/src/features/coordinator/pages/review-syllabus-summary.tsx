@@ -64,8 +64,21 @@ export default function ReviewSyllabusSummary() {
         const parsedData: Record<string, ReviewItem> = JSON.parse(savedData);
         setReviewData(parsedData);
 
-        // Mapeo de patrones de fieldId a número de sección
-        const getSection = (fieldId: string): string | null => {
+        // Mapeo de fieldId a número de sección (puede devolver array para manejar casos donde un step mapea a múltiples secciones)
+        // Ahora se usan IDs de paso: step-1, step-2, etc.
+        // Nota: step-5 se usa para ambas secciones 5 y 6
+        const getSections = (fieldId: string): string[] => {
+          // Nuevo formato: step-X
+          if (fieldId === "step-1") return ["1"];
+          if (fieldId === "step-2") return ["2"];
+          if (fieldId === "step-3") return ["3"];
+          if (fieldId === "step-4") return ["4"];
+          if (fieldId === "step-5") return ["5", "6"]; // Cubre ambas secciones
+          if (fieldId === "step-6") return ["7"];
+          if (fieldId === "step-7") return ["8"];
+          if (fieldId === "step-8") return ["9"];
+
+          // Mantener compatibilidad con formato antiguo (por si hay datos guardados)
           // Sección 1: Datos generales
           if (
             fieldId === "nombreAsignatura" ||
@@ -76,10 +89,10 @@ export default function ReviewSyllabusSummary() {
             fieldId.startsWith("prerequisitos-") ||
             fieldId.startsWith("docente-")
           )
-            return "1";
+            return ["1"];
 
           // Sección 2: Sumilla
-          if (fieldId === "sumilla") return "2";
+          if (fieldId === "sumilla") return ["2"];
 
           // Sección 3: Competencias y componentes
           if (
@@ -87,43 +100,43 @@ export default function ReviewSyllabusSummary() {
             fieldId.startsWith("componente-") ||
             fieldId.startsWith("contenido-actitudinal-")
           )
-            return "3";
+            return ["3"];
 
           // Sección 4: Programación del contenido
           if (fieldId.startsWith("unit-") && fieldId.includes("-week-"))
-            return "4";
+            return ["4"];
 
           // Sección 5: Estrategias metodológicas
-          if (fieldId.startsWith("strategy-")) return "5";
+          if (fieldId.startsWith("strategy-")) return ["5"];
 
           // Sección 6: Recursos didácticos
-          if (fieldId.startsWith("resource-")) return "6";
+          if (fieldId.startsWith("resource-")) return ["6"];
 
           // Sección 7: Evaluación de aprendizaje
           if (
             fieldId === "evaluation-main-formula" ||
             fieldId.startsWith("evaluation-")
           )
-            return "7";
+            return ["7"];
 
           // Sección 8: Fuentes de consulta
           if (
             fieldId.startsWith("bibliography-") ||
             fieldId.startsWith("electronic-resource-")
           )
-            return "8";
+            return ["8"];
 
           // Sección 9: Resultados (outcomes)
-          if (fieldId.startsWith("outcome-")) return "9";
+          if (fieldId.startsWith("outcome-")) return ["9"];
 
-          return null; // fieldId no reconocido
+          return []; // fieldId no reconocido
         };
 
         // Procesar cada sección para determinar si tiene aprobaciones y comentarios
         const processedSections = sectionDefinitions.map((section) => {
           // Filtrar solo los campos que pertenecen a esta sección
-          const sectionFields = Object.entries(parsedData).filter(
-            ([fieldId]) => getSection(fieldId) === section.id,
+          const sectionFields = Object.entries(parsedData).filter(([fieldId]) =>
+            getSections(fieldId).includes(section.id),
           );
 
           // Si no hay campos en esta sección, no mostrar nada
@@ -199,6 +212,24 @@ export default function ReviewSyllabusSummary() {
     const hasRejections = sections.some((section) => section.hasRejected);
     const estado = hasRejections ? "DESAPROBADO" : "VALIDADO";
 
+    // Si hay rechazos, asegurarse de que cada campo rechazado tenga comentario.
+    if (hasRejections) {
+      const rejectedFields = Object.entries(reviewData).filter(
+        ([, v]) => v.status === "rejected",
+      );
+
+      const missingComments = rejectedFields.some(([, v]) => {
+        return !(v.comment && v.comment.trim().length > 0);
+      });
+
+      if (missingComments) {
+        toast.error(
+          "Por favor ingrese comentarios para los puntos marcados con 'X' antes de finalizar la desaprobación.",
+        );
+        return;
+      }
+    }
+
     try {
       await approveMutation.mutateAsync({
         syllabusId: parseInt(syllabusId),
@@ -209,6 +240,12 @@ export default function ReviewSyllabusSummary() {
       // Mostrar modal con el resultado
       setModalType(hasRejections ? "rejected" : "approved");
       setShowModal(true);
+      // Informar por UI que se envió la notificación al docente (si aplica)
+      if (hasRejections) {
+        toast.success("Revisión registrada. Se envió notificación al docente.");
+      } else {
+        toast.success("Revisión registrada. Sí­labo aprobado.");
+      }
     } catch (error) {
       console.error("Error al finalizar revisión:", error);
       toast.error("Error al finalizar la revisión. Intente nuevamente.");
@@ -219,8 +256,8 @@ export default function ReviewSyllabusSummary() {
     setShowModal(false);
     // Limpiar sessionStorage
     sessionStorage.removeItem(`reviewData_${id}`);
-    // Navegar a la lista de sílabos
-    navigate("/coordinator/review-syllabus");
+    // Navegar a la lista de sílabos con timestamp para forzar refresh
+    navigate("/coordinator/review-syllabus?refresh=" + Date.now());
   };
 
   return (
@@ -244,49 +281,49 @@ export default function ReviewSyllabusSummary() {
           </div>
         </div>
 
-        {/* Tabla de resumen */}
-        <div className="mb-8 border border-gray-300 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <tbody>
-              {sections.map((section) => (
-                <tr
-                  key={section.id}
-                  className="border-b border-gray-300 last:border-b-0"
-                >
-                  <td className="px-6 py-4 text-sm text-gray-700">
-                    {section.id}. {section.name}
-                  </td>
-                  <td className="px-6 py-4 w-24 text-center">
-                    {section.hasApproved && (
-                      <div className="flex justify-center">
-                        <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
-                          <Check className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 w-24 text-center">
-                    {section.hasRejected && (
-                      <div className="flex justify-center">
-                        <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
-                          <X className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 w-24 text-center">
-                    {section.hasComments && (
-                      <div className="flex justify-center">
-                        <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
-                          <MessageSquare className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Resumen visual por secciones (estilo cajas como en el diseño) */}
+        <div className="mb-8 space-y-3">
+          {sections.map((section) => (
+            <div
+              key={section.id}
+              className="flex items-center border border-gray-300 rounded-md overflow-hidden"
+            >
+              {/* Sección */}
+              <div className="flex-1 px-6 py-4 text-sm text-gray-700">
+                {section.id}. {section.name}
+              </div>
+
+              {/* Estado (check o cross) */}
+              <div className="w-40 flex items-center justify-center px-4 py-4">
+                {section.hasRejected ? (
+                  <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
+                    <X className="w-5 h-5 text-white" />
+                  </div>
+                ) : section.hasApproved ? (
+                  <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded flex items-center justify-center opacity-0">
+                    {/* placeholder to keep layout */}
+                  </div>
+                )}
+              </div>
+
+              {/* Comentarios */}
+              <div className="w-24 flex items-center justify-center px-4 py-4">
+                {section.hasComments ? (
+                  <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
+                    <MessageSquare className="w-5 h-5 text-white" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded flex items-center justify-center opacity-0">
+                    {/* placeholder */}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Botones de acción */}
@@ -311,14 +348,14 @@ export default function ReviewSyllabusSummary() {
             {approveMutation.isPending ? "Finalizando..." : "Finalizar"}
           </Button>
         </div>
-      </div>
 
-      {/* Modal de confirmación */}
-      <ReviewConfirmationModal
-        isOpen={showModal}
-        type={modalType}
-        onClose={handleCloseModal}
-      />
+        {/* Modal de confirmación */}
+        <ReviewConfirmationModal
+          isOpen={showModal}
+          type={modalType}
+          onClose={handleCloseModal}
+        />
+      </div>
     </div>
   );
 }

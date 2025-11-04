@@ -28,6 +28,16 @@ export default function PermissionsList() {
     error,
   } = useAllAssignments();
 
+  // Debug: verificar estructura de datos real
+  useEffect(() => {
+    if (assignments.length > 0) {
+      console.log("✅ Assignments cargados:", assignments.length);
+      console.log("✅ Áreas disponibles:", [
+        ...new Set(assignments.map((a) => a.areaCurricular).filter(Boolean)),
+      ]);
+    }
+  }, [assignments]);
+
   const {
     viewMode,
     setViewMode,
@@ -98,40 +108,75 @@ export default function PermissionsList() {
     },
   };
 
-  // Normalizar área curricular para búsqueda
-  const normalizeAreaCurricular = (text: string): string => {
-    return text
+  // Helper genérico para normalizar texto (quita acentos, controla chars, pasa a minúsculas)
+  const normalize = (text?: string | null): string =>
+    String(text ?? "")
       .toLowerCase()
       .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, ""); // Eliminar acentos
-  };
+      .replace(/[\u0300-\u036f]/g, "") // remover diacríticos
+      .trim();
 
   const filteredAssignments = assignments.filter((assignment: Assignment) => {
-    let matchesSearch = true;
+    const normalizedSearch = normalize(searchTerm);
 
-    if (searchTerm.trim()) {
+    // Si no hay término de búsqueda, aceptar por defecto
+    let matchesSearch = true;
+    if (normalizedSearch !== "") {
       if (searchFilter === "curso") {
-        matchesSearch = assignment.cursoNombre
-          .toLowerCase()
-          .includes(searchTerm.toLowerCase());
+        // Buscar por nombre del sílabo y código de curso
+        const courseText = `${assignment.cursoNombre ?? ""} ${assignment.cursoCodigo ?? ""}`;
+        const normalizedCourse = normalize(courseText);
+        matchesSearch = normalizedCourse.includes(normalizedSearch);
+
+        // Debug: mostrar primer resultado de búsqueda
+        if (assignments.indexOf(assignment) === 0) {
+          console.log("🔍 Buscando en CURSO:", {
+            searchTerm,
+            normalizedSearch,
+            courseText,
+            normalizedCourse,
+            match: matchesSearch,
+          });
+        }
       } else if (searchFilter === "area") {
-        // Filtrar por área curricular
-        if (!assignment.areaCurricular) {
-          matchesSearch = false;
-        } else {
-          const normalizedArea = normalizeAreaCurricular(
-            assignment.areaCurricular,
-          );
-          const normalizedSearch = normalizeAreaCurricular(searchTerm);
-          matchesSearch = normalizedArea.includes(normalizedSearch);
+        const areaText = assignment.areaCurricular ?? "";
+        const normalizedArea = normalize(areaText);
+
+        // Búsqueda flexible: coincide si el área contiene el término buscado
+        matchesSearch = normalizedArea.includes(normalizedSearch);
+
+        // Debug: mostrar primer resultado de búsqueda
+        if (assignments.indexOf(assignment) === 0) {
+          console.log("🔍 Buscando en ÁREA:", {
+            searchTerm,
+            normalizedSearch,
+            areaText,
+            normalizedArea,
+            match: matchesSearch,
+          });
         }
       }
     }
 
     const matchesStatus =
       selectedStatus === "ALL" || assignment.estadoRevision === selectedStatus;
+
     return matchesSearch && matchesStatus;
   });
+
+  // Log para debug de filtrado
+  useEffect(() => {
+    if (searchTerm) {
+      console.log(
+        `🔍 Filtrado: "${searchTerm}" (${searchFilter}) → ${filteredAssignments.length} de ${assignments.length} resultados`,
+      );
+    }
+  }, [
+    searchTerm,
+    searchFilter,
+    filteredAssignments.length,
+    assignments.length,
+  ]);
 
   if (sessionLoading || isLoading) {
     return (
@@ -154,7 +199,13 @@ export default function PermissionsList() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">Asignaturas</h1>
-
+        {/* Debug badge: should appear if this component bundle is loaded */}
+        <div className="flex items-center gap-4 mb-4">
+          <div className="text-xs text-gray-400">
+            Mostrando {filteredAssignments.length} de {assignments.length}{" "}
+            cursos
+          </div>
+        </div>{" "}
         {/* Toggle Micro/Macro */}
         <div className="flex items-center gap-3 mb-6">
           <span
@@ -184,9 +235,8 @@ export default function PermissionsList() {
             Macro
           </span>
         </div>
-
         {/* Search Bar con Filtro integrado */}
-        <div className="relative max-w-md mb-6">
+        <div className="relative max-w-md mb-6 filter-dropdown-container">
           <div className="relative">
             <Search
               className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -194,64 +244,72 @@ export default function PermissionsList() {
             />
             <input
               type="text"
-              placeholder={`Buscar por ${searchFilter === "curso" ? "Nombre de Curso" : "Área Curricular"}`}
+              placeholder={`Buscar por ${searchFilter === "curso" ? "Nombre de Curso o Código" : "Área Curricular"}`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onFocus={() => setShowFilterDropdown(true)}
+              onClick={() => setShowFilterDropdown(true)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
 
+            {/* Badge visible del filtro activo */}
+            {searchTerm && (
+              <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded pointer-events-none">
+                {searchFilter === "curso" ? "🔍 Curso" : "🔍 Área"}
+              </div>
+            )}
+
             {/* Dropdown menu de filtros dentro del input */}
             {showFilterDropdown && (
-              <>
-                {/* Overlay para cerrar al hacer clic fuera */}
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setShowFilterDropdown(false)}
-                ></div>
-
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-20">
-                  <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
-                    <span className="text-xs font-semibold text-gray-600 uppercase">
-                      Filtrar por:
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => {
-                      setSearchFilter("area");
-                      setShowFilterDropdown(false);
-                      setSearchTerm("");
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center gap-3"
-                  >
-                    <div
-                      className={`w-2 h-2 rounded-full ${searchFilter === "area" ? "bg-green-500" : "bg-gray-300"}`}
-                    ></div>
-                    <span className="text-sm text-gray-700 font-medium">
-                      Área Curricular
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSearchFilter("curso");
-                      setShowFilterDropdown(false);
-                      setSearchTerm("");
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center gap-3"
-                  >
-                    <div
-                      className={`w-2 h-2 rounded-full ${searchFilter === "curso" ? "bg-green-500" : "bg-gray-300"}`}
-                    ></div>
-                    <span className="text-sm text-gray-700 font-medium">
-                      Nombre de Curso
-                    </span>
-                  </button>
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+                <div className="px-3 py-2 border-b border-gray-200 bg-gray-50">
+                  <span className="text-xs font-semibold text-gray-600 uppercase">
+                    Filtrar por:
+                  </span>
                 </div>
-              </>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSearchFilter("area");
+                    setShowFilterDropdown(false);
+                    setSearchTerm("");
+                  }}
+                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center gap-3 ${searchFilter === "area" ? "bg-blue-50" : ""}`}
+                >
+                  <div
+                    className={`w-3 h-3 rounded-full ${searchFilter === "area" ? "bg-green-500" : "bg-gray-300"}`}
+                  ></div>
+                  <span
+                    className={`text-sm font-medium ${searchFilter === "area" ? "text-blue-700" : "text-gray-700"}`}
+                  >
+                    Área Curricular
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSearchFilter("curso");
+                    setShowFilterDropdown(false);
+                    setSearchTerm("");
+                  }}
+                  className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors flex items-center gap-3 ${searchFilter === "curso" ? "bg-blue-50" : ""}`}
+                >
+                  <div
+                    className={`w-3 h-3 rounded-full ${searchFilter === "curso" ? "bg-green-500" : "bg-gray-300"}`}
+                  ></div>
+                  <span
+                    className={`text-sm font-medium ${searchFilter === "curso" ? "text-blue-700" : "text-gray-700"}`}
+                  >
+                    Nombre de Curso
+                  </span>
+                </button>
+              </div>
             )}
           </div>
         </div>
-
         {/* Filtros por estado */}
         <div className="flex gap-2 mb-6 flex-wrap">
           <button
@@ -300,10 +358,13 @@ export default function PermissionsList() {
       </div>
 
       {/* Assignments List */}
-      <div className="space-y-4">
+      <div
+        className="space-y-4"
+        key={`list-${searchTerm}-${searchFilter}-${selectedStatus}`}
+      >
         {filteredAssignments.map((assignment: Assignment) => (
           <div
-            key={assignment.cursoCodigo}
+            key={`${assignment.cursoCodigo}-${assignment.docenteId}`}
             className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
             onClick={() => {
               // Guardar toda la información en el contexto
@@ -363,7 +424,11 @@ export default function PermissionsList() {
 
       {filteredAssignments.length === 0 && (
         <div className="text-center py-12 text-gray-500">
-          No se encontraron asignaciones que coincidan con tu búsqueda.
+          <p className="text-lg mb-2">No se encontraron asignaciones</p>
+          <p className="text-sm">
+            Buscando: "{searchTerm}" en{" "}
+            {searchFilter === "curso" ? "Nombre de Curso" : "Área Curricular"}
+          </p>
         </div>
       )}
     </div>
