@@ -2,8 +2,6 @@ import { useState } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
 import { ChevronDown } from "lucide-react";
-import { useReviewMode } from "../../coordinator/contexts/review-mode-context";
-import { ReviewButtons } from "../../coordinator/components/review-buttons";
 
 // Tipos
 interface StudentOutcome {
@@ -62,7 +60,6 @@ const mockStudentOutcomes: StudentOutcome[] = [
 
 export default function EighthStep() {
   const { nextStep } = useSteps();
-  const { isReviewMode, onFieldReview, onFieldComment } = useReviewMode();
   const [outcomes, setOutcomes] =
     useState<StudentOutcome[]>(mockStudentOutcomes);
 
@@ -128,11 +125,6 @@ export default function EighthStep() {
                   <th className="px-4 py-3 text-center text-sm font-semibold w-32">
                     Nivel
                   </th>
-                  {isReviewMode && (
-                    <th className="px-4 py-3 text-center text-sm font-semibold w-48">
-                      Revisión
-                    </th>
-                  )}
                 </tr>
               </thead>
               <tbody>
@@ -172,17 +164,6 @@ export default function EighthStep() {
                         </div>
                       </div>
                     </td>
-                    {isReviewMode && (
-                      <td className="px-4 py-3">
-                        <div className="flex justify-center">
-                          <ReviewButtons
-                            fieldId={`outcome-${outcome.id}`}
-                            onStatusChange={onFieldReview}
-                            onCommentChange={onFieldComment}
-                          />
-                        </div>
-                      </td>
-                    )}
                   </tr>
                 ))}
               </tbody>

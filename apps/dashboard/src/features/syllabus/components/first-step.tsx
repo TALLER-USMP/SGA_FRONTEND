@@ -1,13 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
+import { useReviewMode } from "../../coordinator/contexts/review-mode-context";
 import { Step } from "./step";
 import { useSyllabusGeneral } from "../hooks/first-step-query";
 import type { SyllabusGeneral } from "../hooks/first-step-query";
+import type { DatosGenerales } from "../../coordinator/hooks/syllabus-section-data-query";
 
 export default function FirstStep() {
   const { nextStep } = useSteps();
   const { syllabusId, setCourseName } = useSyllabusContext();
+  const { isReviewMode, sectionData } = useReviewMode();
 
   const draftKey = syllabusId ? `syllabus:general:${syllabusId}` : null;
 
@@ -72,9 +75,15 @@ export default function FirstStep() {
   const [practiceTotal, setPracticeTotal] = useState<number>(0);
   const [totalHours, setTotalHours] = useState<number>(0);
 
-  const { data, isLoading, isError, error } = useSyllabusGeneral(draftKey);
+  // En modo revisión, usar datos del contexto; de lo contrario, usar el query normal
+  const { data, isLoading, isError, error } = useSyllabusGeneral(
+    isReviewMode ? null : draftKey,
+  );
 
+  // Efecto para cargar datos desde el API (modo normal)
   useEffect(() => {
+    if (isReviewMode) return; // No cargar desde API en modo revisión
+
     if (isError) {
       setApiError(error?.message ?? "Error fetching syllabus");
       return;
@@ -139,7 +148,53 @@ export default function FirstStep() {
       }
       return next;
     });
-  }, [data, isError, error, draftKey, setCourseName]);
+  }, [data, isError, error, draftKey, setCourseName, isReviewMode]);
+
+  // Efecto para cargar datos desde el contexto de revisión
+  useEffect(() => {
+    if (!isReviewMode || !sectionData) return;
+
+    const json = sectionData as DatosGenerales;
+
+    const tTheory = Number(json.horasTeoria ?? 0);
+    const tPractice = Number(json.horasPractica ?? 0);
+    const tTotal = tTheory + tPractice;
+    setTheoryTotal(tTheory);
+    setPracticeTotal(tPractice);
+    setTotalHours(tTotal);
+
+    // Propagar nombre de asignatura a contexto
+    if (json.nombreAsignatura) setCourseName(json.nombreAsignatura);
+
+    // Actualizar form con los datos de revisión
+    setForm((s) => ({
+      ...s,
+      nombreAsignatura: json.nombreAsignatura ?? s.nombreAsignatura,
+      departamentoAcademico:
+        json.departamentoAcademico ?? s.departamentoAcademico,
+      escuelaProfesional: json.escuelaProfesional ?? s.escuelaProfesional,
+      programaAcademico: json.programaAcademico ?? s.programaAcademico,
+      semestreAcademico: json.semestreAcademico ?? s.semestreAcademico,
+      tipoAsignatura: json.tipoAsignatura ?? s.tipoAsignatura,
+      tipoEstudios: json.tipoEstudios ?? s.tipoEstudios,
+      modalidad: json.modalidad ?? s.modalidad,
+      codigoAsignatura: json.codigoAsignatura ?? s.codigoAsignatura,
+      ciclo: json.ciclo ?? s.ciclo,
+      requisitos: json.requisitos ?? s.requisitos,
+      creditosTeoria:
+        json.creditosTeoria != null
+          ? String(json.creditosTeoria)
+          : s.creditosTeoria,
+      creditosPractica:
+        json.creditosPractica != null
+          ? String(json.creditosPractica)
+          : s.creditosPractica,
+      creditosTotal: String(
+        (json.creditosTeoria ?? 0) + (json.creditosPractica ?? 0),
+      ),
+      docentes: json.docentes ?? s.docentes,
+    }));
+  }, [isReviewMode, sectionData, setCourseName]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 

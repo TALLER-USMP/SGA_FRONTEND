@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { useSaveSumilla, useSumilla } from "../hooks/second-step-query";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
+import { useReviewMode } from "../../coordinator/contexts/review-mode-context";
 import { Step } from "./step";
 import { toast } from "sonner";
+import type { SumillaResponse } from "../../coordinator/hooks/syllabus-section-data-query";
 
 /**
  * Paso 2: Formulario de Sumilla con validaciones básicas
@@ -15,16 +17,20 @@ import { toast } from "sonner";
  * - mode="create": Valida si existe data
  *   - Si GET retorna data: usa PUT para actualizar
  *   - Si GET retorna null: usa POST para crear nuevo registro
+ * - mode="review": Carga datos del contexto de revisión (solo lectura con posibilidad de comentarios)
  */
 export default function SecondStep() {
   const { nextStep } = useSteps();
   const { syllabusId, mode, courseName } = useSyllabusContext();
+  const { isReviewMode, sectionData } = useReviewMode();
   const [summary, setSummary] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
 
-  // Load existing sumilla via query
-  const { data, isLoading, isError, error } = useSumilla(syllabusId);
+  // Load existing sumilla via query (solo en modo normal, no en revisión)
+  const { data, isLoading, isError, error } = useSumilla(
+    isReviewMode ? null : syllabusId,
+  );
   const saveSumilla = useSaveSumilla();
 
   // Determina si debe crear (POST) o actualizar (PUT)
@@ -36,7 +42,10 @@ export default function SecondStep() {
   //   - Si GET retorna null: usar POST
   const isCreating = mode === "edit" ? !data : !data;
 
+  // Efecto para cargar datos desde el API (modo normal)
   useEffect(() => {
+    if (isReviewMode) return; // No cargar desde API en modo revisión
+
     if (isError) {
       const errorMsg = error?.message ?? "Error cargando sumilla";
       // 404 es esperado cuando no existe sumilla aún, no mostrar error
@@ -56,7 +65,17 @@ export default function SecondStep() {
         /* ignore */
       }
     }
-  }, [data, isError, error]);
+  }, [data, isError, error, isReviewMode]);
+
+  // Efecto para cargar datos desde el contexto de revisión
+  useEffect(() => {
+    if (!isReviewMode || !sectionData) return;
+
+    const reviewData = sectionData as SumillaResponse;
+    if (reviewData.content && reviewData.content.length > 0) {
+      setSummary(reviewData.content[0].sumilla);
+    }
+  }, [isReviewMode, sectionData]);
 
   const validateAndNext = async () => {
     const newErrors: Record<string, string> = {};
