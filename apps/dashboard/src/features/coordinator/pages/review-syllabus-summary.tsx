@@ -256,8 +256,8 @@ export default function ReviewSyllabusSummary() {
     setShowModal(false);
     // Limpiar sessionStorage
     sessionStorage.removeItem(`reviewData_${id}`);
-    // Navegar a la lista de sílabos
-    navigate("/coordinator/review-syllabus");
+    // Navegar a la lista de sílabos con timestamp para forzar refresh
+    navigate("/coordinator/review-syllabus?refresh=" + Date.now());
   };
 
   return (

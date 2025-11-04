@@ -1,34 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Search } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   useSyllabusInReview,
   type SyllabusReview,
 } from "../hooks/syllabus-review-query";
-// Fallback a mock data si el backend no está disponible
-import { mockSyllabiInReview } from "../data/mock-syllabus-review";
 
 type SyllabusStatus = "ANALIZANDO" | "VALIDADO" | "DESAPROBADO" | "ASIGNADO";
 type FilterStatus = "ALL" | SyllabusStatus;
 
 export default function ReviewSyllabusList() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("ALL");
 
-  // Intentar obtener datos del backend, fallback a mock si falla
+  // Obtener datos del backend
   const {
     data: syllabusListFromAPI,
     isLoading,
     isError,
+    refetch,
   } = useSyllabusInReview();
 
-  // Usar datos del backend si están disponibles Y válidos, sino usar mock
-  // Asegurar que siempre sea un array con datos válidos
-  const syllabusList =
-    Array.isArray(syllabusListFromAPI) && syllabusListFromAPI.length > 0
-      ? syllabusListFromAPI
-      : mockSyllabiInReview;
+  // Efecto para forzar refetch cuando vuelves de la página de resumen
+  useEffect(() => {
+    const refreshParam = searchParams.get("refresh");
+    if (refreshParam) {
+      refetch();
+      // Limpiar el parámetro refresh de la URL sin recargar
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete("refresh");
+      window.history.replaceState(
+        {},
+        "",
+        `${window.location.pathname}${newSearchParams.toString() ? "?" + newSearchParams.toString() : ""}`,
+      );
+    }
+  }, [searchParams, refetch]);
+
+  // Usar solo datos del backend (sin fallback a mock)
+  const syllabusList = useMemo(() => {
+    return Array.isArray(syllabusListFromAPI) ? syllabusListFromAPI : [];
+  }, [syllabusListFromAPI]);
 
   // Configuración de estados
   const statusConfig: Record<
@@ -61,23 +75,58 @@ export default function ReviewSyllabusList() {
     },
   };
 
-  const filteredSyllabi = syllabusList.filter((syllabus) => {
-    // Validar que los campos existan antes de aplicar toLowerCase
-    const courseName = syllabus.courseName?.toLowerCase() || "";
-    const courseCode = syllabus.courseCode || "";
-    const teacherName = syllabus.teacherName?.toLowerCase() || "";
-    const searchLower = searchTerm.toLowerCase();
+  const filteredSyllabi = useMemo(() => {
+    console.log("🔍 [FILTER] Recalculating filter", {
+      totalSyllabi: syllabusList.length,
+      selectedStatus,
+      searchTerm,
+    });
 
-    const matchesSearch =
-      courseName.includes(searchLower) ||
-      courseCode.includes(searchTerm) ||
-      teacherName.includes(searchLower);
+    const result = syllabusList.filter((syllabus) => {
+      // Validar que el objeto syllabus existe y tiene las propiedades necesarias
+      if (!syllabus || typeof syllabus !== "object") {
+        return false;
+      }
 
-    const matchesStatus =
-      selectedStatus === "ALL" || syllabus.status === selectedStatus;
+      // Validar que los campos existan antes de aplicar toLowerCase
+      const courseName = syllabus.courseName?.toLowerCase() || "";
+      const courseCode = syllabus.courseCode || "";
+      const teacherName = syllabus.teacherName?.toLowerCase() || "";
+      const searchLower = searchTerm.toLowerCase();
 
-    return matchesSearch && matchesStatus;
-  });
+      // Filtro por búsqueda de texto
+      const matchesSearch =
+        !searchTerm || // Si no hay término de búsqueda, pasar todos
+        courseName.includes(searchLower) ||
+        courseCode.includes(searchTerm) ||
+        teacherName.includes(searchLower);
+
+      // Filtro por estado
+      const matchesStatus =
+        selectedStatus === "ALL" || syllabus.status === selectedStatus;
+
+      const passes = matchesSearch && matchesStatus;
+
+      // Debug individual
+      if (selectedStatus !== "ALL") {
+        console.log(
+          `🔎 Checking syllabus: "${syllabus.courseName}" - Status: ${syllabus.status} - Passes: ${passes}`,
+        );
+      }
+
+      return passes;
+    });
+
+    console.log(`✅ [FILTER] Result: ${result.length} syllabi passed filter`);
+    if (selectedStatus !== "ALL") {
+      console.log(
+        `📋 [FILTER] Filtered courses:`,
+        result.map((s) => `${s.courseName} (${s.status})`),
+      );
+    }
+
+    return result;
+  }, [syllabusList, selectedStatus, searchTerm]);
 
   const handleReviewSyllabus = (syllabus: SyllabusReview) => {
     // Debug: registrar navegación solicitada
@@ -199,6 +248,18 @@ export default function ReviewSyllabusList() {
 
       {/* Syllabi List */}
       <div className="space-y-4">
+        {(() => {
+          console.log(
+            "🎨 [RENDER] Rendering syllabi. Count to render:",
+            filteredSyllabi.length,
+          );
+          return null;
+        })()}
+        {filteredSyllabi.length === 0 && (
+          <div className="text-center py-12 text-gray-500">
+            No se encontraron sílabos para los filtros seleccionados
+          </div>
+        )}
         {filteredSyllabi.map((syllabus) => (
           <a
             key={syllabus.id}
