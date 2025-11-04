@@ -8,6 +8,7 @@ export interface Assignment {
   docenteId: number;
   syllabusId?: number;
   nombreDocente: string;
+  docenteEmail?: string;
   areaCurricular?: string;
 }
 

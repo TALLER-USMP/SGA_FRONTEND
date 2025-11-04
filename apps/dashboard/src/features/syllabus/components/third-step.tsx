@@ -3,6 +3,7 @@ import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
 import { X, Plus } from "lucide-react";
+
 import {
   Select,
   SelectContent,
@@ -173,44 +174,46 @@ export default function ThirdStep() {
           </h3>
           <div className="space-y-3">
             {formData.competencias.map((item) => (
-              <div key={item.id} className="flex items-start gap-3">
-                <div className="flex-1">
-                  <textarea
-                    value={item.text}
-                    onChange={(e) =>
-                      updateItem("competencias", item.id, e.target.value)
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={2}
-                    placeholder="Ingrese la competencia..."
-                  />
-                </div>
-                <div className="w-24">
-                  <Select
-                    value={item.code}
-                    onValueChange={(value) =>
-                      updateItemCode("competencias", item.id, value)
-                    }
+              <div key={item.id}>
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <textarea
+                      value={item.text}
+                      onChange={(e) =>
+                        updateItem("competencias", item.id, e.target.value)
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={2}
+                      placeholder="Ingrese la competencia..."
+                    />
+                  </div>
+                  <div className="w-24">
+                    <Select
+                      value={item.code}
+                      onValueChange={(value) =>
+                        updateItemCode("competencias", item.id, value)
+                      }
+                    >
+                      <SelectTrigger className="w-full bg-white">
+                        <SelectValue placeholder="Código" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {codeOptions.map((code) => (
+                          <SelectItem key={code} value={code}>
+                            {code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <button
+                    onClick={() => removeItem("competencias", item.id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                    disabled={formData.competencias.length <= 1}
                   >
-                    <SelectTrigger className="w-full bg-white">
-                      <SelectValue placeholder="Código" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {codeOptions.map((code) => (
-                        <SelectItem key={code} value={code}>
-                          {code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <X size={20} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => removeItem("competencias", item.id)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                  disabled={formData.competencias.length <= 1}
-                >
-                  <X size={20} />
-                </button>
               </div>
             ))}
             <div className="flex justify-end pt-2">
@@ -232,44 +235,46 @@ export default function ThirdStep() {
           </h3>
           <div className="space-y-3">
             {formData.componentes.map((item) => (
-              <div key={item.id} className="flex items-start gap-3">
-                <div className="flex-1">
-                  <textarea
-                    value={item.text}
-                    onChange={(e) =>
-                      updateItem("componentes", item.id, e.target.value)
-                    }
-                    className="w-full p-3 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={2}
-                    placeholder="Ingrese el componente..."
-                  />
-                </div>
-                <div className="w-24">
-                  <Select
-                    value={item.code}
-                    onValueChange={(value) =>
-                      updateItemCode("componentes", item.id, value)
-                    }
+              <div key={item.id}>
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <textarea
+                      value={item.text}
+                      onChange={(e) =>
+                        updateItem("componentes", item.id, e.target.value)
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={2}
+                      placeholder="Ingrese el componente..."
+                    />
+                  </div>
+                  <div className="w-24">
+                    <Select
+                      value={item.code}
+                      onValueChange={(value) =>
+                        updateItemCode("componentes", item.id, value)
+                      }
+                    >
+                      <SelectTrigger className="w-full bg-white">
+                        <SelectValue placeholder="Código" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {codeOptions.map((code) => (
+                          <SelectItem key={code} value={code}>
+                            {code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <button
+                    onClick={() => removeItem("componentes", item.id)}
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                    disabled={formData.componentes.length <= 1}
                   >
-                    <SelectTrigger className="w-full bg-white">
-                      <SelectValue placeholder="Código" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {codeOptions.map((code) => (
-                        <SelectItem key={code} value={code}>
-                          {code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <X size={20} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => removeItem("componentes", item.id)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                  disabled={formData.componentes.length <= 1}
-                >
-                  <X size={20} />
-                </button>
               </div>
             ))}
             <div className="flex justify-end pt-2">
@@ -291,48 +296,56 @@ export default function ThirdStep() {
           </h3>
           <div className="space-y-3">
             {formData.contenidosActitudinales.map((item) => (
-              <div key={item.id} className="flex items-start gap-3">
-                <div className="flex-1">
-                  <textarea
-                    value={item.text}
-                    onChange={(e) =>
-                      updateItem(
-                        "contenidosActitudinales",
-                        item.id,
-                        e.target.value,
-                      )
+              <div key={item.id}>
+                <div className="flex items-start gap-3">
+                  <div className="flex-1">
+                    <textarea
+                      value={item.text}
+                      onChange={(e) =>
+                        updateItem(
+                          "contenidosActitudinales",
+                          item.id,
+                          e.target.value,
+                        )
+                      }
+                      className="w-full p-3 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      rows={2}
+                      placeholder="Ingrese el contenido actitudinal..."
+                    />
+                  </div>
+                  <div className="w-24">
+                    <Select
+                      value={item.code}
+                      onValueChange={(value) =>
+                        updateItemCode(
+                          "contenidosActitudinales",
+                          item.id,
+                          value,
+                        )
+                      }
+                    >
+                      <SelectTrigger className="w-full bg-white">
+                        <SelectValue placeholder="Código" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {codeOptions.map((code) => (
+                          <SelectItem key={code} value={code}>
+                            {code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <button
+                    onClick={() =>
+                      removeItem("contenidosActitudinales", item.id)
                     }
-                    className="w-full p-3 border border-gray-300 rounded-lg resize-none bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    rows={2}
-                    placeholder="Ingrese el contenido actitudinal..."
-                  />
-                </div>
-                <div className="w-24">
-                  <Select
-                    value={item.code}
-                    onValueChange={(value) =>
-                      updateItemCode("contenidosActitudinales", item.id, value)
-                    }
+                    className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                    disabled={formData.contenidosActitudinales.length <= 1}
                   >
-                    <SelectTrigger className="w-full bg-white">
-                      <SelectValue placeholder="Código" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {codeOptions.map((code) => (
-                        <SelectItem key={code} value={code}>
-                          {code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    <X size={20} />
+                  </button>
                 </div>
-                <button
-                  onClick={() => removeItem("contenidosActitudinales", item.id)}
-                  className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                  disabled={formData.contenidosActitudinales.length <= 1}
-                >
-                  <X size={20} />
-                </button>
               </div>
             ))}
             <div className="flex justify-end pt-2">

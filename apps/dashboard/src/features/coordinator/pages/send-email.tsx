@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Upload, X } from "lucide-react";
 import {
   useSendMail,
@@ -10,6 +10,12 @@ import { toast } from "sonner";
 
 export default function SendEmail() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Obtener datos de la URL
+  const teacherEmailParam = searchParams.get("teacherEmail") || "";
+  const courseCodeParam = searchParams.get("courseCode") || "";
+
   const [recipient, setRecipient] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [message, setMessage] = useState("");
@@ -18,6 +24,16 @@ export default function SendEmail() {
   const maxChars = 400;
 
   const { sendMail, isSending } = useSendMail();
+
+  // Pre-llenar los campos cuando se carga el componente
+  useEffect(() => {
+    if (teacherEmailParam) {
+      setRecipient(teacherEmailParam);
+    }
+    if (courseCodeParam) {
+      setCourseCode(courseCodeParam);
+    }
+  }, [teacherEmailParam, courseCodeParam]);
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -47,15 +63,18 @@ export default function SendEmail() {
     setAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleSend = async () => {
+  const handleSubmit = async () => {
+    // Validar que los campos no estén vacíos
     if (!recipient.trim()) {
       toast.error("Ingresa el destinatario");
       return;
     }
+
     if (!courseCode.trim()) {
       toast.error("Ingresa el código de asignatura");
       return;
     }
+
     if (!message.trim()) {
       toast.error("Ingresa el mensaje");
       return;
@@ -74,9 +93,8 @@ export default function SendEmail() {
       setMessage("");
       setCharCount(0);
       setAttachments([]);
-    } catch (error) {
+    } catch {
       // El error ya se maneja en el hook con toast
-      console.error("Error enviando correo:", error);
     }
   };
 
@@ -97,7 +115,7 @@ export default function SendEmail() {
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
             className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Nombre del destinatario"
+            placeholder="Correo del destinatario"
           />
         </div>
 
@@ -120,15 +138,17 @@ export default function SendEmail() {
           <label className="block text-xl font-bold text-black mb-3">
             3. Mensaje al Docente
           </label>
-          <textarea
-            value={message}
-            onChange={handleMessageChange}
-            placeholder="Se te han activado permisos para modificar el silabo."
-            rows={8}
-            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <div className="text-right text-sm text-gray-500 mt-2">
-            {charCount}/{maxChars}
+          <div className="relative">
+            <textarea
+              value={message}
+              onChange={handleMessageChange}
+              placeholder="Se te han activado permisos para modificar el sílabo."
+              rows={8}
+              className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <div className="absolute bottom-3 right-3 text-xs text-gray-400">
+              {charCount}/{maxChars}
+            </div>
           </div>
         </div>
 
@@ -195,7 +215,7 @@ export default function SendEmail() {
             <span>Volver</span>
           </button>
           <button
-            onClick={handleSend}
+            onClick={handleSubmit}
             disabled={isSending}
             className="px-8 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
