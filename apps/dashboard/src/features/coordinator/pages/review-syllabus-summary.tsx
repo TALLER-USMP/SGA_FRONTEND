@@ -326,55 +326,6 @@ export default function ReviewSyllabusSummary() {
           ))}
         </div>
 
-        {/* Detalle de puntos observados y aprobados */}
-        <div className="mb-6">
-          <h3 className="text-lg font-semibold mb-3">Detalle de revisión</h3>
-          {Object.keys(reviewData).length === 0 ? (
-            <div className="text-sm text-gray-500">
-              No hay observaciones registradas.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-medium text-red-600 mb-2">
-                  Puntos observados
-                </h4>
-                {Object.entries(reviewData)
-                  .filter(([, v]) => v.status === "rejected")
-                  .map(([fieldId, v]) => (
-                    <div
-                      key={fieldId}
-                      className="mb-3 p-3 border rounded-lg bg-red-50"
-                    >
-                      <div className="text-sm font-medium text-gray-800">
-                        {fieldId}
-                      </div>
-                      <div className="text-sm text-gray-700 mt-1">
-                        {v.comment}
-                      </div>
-                    </div>
-                  ))}
-              </div>
-
-              <div>
-                <h4 className="font-medium text-green-600 mb-2">
-                  Puntos aprobados
-                </h4>
-                {Object.entries(reviewData)
-                  .filter(([, v]) => v.status === "approved")
-                  .map(([fieldId]) => (
-                    <div
-                      key={fieldId}
-                      className="mb-2 p-2 border rounded bg-green-50 text-sm text-gray-800"
-                    >
-                      {fieldId}
-                    </div>
-                  ))}
-              </div>
-            </div>
-          )}
-        </div>
-
         {/* Botones de acción */}
         <div className="flex items-center justify-between pt-6 border-t border-gray-200">
           <Button
