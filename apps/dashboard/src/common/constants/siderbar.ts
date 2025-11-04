@@ -12,6 +12,7 @@ export const sidebarMenusByRole = {
     { to: "/", label: "Inicio" },
     { to: "/silabus", label: "Silabus" },
     { to: "/management", label: "Asignar Docente" },
+    { to: "/coordinator/export-syllabus", label: "Exportar Sílabos" },
   ],
   indeterminado: [],
 } as const;

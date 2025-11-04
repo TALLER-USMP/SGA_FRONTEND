@@ -24,6 +24,7 @@ import ReviewSyllabusList from "./features/coordinator/pages/review-syllabus-lis
 import ReviewSyllabusDetail from "./features/coordinator/pages/review-syllabus-detail";
 import ReviewSyllabusSummary from "./features/coordinator/pages/review-syllabus-summary";
 import SyllabusCatalog from "./features/coordinator/pages/syllabus-catalog";
+import ExportSyllabusPage from "./features/coordinator/pages/export-syllabus"; // Esta ruta debe coincidir con la ubicación de tu archivo
 
 const queryClient = new QueryClient();
 
@@ -114,6 +115,14 @@ export default function App() {
                 element={
                   <MainLayout title="Enviar Correo">
                     <SendEmail />
+                  </MainLayout>
+                }
+              ></Route>
+              <Route
+                path="/coordinator/export-syllabus"
+                element={
+                  <MainLayout title="Exportar Sílabos">
+                    <ExportSyllabusPage />
                   </MainLayout>
                 }
               />
