@@ -4,7 +4,7 @@ import {
   useParams,
   useLocation,
 } from "react-router-dom";
-import { ArrowLeft, MessageSquare } from "lucide-react";
+import { ArrowLeft, Check, X, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useApproveSyllabus } from "../hooks/syllabus-review-query";
 import { toast } from "sonner";
@@ -281,33 +281,49 @@ export default function ReviewSyllabusSummary() {
           </div>
         </div>
 
-        {/* Tabla de resumen */}
-        <div className="mb-8 border border-gray-300 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <tbody>
-              {sections.map((section) => (
-                <tr
-                  key={section.id}
-                  className="border-b border-gray-300 last:border-b-0"
-                >
-                  <td className="px-6 py-4 text-sm text-gray-700">
-                    {section.id}. {section.name}
-                  </td>
-                  <td className="px-6 py-4 w-40 text-center">
-                    {section.hasComments ? (
-                      <div className="flex justify-center">
-                        <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
-                          <MessageSquare className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                    ) : (
-                      <span className="text-sm text-gray-500">-</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Resumen visual por secciones (estilo cajas como en el diseño) */}
+        <div className="mb-8 space-y-3">
+          {sections.map((section) => (
+            <div
+              key={section.id}
+              className="flex items-center border border-gray-300 rounded-md overflow-hidden"
+            >
+              {/* Sección */}
+              <div className="flex-1 px-6 py-4 text-sm text-gray-700">
+                {section.id}. {section.name}
+              </div>
+
+              {/* Estado (check o cross) */}
+              <div className="w-40 flex items-center justify-center px-4 py-4">
+                {section.hasRejected ? (
+                  <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
+                    <X className="w-5 h-5 text-white" />
+                  </div>
+                ) : section.hasApproved ? (
+                  <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
+                    <Check className="w-5 h-5 text-white" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded flex items-center justify-center opacity-0">
+                    {/* placeholder to keep layout */}
+                  </div>
+                )}
+              </div>
+
+              {/* Comentarios */}
+              <div className="w-24 flex items-center justify-center px-4 py-4">
+                {section.hasComments ? (
+                  <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
+                    <MessageSquare className="w-5 h-5 text-white" />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded flex items-center justify-center opacity-0">
+                    {/* placeholder */}
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Detalle de puntos observados y aprobados */}
@@ -381,14 +397,14 @@ export default function ReviewSyllabusSummary() {
             {approveMutation.isPending ? "Finalizando..." : "Finalizar"}
           </Button>
         </div>
-      </div>
 
-      {/* Modal de confirmación */}
-      <ReviewConfirmationModal
-        isOpen={showModal}
-        type={modalType}
-        onClose={handleCloseModal}
-      />
+        {/* Modal de confirmación */}
+        <ReviewConfirmationModal
+          isOpen={showModal}
+          type={modalType}
+          onClose={handleCloseModal}
+        />
+      </div>
     </div>
   );
 }

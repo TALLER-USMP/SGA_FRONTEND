@@ -341,7 +341,8 @@ export default function ReviewSyllabusDetail() {
                   </div>
                 ) : availableSections.length === 0 ? (
                   <div className="text-yellow-600 text-sm bg-yellow-50 p-3 rounded-lg border border-yellow-200">
-                    No hay secciones disponibles para revisar en este sílabo.
+                    Este curso no tiene permisos para revisar ninguna sección
+                    del sílabo.
                   </div>
                 ) : (
                   <Select
