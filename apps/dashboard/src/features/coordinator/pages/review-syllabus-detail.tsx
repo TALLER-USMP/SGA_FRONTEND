@@ -115,7 +115,7 @@ export default function ReviewSyllabusDetail() {
       !selectedSection
     ) {
       // Seleccionar la primera sección disponible
-      setSelectedSection(syllabusSections[0].numeroSección.toString());
+      setSelectedSection(syllabusSections[0].seccion.toString());
     }
   }, [syllabusSections, selectedSection]);
 
@@ -247,7 +247,7 @@ export default function ReviewSyllabusDetail() {
 
     // Filtrar sectionDefinitions para incluir solo las secciones permitidas
     const allowedSectionNumbers = syllabusSections.map((s) =>
-      s.numeroSección.toString(),
+      s.seccion.toString(),
     );
 
     return sectionDefinitions.filter((section) =>
@@ -277,6 +277,9 @@ export default function ReviewSyllabusDetail() {
         onFieldReview={handleFieldReview}
         onFieldComment={handleFieldComment}
         reviewData={reviewData}
+        sectionData={sectionData}
+        sectionDataLoading={sectionDataLoading}
+        sectionDataError={sectionDataError}
       >
         <StepsContext.Provider value={stepperValue}>
           <div className="p-6 w-full mx-auto" style={{ maxWidth: "1600px" }}>
