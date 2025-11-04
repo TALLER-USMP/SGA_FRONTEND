@@ -83,7 +83,10 @@ export default function ReviewSyllabusDetail() {
     data: syllabusSections = [],
     isLoading: sectionsLoading,
     isError: sectionsError,
-  } = useSyllabusSections(syllabusId ? parseInt(syllabusId) : null);
+  } = useSyllabusSections(
+    syllabusId ? parseInt(syllabusId) : null,
+    docenteIdParam ? parseInt(docenteIdParam) : null,
+  );
 
   // Obtener los datos de la sección seleccionada
   const {
@@ -95,17 +98,7 @@ export default function ReviewSyllabusDetail() {
     selectedSection,
   );
 
-  // Debug: Ver qué secciones se obtuvieron
-  console.log("=== SECCIONES DE REVISIÓN ===");
-  console.log("docenteId:", docenteIdParam);
-  console.log("syllabusId:", syllabusId);
-  console.log("Secciones obtenidas:", syllabusSections);
-  console.log("Loading secciones:", sectionsLoading);
-  console.log("Error secciones:", sectionsError);
-  console.log("Sección seleccionada:", selectedSection);
-  console.log("Datos de sección:", sectionData);
-  console.log("Loading datos:", sectionDataLoading);
-  console.log("Error datos:", sectionDataError);
+  // Información de secciones disponible para UI
 
   // Actualizar selectedSection cuando se carguen las secciones
   useEffect(() => {

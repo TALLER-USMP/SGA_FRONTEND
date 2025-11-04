@@ -112,10 +112,7 @@ export function useSyllabusSectionData(
           attitudesRes.json() as Promise<AttitudesResponse>,
         ]);
 
-        console.log("Section 3 data:", {
-          competencies: competenciesData,
-          attitudes: attitudesData,
-        });
+        // datos de sección 3 cargados
 
         return {
           competencies: competenciesData?.items || [],
@@ -144,7 +141,6 @@ export function useSyllabusSectionData(
       }
 
       const url = `${API_BASE_URL}/syllabus/${syllabusId}/${endpoint}`;
-      console.log(`Fetching section data from: ${url}`);
 
       const response = await fetch(url, {
         method: "GET",
@@ -161,7 +157,6 @@ export function useSyllabusSectionData(
       }
 
       const result = await response.json();
-      console.log(`Section ${sectionNumber} data:`, result);
 
       // Sección 1: retorna datos directamente (sin wrapper)
       if (sectionNumber === "1") {

@@ -40,17 +40,57 @@ class SyllabusReviewManager {
     const json = await res.json();
     const rawData = Array.isArray(json) ? json : (json?.data ?? []);
 
-    // Mapear datos del backend al formato esperado
-    return rawData.map((item: Record<string, unknown>) => ({
-      id: String(item.id || ""),
-      courseName: item.cursoNombre || "Sin nombre",
-      courseCode: item.cursoCodigo || "N/A",
-      teacherName: item.nombreDocente || "No asignado",
-      docenteId: item.asignadoADocenteId || 0,
-      syllabusId: item.id || 0, // Usar el id del registro como syllabusId
-      status: item.estadoRevision || "ANALIZANDO",
-      submittedDate: item.createdAt || new Date().toISOString(),
-    })) as SyllabusReview[];
+    // respuesta cruda procesada
+
+    // Mapear datos del backend al formato esperado de forma defensiva.
+    return rawData.map((item: Record<string, unknown>) => {
+      // Intentar localizar un id útil en varios campos posibles
+      const possibleId =
+        item.id ??
+        item._id ??
+        item.syllabusId ??
+        item.silaboId ??
+        item.silaboID ??
+        item.idRevision ??
+        "";
+
+      const idStr = String(possibleId ?? "");
+
+      // Para syllabusId preferimos campos numéricos conocidos
+      const possibleSyllabusId =
+        item.syllabusId ??
+        item.silaboId ??
+        item.id ??
+        item.silaboID ??
+        item.idSyllabus ??
+        0;
+
+      const syllabusIdNum = Number(possibleSyllabusId) || 0;
+
+      const mapped = {
+        id: idStr,
+        courseName:
+          (item.cursoNombre as string) ||
+          (item.courseName as string) ||
+          "Sin nombre",
+        courseCode:
+          (item.cursoCodigo as string) || (item.courseCode as string) || "N/A",
+        teacherName:
+          (item.nombreDocente as string) ||
+          (item.teacherName as string) ||
+          "No asignado",
+        docenteId: Number(item.asignadoADocenteId ?? item.docenteId ?? 0) || 0,
+        syllabusId: syllabusIdNum, // número identificador del sílabo
+        status: ["ANALIZANDO", "VALIDADO", "DESAPROBADO", "ASIGNADO"].includes(
+          String(item.estadoRevision),
+        )
+          ? (String(item.estadoRevision) as SyllabusReview["status"])
+          : "ANALIZANDO",
+        submittedDate: (item.createdAt as string) || new Date().toISOString(),
+      } as SyllabusReview;
+
+      return mapped;
+    }) as SyllabusReview[];
   }
 
   async fetchReviewData(

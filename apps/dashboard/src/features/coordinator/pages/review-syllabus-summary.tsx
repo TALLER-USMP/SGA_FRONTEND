@@ -4,7 +4,7 @@ import {
   useParams,
   useLocation,
 } from "react-router-dom";
-import { ArrowLeft, Check, X, MessageSquare } from "lucide-react";
+import { ArrowLeft, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useApproveSyllabus } from "../hooks/syllabus-review-query";
 import { toast } from "sonner";
@@ -212,6 +212,24 @@ export default function ReviewSyllabusSummary() {
     const hasRejections = sections.some((section) => section.hasRejected);
     const estado = hasRejections ? "DESAPROBADO" : "VALIDADO";
 
+    // Si hay rechazos, asegurarse de que cada campo rechazado tenga comentario.
+    if (hasRejections) {
+      const rejectedFields = Object.entries(reviewData).filter(
+        ([, v]) => v.status === "rejected",
+      );
+
+      const missingComments = rejectedFields.some(([, v]) => {
+        return !(v.comment && v.comment.trim().length > 0);
+      });
+
+      if (missingComments) {
+        toast.error(
+          "Por favor ingrese comentarios para los puntos marcados con 'X' antes de finalizar la desaprobación.",
+        );
+        return;
+      }
+    }
+
     try {
       await approveMutation.mutateAsync({
         syllabusId: parseInt(syllabusId),
@@ -222,6 +240,12 @@ export default function ReviewSyllabusSummary() {
       // Mostrar modal con el resultado
       setModalType(hasRejections ? "rejected" : "approved");
       setShowModal(true);
+      // Informar por UI que se envió la notificación al docente (si aplica)
+      if (hasRejections) {
+        toast.success("Revisión registrada. Se envió notificación al docente.");
+      } else {
+        toast.success("Revisión registrada. Sí­labo aprobado.");
+      }
     } catch (error) {
       console.error("Error al finalizar revisión:", error);
       toast.error("Error al finalizar la revisión. Intente nuevamente.");
@@ -269,37 +293,70 @@ export default function ReviewSyllabusSummary() {
                   <td className="px-6 py-4 text-sm text-gray-700">
                     {section.id}. {section.name}
                   </td>
-                  <td className="px-6 py-4 w-24 text-center">
-                    {section.hasApproved && (
-                      <div className="flex justify-center">
-                        <div className="w-8 h-8 bg-green-500 rounded flex items-center justify-center">
-                          <Check className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 w-24 text-center">
-                    {section.hasRejected && (
-                      <div className="flex justify-center">
-                        <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
-                          <X className="w-5 h-5 text-white" />
-                        </div>
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 w-24 text-center">
-                    {section.hasComments && (
+                  <td className="px-6 py-4 w-40 text-center">
+                    {section.hasComments ? (
                       <div className="flex justify-center">
                         <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
                           <MessageSquare className="w-5 h-5 text-white" />
                         </div>
                       </div>
+                    ) : (
+                      <span className="text-sm text-gray-500">-</span>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Detalle de puntos observados y aprobados */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold mb-3">Detalle de revisión</h3>
+          {Object.keys(reviewData).length === 0 ? (
+            <div className="text-sm text-gray-500">
+              No hay observaciones registradas.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium text-red-600 mb-2">
+                  Puntos observados
+                </h4>
+                {Object.entries(reviewData)
+                  .filter(([, v]) => v.status === "rejected")
+                  .map(([fieldId, v]) => (
+                    <div
+                      key={fieldId}
+                      className="mb-3 p-3 border rounded-lg bg-red-50"
+                    >
+                      <div className="text-sm font-medium text-gray-800">
+                        {fieldId}
+                      </div>
+                      <div className="text-sm text-gray-700 mt-1">
+                        {v.comment}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+
+              <div>
+                <h4 className="font-medium text-green-600 mb-2">
+                  Puntos aprobados
+                </h4>
+                {Object.entries(reviewData)
+                  .filter(([, v]) => v.status === "approved")
+                  .map(([fieldId]) => (
+                    <div
+                      key={fieldId}
+                      className="mb-2 p-2 border rounded bg-green-50 text-sm text-gray-800"
+                    >
+                      {fieldId}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Botones de acción */}

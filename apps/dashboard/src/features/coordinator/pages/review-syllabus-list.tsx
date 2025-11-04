@@ -80,9 +80,30 @@ export default function ReviewSyllabusList() {
   });
 
   const handleReviewSyllabus = (syllabus: SyllabusReview) => {
-    navigate(
-      `/coordinator/review-syllabus/${syllabus.id}?docenteId=${syllabus.docenteId}&syllabusId=${syllabus.syllabusId}&courseName=${encodeURIComponent(syllabus.courseName)}&courseCode=${encodeURIComponent(syllabus.courseCode)}&teacherName=${encodeURIComponent(syllabus.teacherName)}`,
-    );
+    // Debug: registrar navegación solicitada
+    // Esto ayuda a verificar en la consola si el handler se ejecuta
+    // y qué valores se están pasando.
+    // handler called
+
+    // Algunos items vienen con `id` vacío ('') pero contienen `syllabusId`.
+    // Preferimos usar `id` (registro de revisión). Si está vacío, fallback a `syllabusId`.
+    const routeId =
+      syllabus.id && String(syllabus.id).trim() !== ""
+        ? syllabus.id
+        : String(syllabus.syllabusId || "");
+
+    const url = `/coordinator/review-syllabus/${routeId}?docenteId=${syllabus.docenteId}&syllabusId=${syllabus.syllabusId}&courseName=${encodeURIComponent(
+      syllabus.courseName,
+    )}&courseCode=${encodeURIComponent(syllabus.courseCode)}&teacherName=${encodeURIComponent(
+      syllabus.teacherName,
+    )}`;
+
+    if (!routeId) {
+      // Si no hay id ni syllabusId, no navegar
+      return;
+    }
+
+    navigate(url);
   };
 
   return (
@@ -179,10 +200,18 @@ export default function ReviewSyllabusList() {
       {/* Syllabi List */}
       <div className="space-y-4">
         {filteredSyllabi.map((syllabus) => (
-          <div
+          <a
             key={syllabus.id}
-            onClick={() => handleReviewSyllabus(syllabus)}
-            className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer"
+            href={`/coordinator/review-syllabus/${syllabus.id}?docenteId=${syllabus.docenteId}&syllabusId=${syllabus.syllabusId}&courseName=${encodeURIComponent(
+              syllabus.courseName,
+            )}&courseCode=${encodeURIComponent(syllabus.courseCode)}&teacherName=${encodeURIComponent(
+              syllabus.teacherName,
+            )}`}
+            onClick={(e) => {
+              e.preventDefault();
+              handleReviewSyllabus(syllabus);
+            }}
+            className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer block"
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 flex-1">
@@ -223,7 +252,7 @@ export default function ReviewSyllabusList() {
                 })()}
               </div>
             </div>
-          </div>
+          </a>
         ))}
       </div>
 
