@@ -8,8 +8,8 @@ import {
   useThirdStepData,
   useUpdateCompetencias,
   useUpdateActitudes,
+  useUpdateComponentes,
   useSaveCompetencias,
-  useSaveComponentes,
   useSaveActitudes,
 } from "../hooks/third-step-query";
 
@@ -47,13 +47,13 @@ export default function ThirdStep() {
     syllabusId ? Number(syllabusId) : null,
   );
 
-  // Hooks de mutación - UPDATE (PUT)
+  // Hooks de mutación - UPDATE (PUT) - Para sincronización completa
   const updateCompetencias = useUpdateCompetencias();
+  const updateComponentes = useUpdateComponentes();
   const updateActitudes = useUpdateActitudes();
 
-  // Hooks de mutación - CREATE (POST)
+  // Hooks de mutación - CREATE (POST) - Solo para primera creación
   const createCompetencias = useSaveCompetencias();
-  const createComponentes = useSaveComponentes(); // Componentes solo usa POST
   const createActitudes = useSaveActitudes();
 
   const [formData, setFormData] = useState<FormData>({
@@ -76,17 +76,17 @@ export default function ThirdStep() {
 
       const mappedData = {
         competencias: thirdStepData.competenciasPrincipales.map((item) => ({
-          id: String(item.id || Date.now()),
+          id: String(item.id || `temp-${Date.now()}`),
           text: item.text,
           code: item.code || "",
         })),
         componentes: thirdStepData.componentes.map((item) => ({
-          id: String(item.id || Date.now()),
+          id: String(item.id || `temp-${Date.now()}`),
           text: item.text,
           code: item.code || "",
         })),
         contenidosActitudinales: thirdStepData.actitudinales.map((item) => ({
-          id: String(item.id || Date.now()),
+          id: String(item.id || `temp-${Date.now()}`),
           text: item.text,
           code: item.code || "",
         })),
@@ -94,20 +94,37 @@ export default function ThirdStep() {
 
       console.log("✅ Datos mapeados para el formulario:", mappedData);
       setFormData(mappedData);
-      originalDataRef.current = JSON.parse(JSON.stringify(mappedData)); // Deep copy
+      originalDataRef.current = JSON.parse(JSON.stringify(mappedData));
     }
   }, [thirdStepData]);
 
-  // Add new item to a section
+  // Agregar item con ID temporal
   const addItem = (section: keyof FormData) => {
-    const newId = Date.now().toString();
+    const newId = `temp-${Date.now()}`;
+
+    // Asignar código por defecto según la sección
+    let defaultCode = "";
+    if (section === "componentes") {
+      // Para componentes, usar formato g.1, a.1, etc.
+      const nextIndex = formData[section].length + 1;
+      defaultCode = `g.${nextIndex}`;
+    } else if (section === "contenidosActitudinales") {
+      // Para actitudinales, usar una letra sola
+      const nextIndex = formData[section].length;
+      const letter = String.fromCharCode(65 + (nextIndex % 26)); // A, B, C...
+      defaultCode = letter;
+    } else {
+      // Para competencias, permitir código vacío o asignar uno por defecto
+      defaultCode = "A";
+    }
+
     setFormData((prev) => ({
       ...prev,
-      [section]: [...prev[section], { id: newId, text: "", code: "A" }],
+      [section]: [...prev[section], { id: newId, text: "", code: defaultCode }],
     }));
   };
 
-  // Remove item from a section
+  // Eliminar item
   const removeItem = (section: keyof FormData, id: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -115,7 +132,7 @@ export default function ThirdStep() {
     }));
   };
 
-  // Update item text
+  // Actualizar texto del item
   const updateItem = (section: keyof FormData, id: string, text: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -125,7 +142,7 @@ export default function ThirdStep() {
     }));
   };
 
-  // Update item code
+  // Actualizar código del item
   const updateItemCode = (
     section: keyof FormData,
     id: string,
@@ -139,14 +156,47 @@ export default function ThirdStep() {
     }));
   };
 
-  // Detectar cambios comparando con datos originales
-  const hasChanges = (section: keyof FormData): boolean => {
+  // Detectar cambios reales en el contenido
+  const hasRealChanges = (section: keyof FormData): boolean => {
     const current = formData[section];
     const original = originalDataRef.current[section];
-    return JSON.stringify(current) !== JSON.stringify(original);
+
+    if (current.length !== original.length) return true;
+
+    for (let i = 0; i < current.length; i++) {
+      const curr = current[i];
+      const orig = original[i];
+
+      if (curr.text !== orig?.text || curr.code !== orig?.code) {
+        return true;
+      }
+    }
+
+    return false;
   };
 
-  // Submit handler - guardar cambios y avanzar
+  // Determinar si es operación de creación (POST) o actualización (PUT)
+  const isCreateOperation = (section: keyof FormData): boolean => {
+    // Si no hay datos originales del backend
+    if (originalDataRef.current[section].length === 0) return true;
+
+    // Si todos los items son temporales (nuevos)
+    const allTemporary = formData[section].every((item) =>
+      item.id.startsWith("temp-"),
+    );
+
+    return allTemporary;
+  };
+
+  // Detectar si se eliminaron todos los items
+  const wereAllItemsDeleted = (section: keyof FormData): boolean => {
+    const hadOriginalData = originalDataRef.current[section].length > 0;
+    const hasCurrentData = formData[section].length > 0;
+
+    return hadOriginalData && !hasCurrentData;
+  };
+
+  // Manejar el envío del formulario
   const handleSubmit = async () => {
     if (!syllabusId) {
       toast.error("No se encontró el ID del sílabo");
@@ -158,109 +208,179 @@ export default function ThirdStep() {
     let toastId: string | number | undefined;
 
     try {
-      // 1. Verificar y guardar COMPETENCIAS si hay cambios
-      if (hasChanges("competencias")) {
-        const hasOriginalData = originalDataRef.current.competencias.length > 0;
+      // ========== 1. COMPETENCIAS ==========
+      if (hasRealChanges("competencias")) {
+        const isCreate = isCreateOperation("competencias");
+        const allDeleted = wereAllItemsDeleted("competencias");
+
         console.log(
-          `🔄 Detectados cambios en competencias, ${hasOriginalData ? "actualizando (PUT)" : "creando (POST)"}...`,
+          `🔄 Competencias: ${allDeleted ? "PUT con items:[] (eliminar todos)" : isCreate ? "POST (crear)" : "PUT (sincronizar)"}`,
         );
 
-        const competenciasPayload = {
-          items: formData.competencias.map((item, index) => ({
-            ...(item.id && !item.id.startsWith("temp-") && hasOriginalData
-              ? { id: Number(item.id) }
-              : {}),
-            text: item.text,
-            code: item.code || undefined,
-            order: index + 1,
-          })),
-        };
-
-        if (hasOriginalData) {
-          // Usar PUT para sincronizar (crear, actualizar, eliminar)
-          promises.push(
-            updateCompetencias.mutateAsync({
-              syllabusId: numSyllabusId,
-              data: competenciasPayload,
-            }),
-          );
+        // Si NO hay datos originales Y NO hay items actuales -> no hacer nada (nunca se creó)
+        if (
+          originalDataRef.current["competencias"].length === 0 &&
+          formData.competencias.length === 0
+        ) {
+          console.log("⚠️ No hay competencias para crear ni sincronizar");
         } else {
-          // Usar POST para crear por primera vez
+          const competenciasPayload = {
+            items: formData.competencias.map((item, index) => {
+              // Para competencias, permitir código vacío o validar formato
+              // Si hay código, usarlo; si no, generar uno por defecto
+              const validCode =
+                item.code && item.code.trim() !== ""
+                  ? item.code.trim()
+                  : String.fromCharCode(65 + (index % 26)); // A, B, C... por defecto
+
+              const baseItem = {
+                text: item.text,
+                code: validCode,
+                order: index + 1,
+              };
+
+              // Incluir ID solo si no es temporal y estamos actualizando
+              if (!isCreate && !item.id.startsWith("temp-")) {
+                return { ...baseItem, id: Number(item.id) };
+              }
+
+              return baseItem;
+            }),
+          };
+
+          if (isCreate) {
+            promises.push(
+              createCompetencias.mutateAsync({
+                syllabusId: numSyllabusId,
+                data: competenciasPayload,
+              }),
+            );
+          } else {
+            // Usar PUT para sincronizar (incluso con items:[] para eliminar todos)
+            promises.push(
+              updateCompetencias.mutateAsync({
+                syllabusId: numSyllabusId,
+                data: competenciasPayload,
+              }),
+            );
+          }
+        }
+      }
+
+      // ========== 2. COMPONENTES (siempre usar PUT) ==========
+      if (hasRealChanges("componentes")) {
+        const allDeleted = wereAllItemsDeleted("componentes");
+
+        console.log(
+          `🔄 Componentes: ${allDeleted ? "PUT con items:[] (eliminar todos)" : "PUT (sincronizar)"}`,
+        );
+
+        // Si NO hay datos originales Y NO hay items actuales -> no hacer nada
+        if (
+          originalDataRef.current["componentes"].length === 0 &&
+          formData.componentes.length === 0
+        ) {
+          console.log("⚠️ No hay componentes para crear ni sincronizar");
+        } else {
+          const componentesPayload = {
+            items: formData.componentes.map((item, index) => {
+              // Validar o generar código en formato g.1, a.2, etc.
+              const codePattern = /^[a-zA-Z]\.\d+$/;
+              const validCode =
+                item.code && codePattern.test(item.code.trim())
+                  ? item.code.trim()
+                  : `g.${index + 1}`; // Generar código por defecto si está vacío o inválido
+
+              const baseItem = {
+                text: item.text,
+                code: validCode,
+                order: index + 1,
+              };
+
+              // Incluir ID si no es temporal
+              if (!item.id.startsWith("temp-")) {
+                return { ...baseItem, id: Number(item.id) };
+              }
+
+              return baseItem;
+            }),
+          };
+
+          // Siempre usar PUT para componentes (maneja crear, actualizar, eliminar)
+          // Incluso con items:[] para eliminar todos
           promises.push(
-            createCompetencias.mutateAsync({
+            updateComponentes.mutateAsync({
               syllabusId: numSyllabusId,
-              data: competenciasPayload,
+              data: componentesPayload,
             }),
           );
         }
       }
 
-      // 2. Verificar y guardar COMPONENTES si hay cambios
-      // NOTA: El backend solo tiene POST, no PUT para componentes
-      if (hasChanges("componentes")) {
+      // ========== 3. ACTITUDES ==========
+      if (hasRealChanges("contenidosActitudinales")) {
+        const isCreate = isCreateOperation("contenidosActitudinales");
+        const allDeleted = wereAllItemsDeleted("contenidosActitudinales");
+
         console.log(
-          "🔄 Detectados cambios en componentes, guardando (POST)...",
+          `🔄 Actitudes: ${allDeleted ? "PUT con items:[] (eliminar todos)" : isCreate ? "POST (crear)" : "PUT (sincronizar)"}`,
         );
 
-        const componentesPayload = {
-          items: formData.componentes.map((item, index) => ({
-            // No incluir id para POST
-            text: item.text,
-            code: item.code || undefined,
-            order: index + 1,
-          })),
-        };
-
-        promises.push(
-          createComponentes.mutateAsync({
-            syllabusId: numSyllabusId,
-            data: componentesPayload,
-          }),
-        );
-      }
-
-      // 3. Verificar y guardar ACTITUDES si hay cambios
-      if (hasChanges("contenidosActitudinales")) {
-        const hasOriginalData =
-          originalDataRef.current.contenidosActitudinales.length > 0;
-        console.log(
-          `🔄 Detectados cambios en actitudes, ${hasOriginalData ? "actualizando (PUT)" : "creando (POST)"}...`,
-        );
-
-        const actitudesPayload = {
-          items: formData.contenidosActitudinales.map((item, index) => ({
-            ...(item.id && !item.id.startsWith("temp-") && hasOriginalData
-              ? { id: Number(item.id) }
-              : {}),
-            text: item.text,
-            code: item.code || undefined,
-            order: index + 1,
-          })),
-        };
-
-        if (hasOriginalData) {
-          promises.push(
-            updateActitudes.mutateAsync({
-              syllabusId: numSyllabusId,
-              data: actitudesPayload,
-            }),
-          );
+        // Si NO hay datos originales Y NO hay items actuales -> no hacer nada
+        if (
+          originalDataRef.current["contenidosActitudinales"].length === 0 &&
+          formData.contenidosActitudinales.length === 0
+        ) {
+          console.log("⚠️ No hay actitudes para crear ni sincronizar");
         } else {
-          promises.push(
-            createActitudes.mutateAsync({
-              syllabusId: numSyllabusId,
-              data: actitudesPayload,
+          const actitudesPayload = {
+            items: formData.contenidosActitudinales.map((item, index) => {
+              // Validar que el código sea solo una letra (A-Z, a-z)
+              const codePattern = /^[a-zA-Z]$/;
+              const validCode =
+                item.code && codePattern.test(item.code.trim())
+                  ? item.code.trim().toUpperCase()
+                  : String.fromCharCode(65 + (index % 26)); // A, B, C... por defecto
+
+              const baseItem = {
+                text: item.text,
+                code: validCode,
+                order: index + 1,
+              };
+
+              // Incluir ID solo si no es temporal y estamos actualizando
+              if (!isCreate && !item.id.startsWith("temp-")) {
+                return { ...baseItem, id: Number(item.id) };
+              }
+
+              return baseItem;
             }),
-          );
+          };
+
+          if (isCreate) {
+            promises.push(
+              createActitudes.mutateAsync({
+                syllabusId: numSyllabusId,
+                data: actitudesPayload,
+              }),
+            );
+          } else {
+            // Usar PUT para sincronizar (incluso con items:[] para eliminar todos)
+            promises.push(
+              updateActitudes.mutateAsync({
+                syllabusId: numSyllabusId,
+                data: actitudesPayload,
+              }),
+            );
+          }
         }
       }
 
-      // Ejecutar todas las peticiones en paralelo
+      // ========== EJECUTAR PETICIONES ==========
       if (promises.length > 0) {
         toastId = toast.loading("Guardando cambios...");
         const results = await Promise.all(promises);
 
-        // Cerrar el toast de loading
         toast.dismiss(toastId);
 
         // Mostrar resultados
@@ -268,23 +388,36 @@ export default function ThirdStep() {
           console.log("✅ Resultado:", result);
           toast.success(result.message || "Cambios guardados correctamente");
         });
+
+        // Actualizar referencia original después de guardar exitosamente
+        originalDataRef.current = JSON.parse(JSON.stringify(formData));
       } else {
         console.log("ℹ️ No hay cambios para guardar");
         toast.info("No hay cambios para guardar");
-      }
-
-      // Avanzar al siguiente paso
+      } // Avanzar al siguiente paso
       nextStep();
     } catch (error) {
-      // Cerrar el toast de loading si existe
       if (toastId) {
         toast.dismiss(toastId);
       }
 
       console.error("❌ Error al guardar:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Error al guardar los cambios",
-      );
+
+      // Extraer mensaje de error legible
+      let errorMessage = "Error al guardar los cambios";
+
+      if (error instanceof Error) {
+        // Intentar parsear si el mensaje es JSON
+        try {
+          const errorObj = JSON.parse(error.message);
+          errorMessage = errorObj.message || errorObj.error || error.message;
+        } catch {
+          // Si no es JSON, usar el mensaje tal cual
+          errorMessage = error.message;
+        }
+      }
+
+      toast.error(errorMessage);
     }
   };
 
