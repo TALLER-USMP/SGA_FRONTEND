@@ -46,7 +46,10 @@ const FourthStep: React.FC = () => {
   const { cursoCodigo, syllabusId, mode } = useSyllabusContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const silaboId = syllabusId ? Number(syllabusId) : 0;
-  const { data, isLoading } = useGetProgramacion(cursoCodigo ?? "");
+  // Usar syllabusId en lugar de cursoCodigo para obtener las unidades
+  const { data, isLoading } = useGetProgramacion(
+    syllabusId ? String(syllabusId) : "",
+  );
   const createProgramacion = useCreateProgramacion();
   const updateProgramacion = useUpdateProgramacion();
   const [selectedUnidad, setSelectedUnidad] = useState<number | null>(null);
@@ -175,7 +178,7 @@ const FourthStep: React.FC = () => {
         setProgramacionForm(unit);
       }
     }
-  }, [selectedSemana, selectedUnidad]);
+  }, [selectedSemana, selectedUnidad, cargarDatosLocales, data]);
   const allSemanas: Array<{
     numeroSemana: number;
     horasDisponibles?: number;

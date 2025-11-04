@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Step } from "./step";
 import { X, Plus } from "lucide-react";
-
+import { toast } from "sonner";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../../../common/components/ui/select";
+  useThirdStepData,
+  useUpdateCompetencias,
+  useUpdateActitudes,
+  useSaveCompetencias,
+  useSaveComponentes,
+  useSaveActitudes,
+} from "../hooks/third-step-query";
 
 interface CompetenciaItem {
   id: string;
@@ -41,41 +42,61 @@ export default function ThirdStep() {
   const { syllabusId, courseName } = useSyllabusContext();
   console.log("Syllabus ID in ThirdStep:", syllabusId, "Course:", courseName);
 
-  // Generar opciones de códigos de la A a la Z
-  const codeOptions = Array.from({ length: 26 }, (_, i) =>
-    String.fromCharCode(65 + i),
+  // Obtener datos del backend
+  const { data: thirdStepData, isLoading } = useThirdStepData(
+    syllabusId ? Number(syllabusId) : null,
   );
 
+  // Hooks de mutación - UPDATE (PUT)
+  const updateCompetencias = useUpdateCompetencias();
+  const updateActitudes = useUpdateActitudes();
+
+  // Hooks de mutación - CREATE (POST)
+  const createCompetencias = useSaveCompetencias();
+  const createComponentes = useSaveComponentes(); // Componentes solo usa POST
+  const createActitudes = useSaveActitudes();
+
   const [formData, setFormData] = useState<FormData>({
-    competencias: [
-      {
-        id: "1",
-        text: "Elabora y gestiona proyectos de diversa índole, vinculados a profesión.",
-        code: "G",
-      },
-      {
-        id: "2",
-        text: "Analizar un sistema complejo de computación y aplicar principios de computación y otras disciplinas relevantes para identificar soluciones.",
-        code: "I",
-      },
-    ],
-    componentes: [
-      {
-        id: "1",
-        text: "Elabora trabajos de aplicación a proyectos vinculados a la especialidad",
-        code: "A",
-      },
-      {
-        id: "2",
-        text: "Gestiona proyectos de diversa índole, vinculados a la especialidad",
-        code: "B",
-      },
-    ],
-    contenidosActitudinales: [
-      { id: "1", text: "Búsqueda de la verdad.", code: "A" },
-      { id: "2", text: "Compromiso ético en todo su quehacer.", code: "B" },
-    ],
+    competencias: [],
+    componentes: [],
+    contenidosActitudinales: [],
   });
+
+  // Guardar datos originales para detectar cambios
+  const originalDataRef = useRef<FormData>({
+    competencias: [],
+    componentes: [],
+    contenidosActitudinales: [],
+  });
+
+  // Cargar datos del backend cuando estén disponibles
+  useEffect(() => {
+    if (thirdStepData) {
+      console.log("📊 Datos del backend recibidos:", thirdStepData);
+
+      const mappedData = {
+        competencias: thirdStepData.competenciasPrincipales.map((item) => ({
+          id: String(item.id || Date.now()),
+          text: item.text,
+          code: item.code || "",
+        })),
+        componentes: thirdStepData.componentes.map((item) => ({
+          id: String(item.id || Date.now()),
+          text: item.text,
+          code: item.code || "",
+        })),
+        contenidosActitudinales: thirdStepData.actitudinales.map((item) => ({
+          id: String(item.id || Date.now()),
+          text: item.text,
+          code: item.code || "",
+        })),
+      };
+
+      console.log("✅ Datos mapeados para el formulario:", mappedData);
+      setFormData(mappedData);
+      originalDataRef.current = JSON.parse(JSON.stringify(mappedData)); // Deep copy
+    }
+  }, [thirdStepData]);
 
   // Add new item to a section
   const addItem = (section: keyof FormData) => {
@@ -118,36 +139,153 @@ export default function ThirdStep() {
     }));
   };
 
-  // Submit handler - prepare data for backend
-  const handleSubmit = () => {
-    const dataForBackend = {
-      step: 3,
-      title: "COMPETENCIAS Y SUS COMPONENTES COMPRENDIDOS EN LA ASIGNATURA",
-      sections: {
-        competencias: {
-          title: "3.1 Competencia",
-          items: formData.competencias
-            .map((item) => item.text)
-            .filter((text) => text.trim() !== ""),
-        },
-        componentes: {
-          title: "3.2. Componentes",
-          items: formData.componentes
-            .map((item) => item.text)
-            .filter((text) => text.trim() !== ""),
-        },
-        contenidosActitudinales: {
-          title: "3.3. Contenidos actitudinales",
-          items: formData.contenidosActitudinales
-            .map((item) => item.text)
-            .filter((text) => text.trim() !== ""),
-        },
-      },
-      timestamp: new Date().toISOString(),
-    };
+  // Detectar cambios comparando con datos originales
+  const hasChanges = (section: keyof FormData): boolean => {
+    const current = formData[section];
+    const original = originalDataRef.current[section];
+    return JSON.stringify(current) !== JSON.stringify(original);
+  };
 
-    console.log("Data prepared for backend:", dataForBackend);
-    nextStep();
+  // Submit handler - guardar cambios y avanzar
+  const handleSubmit = async () => {
+    if (!syllabusId) {
+      toast.error("No se encontró el ID del sílabo");
+      return;
+    }
+
+    const numSyllabusId = Number(syllabusId);
+    const promises: Promise<{ message?: string }>[] = [];
+    let toastId: string | number | undefined;
+
+    try {
+      // 1. Verificar y guardar COMPETENCIAS si hay cambios
+      if (hasChanges("competencias")) {
+        const hasOriginalData = originalDataRef.current.competencias.length > 0;
+        console.log(
+          `🔄 Detectados cambios en competencias, ${hasOriginalData ? "actualizando (PUT)" : "creando (POST)"}...`,
+        );
+
+        const competenciasPayload = {
+          items: formData.competencias.map((item, index) => ({
+            ...(item.id && !item.id.startsWith("temp-") && hasOriginalData
+              ? { id: Number(item.id) }
+              : {}),
+            text: item.text,
+            code: item.code || undefined,
+            order: index + 1,
+          })),
+        };
+
+        if (hasOriginalData) {
+          // Usar PUT para sincronizar (crear, actualizar, eliminar)
+          promises.push(
+            updateCompetencias.mutateAsync({
+              syllabusId: numSyllabusId,
+              data: competenciasPayload,
+            }),
+          );
+        } else {
+          // Usar POST para crear por primera vez
+          promises.push(
+            createCompetencias.mutateAsync({
+              syllabusId: numSyllabusId,
+              data: competenciasPayload,
+            }),
+          );
+        }
+      }
+
+      // 2. Verificar y guardar COMPONENTES si hay cambios
+      // NOTA: El backend solo tiene POST, no PUT para componentes
+      if (hasChanges("componentes")) {
+        console.log(
+          "🔄 Detectados cambios en componentes, guardando (POST)...",
+        );
+
+        const componentesPayload = {
+          items: formData.componentes.map((item, index) => ({
+            // No incluir id para POST
+            text: item.text,
+            code: item.code || undefined,
+            order: index + 1,
+          })),
+        };
+
+        promises.push(
+          createComponentes.mutateAsync({
+            syllabusId: numSyllabusId,
+            data: componentesPayload,
+          }),
+        );
+      }
+
+      // 3. Verificar y guardar ACTITUDES si hay cambios
+      if (hasChanges("contenidosActitudinales")) {
+        const hasOriginalData =
+          originalDataRef.current.contenidosActitudinales.length > 0;
+        console.log(
+          `🔄 Detectados cambios en actitudes, ${hasOriginalData ? "actualizando (PUT)" : "creando (POST)"}...`,
+        );
+
+        const actitudesPayload = {
+          items: formData.contenidosActitudinales.map((item, index) => ({
+            ...(item.id && !item.id.startsWith("temp-") && hasOriginalData
+              ? { id: Number(item.id) }
+              : {}),
+            text: item.text,
+            code: item.code || undefined,
+            order: index + 1,
+          })),
+        };
+
+        if (hasOriginalData) {
+          promises.push(
+            updateActitudes.mutateAsync({
+              syllabusId: numSyllabusId,
+              data: actitudesPayload,
+            }),
+          );
+        } else {
+          promises.push(
+            createActitudes.mutateAsync({
+              syllabusId: numSyllabusId,
+              data: actitudesPayload,
+            }),
+          );
+        }
+      }
+
+      // Ejecutar todas las peticiones en paralelo
+      if (promises.length > 0) {
+        toastId = toast.loading("Guardando cambios...");
+        const results = await Promise.all(promises);
+
+        // Cerrar el toast de loading
+        toast.dismiss(toastId);
+
+        // Mostrar resultados
+        results.forEach((result) => {
+          console.log("✅ Resultado:", result);
+          toast.success(result.message || "Cambios guardados correctamente");
+        });
+      } else {
+        console.log("ℹ️ No hay cambios para guardar");
+        toast.info("No hay cambios para guardar");
+      }
+
+      // Avanzar al siguiente paso
+      nextStep();
+    } catch (error) {
+      // Cerrar el toast de loading si existe
+      if (toastId) {
+        toast.dismiss(toastId);
+      }
+
+      console.error("❌ Error al guardar:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Error al guardar los cambios",
+      );
+    }
   };
 
   return (
@@ -166,6 +304,13 @@ export default function ThirdStep() {
             {courseName || "TALLER DE PROYECTOS"}
           </div>
         </div>
+
+        {/* Indicador de carga */}
+        {isLoading && (
+          <div className="flex justify-center items-center py-8">
+            <div className="text-gray-500">Cargando datos...</div>
+          </div>
+        )}
 
         {/* 3.1 Competencia */}
         <div className="mb-8 bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -188,23 +333,16 @@ export default function ThirdStep() {
                     />
                   </div>
                   <div className="w-24">
-                    <Select
+                    <input
+                      type="text"
                       value={item.code}
-                      onValueChange={(value) =>
-                        updateItemCode("competencias", item.id, value)
+                      onChange={(e) =>
+                        updateItemCode("competencias", item.id, e.target.value)
                       }
-                    >
-                      <SelectTrigger className="w-full bg-white">
-                        <SelectValue placeholder="Código" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {codeOptions.map((code) => (
-                          <SelectItem key={code} value={code}>
-                            {code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                      placeholder="Código"
+                      maxLength={10}
+                    />
                   </div>
                   <button
                     onClick={() => removeItem("competencias", item.id)}
@@ -249,23 +387,16 @@ export default function ThirdStep() {
                     />
                   </div>
                   <div className="w-24">
-                    <Select
+                    <input
+                      type="text"
                       value={item.code}
-                      onValueChange={(value) =>
-                        updateItemCode("componentes", item.id, value)
+                      onChange={(e) =>
+                        updateItemCode("componentes", item.id, e.target.value)
                       }
-                    >
-                      <SelectTrigger className="w-full bg-white">
-                        <SelectValue placeholder="Código" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {codeOptions.map((code) => (
-                          <SelectItem key={code} value={code}>
-                            {code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                      placeholder="Código"
+                      maxLength={10}
+                    />
                   </div>
                   <button
                     onClick={() => removeItem("componentes", item.id)}
@@ -314,34 +445,26 @@ export default function ThirdStep() {
                     />
                   </div>
                   <div className="w-24">
-                    <Select
+                    <input
+                      type="text"
                       value={item.code}
-                      onValueChange={(value) =>
+                      onChange={(e) =>
                         updateItemCode(
                           "contenidosActitudinales",
                           item.id,
-                          value,
+                          e.target.value,
                         )
                       }
-                    >
-                      <SelectTrigger className="w-full bg-white">
-                        <SelectValue placeholder="Código" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {codeOptions.map((code) => (
-                          <SelectItem key={code} value={code}>
-                            {code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      className="w-full p-3 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
+                      placeholder="Código"
+                      maxLength={10}
+                    />
                   </div>
                   <button
                     onClick={() =>
                       removeItem("contenidosActitudinales", item.id)
                     }
                     className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                    disabled={formData.contenidosActitudinales.length <= 1}
                   >
                     <X size={20} />
                   </button>
