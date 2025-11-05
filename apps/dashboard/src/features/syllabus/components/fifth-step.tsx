@@ -1,4 +1,3 @@
-// src/features/syllabus/components/fifth-step.tsx
 import {
   useMethodologicalStrategiesQuery,
   useDidacticResourcesQuery,
@@ -17,7 +16,6 @@ import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
 import { X, Plus } from "lucide-react";
 
-/* -- Data inicial -- */
 const initialStrategies: MethodologicalStrategy[] = [
   {
     id: "1",
@@ -58,13 +56,11 @@ const initialDidacticResources: DidacticResource[] = [
   },
 ];
 
-/** Extrae mensaje de error de unknown */
 const extractErrorMessage = (err: unknown): string | undefined => {
   if (!err) return undefined;
   if (err instanceof Error) return err.message;
   if (typeof err === "string") return err;
   try {
-    // intentar serializar objeto
     const s = JSON.stringify(err);
     return s === "{}" ? undefined : s;
   } catch {
@@ -82,7 +78,6 @@ export default function FifthStep() {
     DidacticResource[]
   >(initialDidacticResources);
 
-  /* GET hooks */
   const {
     data: serverStrategies,
     isLoading: loadingStrategies,
@@ -99,24 +94,19 @@ export default function FifthStep() {
     refetch: refetchResources,
   } = useDidacticResourcesQuery(syllabusId ?? null);
 
-  /* Mutations */
   const saveStrategiesMutation = useSaveMethodologicalStrategies();
   const saveResourcesMutation = useSaveDidacticResources();
 
-  // Status: 'idle' | 'pending' | 'success' | 'error' (react-query v5)
   const saveStrategiesStatus = saveStrategiesMutation.status;
   const saveResourcesStatus = saveResourcesMutation.status;
 
-  // Extraer mensajes sin usar `any`
   const saveStrategiesErrorMessage = extractErrorMessage(
-    // mutation.error es tipado, pero lo tratamos como unknown por seguridad
     (saveStrategiesMutation as unknown as { error?: unknown }).error,
   );
   const saveResourcesErrorMessage = extractErrorMessage(
     (saveResourcesMutation as unknown as { error?: unknown }).error,
   );
 
-  /* Sink server data into local state when available (only if non-empty) */
   useEffect(() => {
     if (Array.isArray(serverStrategies) && serverStrategies.length > 0) {
       setMethodologicalStrategies(serverStrategies);
@@ -129,7 +119,6 @@ export default function FifthStep() {
     }
   }, [serverResources]);
 
-  /* Local CRUD helpers */
   const addStrategy = () => {
     setMethodologicalStrategies((s) => [
       ...s,
@@ -163,7 +152,6 @@ export default function FifthStep() {
       r.map((res) => (res.id === id ? { ...res, [field]: value } : res)),
     );
 
-  /* handleNextStep: guarda ambos endpoints (estrategias + recursos) y avanza sólo si OK */
   const handleNextStep = async () => {
     console.log(
       "Guardando estrategias metodológicas...",
@@ -181,7 +169,6 @@ export default function FifthStep() {
     }
 
     try {
-      // hacemos las dos mutaciones en paralelo
       await Promise.all([
         saveStrategiesMutation.mutateAsync({
           syllabusId: normalizedId,
@@ -193,18 +180,15 @@ export default function FifthStep() {
         }),
       ]);
 
-      // opcional: refrescar desde servidor
       await Promise.all([refetchStrategies(), refetchResources()]);
 
       nextStep();
     } catch (err) {
       const msg = extractErrorMessage(err);
       console.error("Error guardando datos del paso 5:", msg ?? err);
-      // Política actual: no avanzamos si hay error.
     }
   };
 
-  /* Render */
   return (
     <Step step={5} onNextStep={handleNextStep}>
       <div className="w-full p-6 space-y-8">

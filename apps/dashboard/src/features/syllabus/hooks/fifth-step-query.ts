@@ -1,7 +1,5 @@
-// src/features/syllabus/hooks/fifth-step-query.ts
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-/** Tipos compartidos */
 export interface MethodologicalStrategy {
   id: string;
   title: string;
@@ -23,7 +21,6 @@ class SyllabusManager {
     );
   }
 
-  /* ---------- GET ---------- */
   async fetchMethodologicalStrategies(syllabusId: string, baseUrl?: string) {
     const apiBase = this.getBase(baseUrl);
     const url = `${apiBase}/syllabus/${encodeURIComponent(syllabusId)}/estrategias_metodologicas`;
@@ -37,7 +34,6 @@ class SyllabusManager {
 
   async fetchDidacticResources(syllabusId: string, baseUrl?: string) {
     const apiBase = this.getBase(baseUrl);
-    // si el backend expone otra ruta para GET, ajusta aquí. Probamos nombre sin _notas también.
     const urls = [
       `${apiBase}/syllabus/${encodeURIComponent(syllabusId)}/recursos_didacticos_notas`,
       `${apiBase}/syllabus/${encodeURIComponent(syllabusId)}/recursos_didacticos`,
@@ -54,7 +50,6 @@ class SyllabusManager {
     );
   }
 
-  /* ---------- helper POST/PUT ---------- */
   private async postOrPut(url: string, method: "POST" | "PUT", body: unknown) {
     const res = await fetch(url, {
       method,
@@ -64,7 +59,6 @@ class SyllabusManager {
     return res;
   }
 
-  /* ---------- SAVE estrategias ---------- */
   async saveMethodologicalStrategies(
     syllabusId: string,
     estrategias: MethodologicalStrategy[],
@@ -74,18 +68,15 @@ class SyllabusManager {
     const normalizedId = (syllabusId ?? "").trim();
     const hasId = normalizedId !== "" && /^\d+$/.test(normalizedId);
 
-    // Prefer PUT /syllabus/{id}/estrategias_metodologicas with expected field name
     if (hasId) {
       const urlPut = `${apiBase}/syllabus/${encodeURIComponent(normalizedId)}/estrategias_metodologicas`;
 
-      // Body expected by backend: { id: <id>, estrategias_metodologicas: [...] }
       let res = await this.postOrPut(urlPut, "PUT", {
         id: normalizedId,
         estrategias_metodologicas: estrategias,
       });
       if (res.ok) return;
 
-      // If PUT rejected with 400 maybe it expects different shape: try with syllabusId key
       if (res.status === 400 || res.status === 422) {
         res = await this.postOrPut(urlPut, "PUT", {
           syllabusId: normalizedId,
@@ -94,14 +85,12 @@ class SyllabusManager {
         if (res.ok) return;
       }
 
-      // If not found, fall through to POST below
       if (res.status !== 404) {
         const t = await res.text();
         throw new Error(`PUT ${urlPut} -> ${res.status} ${t}`);
       }
     }
 
-    // POST create route (body: { syllabusId, estrategias_metodologicas })
     const urlPost = `${apiBase}/syllabus/estrategias_metodologicas`;
     let resPost = await this.postOrPut(urlPost, "POST", {
       syllabusId: normalizedId,
@@ -109,7 +98,6 @@ class SyllabusManager {
     });
     if (resPost.ok) return;
 
-    // fallback: POST array directly (unlikely for this backend but safe)
     resPost = await this.postOrPut(urlPost, "POST", estrategias);
     if (resPost.ok) return;
 
@@ -117,7 +105,6 @@ class SyllabusManager {
     throw new Error(`POST ${urlPost} -> ${resPost.status} ${t}`);
   }
 
-  /* ---------- SAVE recursos ---------- */
   async saveDidacticResources(
     syllabusId: string,
     recursos: DidacticResource[],
@@ -130,14 +117,12 @@ class SyllabusManager {
     if (hasId) {
       const urlPut = `${apiBase}/syllabus/${encodeURIComponent(normalizedId)}/recursos_didacticos_notas`;
 
-      // Backend expects: { id: <id>, recursos_didacticos_notas: [...] }
       let res = await this.postOrPut(urlPut, "PUT", {
         id: normalizedId,
         recursos_didacticos_notas: recursos,
       });
       if (res.ok) return;
 
-      // fallback: try syllabusId key
       if (res.status === 400 || res.status === 422) {
         res = await this.postOrPut(urlPut, "PUT", {
           syllabusId: normalizedId,
@@ -159,7 +144,6 @@ class SyllabusManager {
     });
     if (resPost.ok) return;
 
-    // fallback: POST array directly
     resPost = await this.postOrPut(urlPost, "POST", recursos);
     if (resPost.ok) return;
 
@@ -169,8 +153,6 @@ class SyllabusManager {
 }
 
 export const syllabusManager = new SyllabusManager();
-
-/* ---------- Hooks (react-query) ---------- */
 
 export const useMethodologicalStrategiesQuery = (syllabusId: string | null) => {
   const normalizedId = (syllabusId ?? "").trim();
