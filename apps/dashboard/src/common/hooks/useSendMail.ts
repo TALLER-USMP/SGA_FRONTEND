@@ -46,7 +46,9 @@ const sendMailRequest = async (opts: SendMailOptions): Promise<void> => {
 
   const mailToken = sessionStorage.getItem("mailToken");
   if (!mailToken) {
-    throw new Error("No se encontró mailToken en la sesión");
+    throw new Error(
+      "No se encontraron los permisos para enviar email, vuelva a iniciar sesión",
+    );
   }
 
   let attachments: GraphFileAttachment[] | undefined = undefined;

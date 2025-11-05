@@ -41,18 +41,14 @@ export interface ComponenteCompetencia {
 export interface ResultadoAprendizaje {
   id: number;
   silaboId: number;
-  codigo: string;
   descripcion: string;
   orden: number;
 }
 
-export interface UnidadDidactica {
+export interface SemanaUnidad {
   id: number;
-  silaboId: number;
-  numero: number;
-  titulo: string;
-  semanaInicio: number;
-  semanaFin: number;
+  silaboUnidadId: number;
+  semana: number;
   contenidosConceptuales?: string;
   contenidosProcedimentales?: string;
   actividadesAprendizaje?: string;
@@ -60,6 +56,34 @@ export interface UnidadDidactica {
   horasLectivasPractica?: number;
   horasNoLectivasTeoria?: number;
   horasNoLectivasPractica?: number;
+  creadoEn?: string;
+  actualizadoEn?: string;
+}
+
+export interface UnidadDidactica {
+  id: number;
+  silaboId: number;
+  numero: number;
+  titulo: string;
+  capacidadesText?: string;
+  contenidosConceptuales?: string;
+  contenidosProcedimentales?: string;
+  actividadesAprendizaje?: string;
+  horasLectivasTeoria?: number;
+  horasLectivasPractica?: number;
+  horasNoLectivasTeoria?: number;
+  horasNoLectivasPractica?: number;
+  semanas?: SemanaUnidad[];
+}
+
+export interface EstrategiaMetodologica {
+  nombre: string;
+  descripcion: string;
+}
+
+export interface NotaRecurso {
+  nombre: string;
+  descripcion: string;
 }
 
 export interface RecursoDidactico {
@@ -70,28 +94,82 @@ export interface RecursoDidactico {
   observaciones?: string;
 }
 
-export interface PlanEvaluacion {
+export interface RecursosDidacticos {
+  notas?: NotaRecurso[];
+  recursos?: RecursoDidactico[];
+}
+
+export interface PlanEvaluacionItem {
   id: number;
   silaboId: number;
+  componenteNombre: string;
+  instrumentoNombre: string;
   semana: number;
-  instrumento: string;
+  fecha?: string | null;
+  instrucciones?: string;
+  rubricaUrl?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface VariableFormula {
+  codigo: string;
+  nombre: string;
+  tipo: string;
+  descripcion: string;
+  orden: number;
+}
+
+export interface Subformula {
+  variableCodigo: string;
+  expresion: string;
+}
+
+export interface VariablePlanMapping {
+  variableCodigo: string;
+  planEvaluacionOfertaId: number;
+}
+
+export interface FormulaEvaluacion {
+  id: number;
+  silaboId: number;
+  nombreRegla: string;
+  variableFinalCodigo: string;
+  expresionFinal: string;
+  activo: boolean;
+  variables?: VariableFormula[];
+  subformulas?: Subformula[];
+  variablePlanMappings?: VariablePlanMapping[];
+  planesEvaluacion?: PlanEvaluacionItem[];
+}
+
+export interface EvaluacionAprendizaje {
+  planEvaluacion?: PlanEvaluacionItem[];
+  formulaEvaluacion?: FormulaEvaluacion;
+  // Campos antiguos para compatibilidad
   descripcion?: string;
-  peso?: number;
+  formulaPF?: string;
+  componentesPF?: ComponenteEvaluacion[];
+  descripcionPE?: string;
+  formulaPE?: string;
+  componentesPE?: ComponenteEvaluacion[];
 }
 
 export interface FuenteInformacion {
   id: number;
-  tipo: "LIBRO" | "ARTICULO" | "WEB" | "OTRO";
+  tipo: "LIBRO" | "ART" | "WEB" | "OTRO";
   autores: string;
   anio?: number;
   titulo: string;
   editorial?: string;
-  ciudad?: string;
-  isbn?: string;
-  url?: string;
+  ciudad?: string | null;
+  isbn?: string | null;
+  url?: string | null;
+  notas?: string | null;
 }
 
 export interface AporteResultadoPrograma {
+  silaboId?: number;
   resultadoCodigo: string;
   resultadoDescripcion: string;
   aporteValor: "K" | "R" | "";
@@ -120,8 +198,8 @@ export interface CompleteSyllabus {
   componentesActitudinales: ComponenteCompetencia[];
   resultadosAprendizaje: ResultadoAprendizaje[];
   unidadesDidacticas: UnidadDidactica[];
-  estrategiasMetodologicas: string | null;
-  recursosDidacticos: RecursoDidactico[];
+  estrategiasMetodologicas: EstrategiaMetodologica[];
+  recursosDidacticos: RecursosDidacticos;
   evaluacionAprendizaje: EvaluacionAprendizaje;
   fuentes: FuenteInformacion[];
   aportesResultadosPrograma: AporteResultadoPrograma[];

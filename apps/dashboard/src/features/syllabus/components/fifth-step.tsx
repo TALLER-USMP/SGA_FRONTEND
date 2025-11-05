@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
+import { useFinalizeSyllabus } from "../hooks/use-finalize-syllabus";
 import { X, Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,6 +37,40 @@ export default function FifthStep() {
 
   const saveStrategiesMutation = useUpdateMethodologicalStrategies();
   const saveResourcesMutation = useUpdateDidacticResources();
+
+  // Hook para finalizar el sílabo si es el último step
+  const { isLastStep, finalizeSyllabus } = useFinalizeSyllabus({
+    syllabusId,
+    onBeforeFinalize: async () => {
+      // Guardar datos del step 5 antes de finalizar
+      const normalizedId = syllabusId ? String(syllabusId).trim() : "";
+      const isValidId = normalizedId !== "" && /^\d+$/.test(normalizedId);
+
+      if (!isValidId) {
+        throw new Error("ID del syllabus no válido");
+      }
+
+      if (
+        methodologicalStrategies === undefined ||
+        didacticResources === undefined
+      ) {
+        throw new Error("Esperando datos del servidor...");
+      }
+
+      await Promise.all([
+        saveStrategiesMutation.mutateAsync({
+          syllabusId: normalizedId,
+          estrategias: methodologicalStrategies,
+        }),
+        saveResourcesMutation.mutateAsync({
+          syllabusId: normalizedId,
+          recursos: didacticResources,
+        }),
+      ]);
+
+      toast.success("Datos guardados correctamente");
+    },
+  });
 
   // Sincronizar con datos del servidor cuando lleguen
   useEffect(() => {
@@ -96,6 +131,13 @@ export default function FifthStep() {
     );
 
   const handleNextStep = async () => {
+    // Si es el último step, ejecutar lógica de finalización
+    if (isLastStep) {
+      await finalizeSyllabus();
+      return;
+    }
+
+    // Si no es el último step, guardar y avanzar normalmente
     const normalizedId = syllabusId ? String(syllabusId).trim() : "";
     const isValidId = normalizedId !== "" && /^\d+$/.test(normalizedId);
 

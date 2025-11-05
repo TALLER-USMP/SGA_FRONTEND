@@ -1,8 +1,10 @@
 import React from "react";
 import { useStepper } from "../hooks/use-steps";
 
-export const StepsContext = React.createContext(
-  {} as ReturnType<typeof useStepper>,
-);
+type StepsContextType = ReturnType<typeof useStepper> & {
+  allowedSteps?: number[];
+};
+
+export const StepsContext = React.createContext({} as StepsContextType);
 
 export const useSteps = () => React.useContext(StepsContext);

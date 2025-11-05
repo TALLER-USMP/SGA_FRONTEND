@@ -1,5 +1,7 @@
 import StepsProvider from "../contexts/steps-context";
 import { SyllabusProvider } from "../contexts/syllabus-context";
+import { PermissionsProvider } from "../contexts/permissions-context";
+import { usePermissions } from "../hooks/use-permissions";
 import FirstStep from "../components/first-step";
 import SecondStep from "../components/second-step";
 import ThirdStep from "../components/third-step";
@@ -10,18 +12,52 @@ import SeventhStep from "../components/seventh-step";
 import EighthStep from "../components/eighth-step";
 
 export default function SyllabusProcess() {
+  // TODO: Obtener userId del contexto de autenticación
+  // Por ahora usamos un ID fijo para testing
+  const userId = 5;
+
+  const { allowedSteps, isLoading, error, hasEditPermissionForSection } =
+    usePermissions(userId);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Cargando permisos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center text-red-600">
+          <p className="text-xl mb-2">Error al cargar permisos</p>
+          <p className="text-sm">{error.message}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <SyllabusProvider>
-      <StepsProvider totalSteps={8}>
-        <FirstStep />
-        <SecondStep />
-        <ThirdStep />
-        <FourthStep />
-        <FifthStep />
-        <SixthStep />
-        <SeventhStep />
-        <EighthStep />
-      </StepsProvider>
+      <PermissionsProvider
+        hasEditPermissionForSection={hasEditPermissionForSection}
+        allowedSteps={allowedSteps}
+      >
+        <StepsProvider totalSteps={8} allowedSteps={allowedSteps}>
+          {allowedSteps.includes(1) && <FirstStep />}
+          {allowedSteps.includes(2) && <SecondStep />}
+          {allowedSteps.includes(3) && <ThirdStep />}
+          {allowedSteps.includes(4) && <FourthStep />}
+          {allowedSteps.includes(5) && <FifthStep />}
+          {allowedSteps.includes(6) && <SixthStep />}
+          {allowedSteps.includes(7) && <SeventhStep />}
+          {allowedSteps.includes(8) && <EighthStep />}
+        </StepsProvider>
+      </PermissionsProvider>
     </SyllabusProvider>
   );
 }
