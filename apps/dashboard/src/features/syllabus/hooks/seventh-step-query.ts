@@ -1,46 +1,59 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-// Tipos para Bibliografía (Paso 7)
-export interface Bibliography {
-  id?: string | number;
-  authors?: string;
-  year?: string;
-  title?: string;
+// Interfaces para Fuentes Bibliográficas (Paso 7)
+export interface Fuente {
+  id: number;
+  silaboId: number;
+  tipo: "LIBRO" | "ART" | "WEB";
+  autores: string;
+  anio: number;
+  titulo: string;
+  editorialRevista: string | null;
+  ciudad: string | null;
+  isbnIssn: string | null;
+  doiUrl: string | null;
+  notas: string | null;
+}
+
+export interface FuenteCreate {
+  tipo: "LIBRO" | "ART" | "WEB";
+  autores: string;
+  anio: number;
+  titulo: string;
+  editorialRevista?: string;
+  ciudad?: string;
+  isbnIssn?: string;
+  doiUrl?: string;
+  notas?: string;
+}
+
+export interface FuenteUpdate {
+  tipo?: "LIBRO" | "ART" | "WEB";
   autores?: string;
-  anio?: string;
+  anio?: number;
   titulo?: string;
-  [key: string]: unknown;
+  editorialRevista?: string;
+  ciudad?: string;
+  isbnIssn?: string;
+  doiUrl?: string;
+  notas?: string;
 }
 
-export interface ElectronicResource {
-  id?: string | number;
-  source?: string;
-  year?: string;
-  url?: string;
-  fuente?: string;
-  anio?: string;
-  enlace?: string;
-  [key: string]: unknown;
+export interface FuentesResponse {
+  success: boolean;
+  message: string;
+  data: Fuente[];
 }
 
-export interface BibliografiaResponse {
-  bibliografias?: Bibliography[];
-  recursosElectronicos?: ElectronicResource[];
-  items?: Bibliography[];
-  recursos?: ElectronicResource[];
-  [key: string]: unknown;
+export interface FuenteResponse {
+  success: boolean;
+  message: string;
+  data: Fuente;
 }
 
-export interface BibliografiaData {
-  bibliografias?: Bibliography[];
-  recursosElectronicos?: ElectronicResource[];
-  [key: string]: unknown;
-}
-
-interface ApiErrorResponse {
-  message?: string;
-  error?: string;
-  [key: string]: unknown;
+export interface DeleteResponse {
+  success: boolean;
+  message: string;
 }
 
 class SeventhStepManager {
@@ -52,146 +65,181 @@ class SeventhStepManager {
     );
   }
 
-  async fetchBibliografia(
-    syllabusId: number,
-    baseUrl?: string,
-  ): Promise<BibliografiaResponse> {
+  async fetchFuentes(silaboId: number, baseUrl?: string): Promise<Fuente[]> {
     const apiBase = this.getApiBase(baseUrl);
-    const url = `${apiBase}/syllabus/${syllabusId}/bibliografia`;
+    const url = `${apiBase}/syllabus/${silaboId}/fuentes`;
 
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
     if (res.status === 404) {
-      return { bibliografias: [], recursosElectronicos: [] };
+      return [];
     }
+
     if (!res.ok) {
-      const t = await res.text();
-      throw new Error(`${res.status} ${t}`);
+      const text = await res.text();
+      throw new Error(`Error ${res.status}: ${text}`);
     }
 
-    const response = await res.json();
-
-    // Manejar diferentes formatos de respuesta
-    if (response.data) {
-      const data = response.data;
-      return {
-        bibliografias: data.bibliografias || data.items || [],
-        recursosElectronicos: data.recursosElectronicos || data.recursos || [],
-      };
-    }
-
-    if (response.bibliografias || response.recursosElectronicos) {
-      return {
-        bibliografias: response.bibliografias || [],
-        recursosElectronicos: response.recursosElectronicos || [],
-      };
-    }
-
-    if (response.items || response.recursos) {
-      return {
-        bibliografias: response.items || [],
-        recursosElectronicos: response.recursos || [],
-      };
-    }
-
-    return { bibliografias: [], recursosElectronicos: [] };
+    const response: FuentesResponse = await res.json();
+    return response.data || [];
   }
 
-  async createBibliografia(
-    syllabusId: number,
-    data: BibliografiaData,
+  async createFuente(
+    silaboId: number,
+    fuente: FuenteCreate,
     baseUrl?: string,
-  ): Promise<{ message: string }> {
+  ): Promise<Fuente> {
     const apiBase = this.getApiBase(baseUrl);
-    const url = `${apiBase}/syllabus/${syllabusId}/bibliografia`;
+    const url = `${apiBase}/syllabus/${silaboId}/fuentes`;
 
     const res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(fuente),
     });
 
     if (!res.ok) {
       const text = await res.text();
+      let errorMessage = `Error ${res.status}`;
       try {
-        const json = JSON.parse(text) as ApiErrorResponse;
-        const apiMessage = json?.message || json?.error;
-        if (apiMessage) throw new Error(apiMessage);
-        throw new Error(JSON.stringify(json));
-      } catch (_parseError) {
-        throw new Error(text || `Error ${res.status}` || "error" + _parseError);
+        const json = JSON.parse(text);
+        errorMessage = json.message || json.error || errorMessage;
+      } catch {
+        errorMessage = text || errorMessage;
       }
+      throw new Error(errorMessage);
     }
 
-    return res.json();
+    const response: FuenteResponse = await res.json();
+    return response.data;
   }
 
-  async updateBibliografia(
-    syllabusId: number,
-    data: BibliografiaData,
+  async updateFuente(
+    silaboId: number,
+    fuenteId: number,
+    fuente: FuenteUpdate,
     baseUrl?: string,
-  ): Promise<{ message: string }> {
+  ): Promise<Fuente> {
     const apiBase = this.getApiBase(baseUrl);
-    const url = `${apiBase}/syllabus/${syllabusId}/bibliografia`;
+    const url = `${apiBase}/syllabus/${silaboId}/fuentes/${fuenteId}`;
 
     const res = await fetch(url, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(fuente),
     });
 
     if (!res.ok) {
       const text = await res.text();
+      let errorMessage = `Error ${res.status}`;
       try {
-        const json = JSON.parse(text) as ApiErrorResponse;
-        const apiMessage = json?.message || json?.error;
-        if (apiMessage) throw new Error(apiMessage);
-        throw new Error(JSON.stringify(json));
-      } catch (_parseError) {
-        throw new Error(text || `Error ${res.status}` || "error" + _parseError);
+        const json = JSON.parse(text);
+        errorMessage = json.message || json.error || errorMessage;
+      } catch {
+        errorMessage = text || errorMessage;
       }
+      throw new Error(errorMessage);
     }
 
-    return res.json();
+    const response: FuenteResponse = await res.json();
+    return response.data;
+  }
+
+  async deleteFuente(
+    silaboId: number,
+    fuenteId: number,
+    baseUrl?: string,
+  ): Promise<void> {
+    const apiBase = this.getApiBase(baseUrl);
+    const url = `${apiBase}/syllabus/${silaboId}/fuentes/${fuenteId}`;
+
+    const res = await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      let errorMessage = `Error ${res.status}`;
+      try {
+        const json = JSON.parse(text);
+        errorMessage = json.message || json.error || errorMessage;
+      } catch {
+        errorMessage = text || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
   }
 }
 
 const seventhStepManager = new SeventhStepManager();
 
-export const useBibliografia = (syllabusId: number | null) => {
-  const isValidId = syllabusId !== null && syllabusId > 0;
+export const useFuentesQuery = (silaboId: number | null) => {
+  const isValidId = silaboId !== null && silaboId > 0;
 
-  return useQuery<BibliografiaResponse, Error>({
-    queryKey: ["syllabus", syllabusId, "bibliografia"],
-    queryFn: () => seventhStepManager.fetchBibliografia(syllabusId!),
+  return useQuery<Fuente[], Error>({
+    queryKey: ["syllabus", silaboId, "fuentes"],
+    queryFn: () => seventhStepManager.fetchFuentes(silaboId!),
     enabled: isValidId,
     retry: false,
-    throwOnError: false,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
   });
 };
 
-export const useSaveBibliografia = () => {
+export const useCreateFuente = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<Fuente, Error, { silaboId: number; fuente: FuenteCreate }>(
+    {
+      mutationFn: ({ silaboId, fuente }) =>
+        seventhStepManager.createFuente(silaboId, fuente),
+      onSuccess: (_, variables) => {
+        queryClient.invalidateQueries({
+          queryKey: ["syllabus", variables.silaboId, "fuentes"],
+        });
+      },
+    },
+  );
+};
+
+export const useUpdateFuente = () => {
   const queryClient = useQueryClient();
 
   return useMutation<
-    { message: string },
+    Fuente,
     Error,
-    { syllabusId: number; data: BibliografiaData; isCreating: boolean }
+    { silaboId: number; fuenteId: number; fuente: FuenteUpdate }
   >({
-    mutationFn: ({ syllabusId, data, isCreating }) => {
-      if (isCreating) {
-        return seventhStepManager.createBibliografia(syllabusId, data);
-      } else {
-        return seventhStepManager.updateBibliografia(syllabusId, data);
-      }
-    },
+    mutationFn: ({ silaboId, fuenteId, fuente }) =>
+      seventhStepManager.updateFuente(silaboId, fuenteId, fuente),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
-        queryKey: ["syllabus", variables.syllabusId, "bibliografia"],
+        queryKey: ["syllabus", variables.silaboId, "fuentes"],
+      });
+    },
+  });
+};
+
+export const useDeleteFuente = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, Error, { silaboId: number; fuenteId: number }>({
+    mutationFn: ({ silaboId, fuenteId }) =>
+      seventhStepManager.deleteFuente(silaboId, fuenteId),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["syllabus", variables.silaboId, "fuentes"],
       });
     },
   });

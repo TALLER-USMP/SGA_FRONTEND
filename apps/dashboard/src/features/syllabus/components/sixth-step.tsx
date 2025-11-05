@@ -1,6 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
+import { useSyllabusContext } from "../contexts/syllabus-context";
+import { toast } from "sonner";
+import { useFormulaQuery } from "../hooks/sixth-step-query";
 import {
   Select,
   SelectContent,
@@ -131,7 +134,19 @@ const availableFormulas: MainFormula[] = [
 
 export default function SixthStep() {
   const { nextStep } = useSteps();
+  const { syllabusId } = useSyllabusContext();
   const [selectedFormula, setSelectedFormula] = useState<string>("1");
+
+  // Intentar cargar fórmula del API
+  const { data: formulaFromApi, isLoading } = useFormulaQuery(syllabusId);
+
+  // Si hay fórmula del API, mostrar mensaje en consola
+  useEffect(() => {
+    if (formulaFromApi) {
+      console.log("Fórmula cargada desde API:", formulaFromApi);
+      toast.success("Fórmula cargada desde el servidor");
+    }
+  }, [formulaFromApi]);
 
   const currentFormula = availableFormulas.find(
     (f) => f.id === selectedFormula,
@@ -140,9 +155,20 @@ export default function SixthStep() {
   const handleNextStep = () => {
     console.log("Guardando fórmula seleccionada...", {
       formula: currentFormula,
+      fromApi: formulaFromApi,
     });
     nextStep();
   };
+
+  if (isLoading) {
+    return (
+      <Step step={6} onNextStep={handleNextStep}>
+        <div className="w-full p-6">
+          <p className="text-center">Cargando fórmula de evaluación...</p>
+        </div>
+      </Step>
+    );
+  }
 
   return (
     <Step step={6} onNextStep={handleNextStep}>

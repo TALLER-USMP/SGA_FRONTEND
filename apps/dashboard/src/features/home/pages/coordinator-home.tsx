@@ -5,15 +5,27 @@ interface ModuleCardProps {
   icon: React.ReactNode;
   title: string;
   onClick: () => void;
+  disabled?: boolean;
 }
 
-function ModuleCard({ icon, title, onClick }: ModuleCardProps) {
+function ModuleCard({ icon, title, onClick, disabled }: ModuleCardProps) {
   return (
     <button
-      onClick={onClick}
-      className="bg-white hover:bg-gray-50 border-2 border-gray-300 rounded-lg p-8 transition-all duration-200 shadow-sm hover:shadow-md flex flex-col items-center justify-center gap-4 aspect-square"
+      onClick={!disabled ? onClick : undefined}
+      disabled={disabled}
+      className={`border-2 rounded-lg p-8 transition-all duration-200 shadow-sm flex flex-col items-center justify-center gap-4 aspect-square
+        ${
+          disabled
+            ? "opacity-50 cursor-not-allowed bg-gray-200"
+            : "bg-white hover:bg-gray-50 hover:shadow-md"
+        }
+      `}
     >
-      <div className="bg-red-600 text-white p-4 rounded-lg">{icon}</div>
+      <div
+        className={`p-4 rounded-lg ${disabled ? "bg-gray-400 text-gray-200" : "bg-red-600 text-white"}`}
+      >
+        {icon}
+      </div>
       <span className="text-base font-semibold text-black text-center">
         {title}
       </span>
@@ -44,11 +56,13 @@ export default function CoordinatorHome() {
       icon: <List size={32} />,
       title: "Catalogo de Sumilla",
       onClick: () => navigate("/coordinator/syllabus-catalog"),
+      disabled: true,
     },
     {
       icon: <Plus size={32} />,
       title: "Registrar nuevo Silabo",
       onClick: () => navigate("/syllabus"),
+      disabled: true,
     },
     {
       icon: <Edit size={32} />,
@@ -66,6 +80,7 @@ export default function CoordinatorHome() {
             icon={module.icon}
             title={module.title}
             onClick={module.onClick}
+            disabled={module.disabled}
           />
         ))}
       </div>
