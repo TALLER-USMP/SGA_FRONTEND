@@ -1,235 +1,162 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+﻿import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export interface MethodologicalStrategy {
-  id: string;
-  title: string;
-  description: string;
+  titulo: string;
+  descripcion: string;
 }
 
 export interface DidacticResource {
-  id: string;
-  title: string;
-  description: string;
+  titulo: string;
+  descripcion: string;
 }
 
-class SyllabusManager {
-  private getBase(baseUrl?: string) {
-    return (
-      baseUrl ??
-      import.meta.env.VITE_API_BASE_URL ??
-      "http://localhost:7071/api"
-    );
+interface MethodologicalStrategiesResponse {
+  message: string;
+  data: {
+    items: MethodologicalStrategy[];
+  };
+}
+
+interface DidacticResourcesResponse {
+  message: string;
+  data: {
+    items: DidacticResource[];
+  };
+}
+
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:7071/api";
+
+// ==================== GET APIs ====================
+
+async function fetchMethodologicalStrategies(
+  syllabusId: string,
+): Promise<MethodologicalStrategy[]> {
+  const url = `${API_BASE}/syllabus/${syllabusId}/estrategias_metodologicas`;
+  const res = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error ${res.status}: ${text}`);
   }
 
-  async fetchMethodologicalStrategies(syllabusId: string, baseUrl?: string) {
-    const apiBase = this.getBase(baseUrl);
-    const url = `${apiBase}/syllabus/${encodeURIComponent(syllabusId)}/estrategias_metodologicas`;
-    const res = await fetch(url, { method: "GET" });
-    if (!res.ok) {
-      const t = await res.text();
-      throw new Error(`GET ${url} -> ${res.status} ${t}`);
-    }
-    return (await res.json()) as MethodologicalStrategy[];
+  const response: MethodologicalStrategiesResponse = await res.json();
+  return response.data?.items || [];
+}
+
+async function fetchDidacticResources(
+  syllabusId: string,
+): Promise<DidacticResource[]> {
+  const url = `${API_BASE}/syllabus/${syllabusId}/recursos_didacticos_notas`;
+  const res = await fetch(url, {
+    method: "GET",
+    credentials: "include",
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error ${res.status}: ${text}`);
   }
 
-  async fetchDidacticResources(syllabusId: string, baseUrl?: string) {
-    const apiBase = this.getBase(baseUrl);
-    const urls = [
-      `${apiBase}/syllabus/${encodeURIComponent(syllabusId)}/recursos_didacticos_notas`,
-      `${apiBase}/syllabus/${encodeURIComponent(syllabusId)}/recursos_didacticos`,
-    ];
-    for (const url of urls) {
-      const res = await fetch(url, { method: "GET" });
-      if (res.ok) return (await res.json()) as DidacticResource[];
-      if (res.status === 404) continue;
-      const t = await res.text();
-      throw new Error(`GET ${url} -> ${res.status} ${t}`);
-    }
-    throw new Error(
-      `GET recursos: no route matched for syllabusId=${syllabusId}`,
-    );
-  }
+  const response: DidacticResourcesResponse = await res.json();
+  return response.data?.items || [];
+}
 
-  private async postOrPut(url: string, method: "POST" | "PUT", body: unknown) {
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    return res;
-  }
+// ==================== PUT APIs ====================
 
-  async saveMethodologicalStrategies(
-    syllabusId: string,
-    estrategias: MethodologicalStrategy[],
-    baseUrl?: string,
-  ): Promise<void> {
-    const apiBase = this.getBase(baseUrl);
-    const normalizedId = (syllabusId ?? "").trim();
-    const hasId = normalizedId !== "" && /^\d+$/.test(normalizedId);
+async function updateMethodologicalStrategies(
+  syllabusId: string,
+  estrategias: MethodologicalStrategy[],
+): Promise<void> {
+  const url = `${API_BASE}/syllabus/${syllabusId}/estrategias_metodologicas`;
+  const res = await fetch(url, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ estrategias_metodologicas: estrategias }),
+  });
 
-    if (hasId) {
-      const urlPut = `${apiBase}/syllabus/${encodeURIComponent(normalizedId)}/estrategias_metodologicas`;
-
-      let res = await this.postOrPut(urlPut, "PUT", {
-        id: normalizedId,
-        estrategias_metodologicas: estrategias,
-      });
-      if (res.ok) return;
-
-      if (res.status === 400 || res.status === 422) {
-        res = await this.postOrPut(urlPut, "PUT", {
-          syllabusId: normalizedId,
-          estrategias_metodologicas: estrategias,
-        });
-        if (res.ok) return;
-      }
-
-      if (res.status !== 404) {
-        const t = await res.text();
-        throw new Error(`PUT ${urlPut} -> ${res.status} ${t}`);
-      }
-    }
-
-    const urlPost = `${apiBase}/syllabus/estrategias_metodologicas`;
-    let resPost = await this.postOrPut(urlPost, "POST", {
-      syllabusId: normalizedId,
-      estrategias_metodologicas: estrategias,
-    });
-    if (resPost.ok) return;
-
-    resPost = await this.postOrPut(urlPost, "POST", estrategias);
-    if (resPost.ok) return;
-
-    const t = await resPost.text();
-    throw new Error(`POST ${urlPost} -> ${resPost.status} ${t}`);
-  }
-
-  async saveDidacticResources(
-    syllabusId: string,
-    recursos: DidacticResource[],
-    baseUrl?: string,
-  ): Promise<void> {
-    const apiBase = this.getBase(baseUrl);
-    const normalizedId = (syllabusId ?? "").trim();
-    const hasId = normalizedId !== "" && /^\d+$/.test(normalizedId);
-
-    if (hasId) {
-      const urlPut = `${apiBase}/syllabus/${encodeURIComponent(normalizedId)}/recursos_didacticos_notas`;
-
-      let res = await this.postOrPut(urlPut, "PUT", {
-        id: normalizedId,
-        recursos_didacticos_notas: recursos,
-      });
-      if (res.ok) return;
-
-      if (res.status === 400 || res.status === 422) {
-        res = await this.postOrPut(urlPut, "PUT", {
-          syllabusId: normalizedId,
-          recursos_didacticos_notas: recursos,
-        });
-        if (res.ok) return;
-      }
-
-      if (res.status !== 404) {
-        const t = await res.text();
-        throw new Error(`PUT ${urlPut} -> ${res.status} ${t}`);
-      }
-    }
-
-    const urlPost = `${apiBase}/syllabus/recursos_didacticos_notas`;
-    let resPost = await this.postOrPut(urlPost, "POST", {
-      syllabusId: normalizedId,
-      recursos_didacticos_notas: recursos,
-    });
-    if (resPost.ok) return;
-
-    resPost = await this.postOrPut(urlPost, "POST", recursos);
-    if (resPost.ok) return;
-
-    const t = await resPost.text();
-    throw new Error(`POST ${urlPost} -> ${resPost.status} ${t}`);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error ${res.status}: ${text}`);
   }
 }
 
-export const syllabusManager = new SyllabusManager();
-
-export const useMethodologicalStrategiesQuery = (syllabusId: string | null) => {
-  const normalizedId = (syllabusId ?? "").trim();
-  const isValidId = normalizedId !== "" && /^\d+$/.test(normalizedId);
-
-  return useQuery<MethodologicalStrategy[], Error>({
-    queryKey: [
-      "syllabus",
-      isValidId ? normalizedId : null,
-      "estrategias_metodologicas",
-    ],
-    queryFn: () => syllabusManager.fetchMethodologicalStrategies(normalizedId),
-    enabled: isValidId,
-    retry: false,
+async function updateDidacticResources(
+  syllabusId: string,
+  recursos: DidacticResource[],
+): Promise<void> {
+  const url = `${API_BASE}/syllabus/${syllabusId}/recursos_didacticos_notas`;
+  const res = await fetch(url, {
+    method: "PUT",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ recursos_didacticos_notas: recursos }),
   });
-};
 
-export const useDidacticResourcesQuery = (syllabusId: string | null) => {
-  const normalizedId = (syllabusId ?? "").trim();
-  const isValidId = normalizedId !== "" && /^\d+$/.test(normalizedId);
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Error ${res.status}: ${text}`);
+  }
+}
 
-  return useQuery<DidacticResource[], Error>({
-    queryKey: [
-      "syllabus",
-      isValidId ? normalizedId : null,
-      "recursos_didacticos",
-    ],
-    queryFn: () => syllabusManager.fetchDidacticResources(normalizedId),
-    enabled: isValidId,
-    retry: false,
+// ==================== React Query Hooks ====================
+
+export function useMethodologicalStrategiesQuery(syllabusId: string | null) {
+  return useQuery({
+    queryKey: ["methodological-strategies", syllabusId],
+    queryFn: () => fetchMethodologicalStrategies(syllabusId!),
+    enabled: !!syllabusId,
+    staleTime: 1000 * 60 * 5,
   });
-};
+}
 
-export const useSaveMethodologicalStrategies = () => {
-  const qc = useQueryClient();
-  return useMutation<
-    void,
-    Error,
-    { syllabusId: string; estrategias: MethodologicalStrategy[] }
-  >({
-    mutationFn: async (vars) => {
-      return await syllabusManager.saveMethodologicalStrategies(
-        vars.syllabusId,
-        vars.estrategias,
-      );
-    },
-    onSuccess: (_data, variables) => {
-      const id = (variables.syllabusId ?? "").trim();
-      if (id && /^\d+$/.test(id)) {
-        qc.invalidateQueries({
-          queryKey: ["syllabus", id, "estrategias_metodologicas"],
-        });
-      }
-    },
+export function useDidacticResourcesQuery(syllabusId: string | null) {
+  return useQuery({
+    queryKey: ["didactic-resources", syllabusId],
+    queryFn: () => fetchDidacticResources(syllabusId!),
+    enabled: !!syllabusId,
+    staleTime: 1000 * 60 * 5,
   });
-};
+}
 
-export const useSaveDidacticResources = () => {
-  const qc = useQueryClient();
-  return useMutation<
-    void,
-    Error,
-    { syllabusId: string; recursos: DidacticResource[] }
-  >({
-    mutationFn: async (vars) => {
-      return await syllabusManager.saveDidacticResources(
-        vars.syllabusId,
-        vars.recursos,
-      );
-    },
-    onSuccess: (_data, variables) => {
-      const id = (variables.syllabusId ?? "").trim();
-      if (id && /^\d+$/.test(id)) {
-        qc.invalidateQueries({
-          queryKey: ["syllabus", id, "recursos_didacticos"],
-        });
-      }
+export function useUpdateMethodologicalStrategies() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      syllabusId,
+      estrategias,
+    }: {
+      syllabusId: string;
+      estrategias: MethodologicalStrategy[];
+    }) => updateMethodologicalStrategies(syllabusId, estrategias),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["methodological-strategies", variables.syllabusId],
+      });
     },
   });
-};
+}
+
+export function useUpdateDidacticResources() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      syllabusId,
+      recursos,
+    }: {
+      syllabusId: string;
+      recursos: DidacticResource[];
+    }) => updateDidacticResources(syllabusId, recursos),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["didactic-resources", variables.syllabusId],
+      });
+    },
+  });
+}

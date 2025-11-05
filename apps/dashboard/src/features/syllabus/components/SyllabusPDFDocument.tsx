@@ -503,9 +503,9 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                 </View>
               </View>
 
-              {/* Filas con el contenido - una fila por cada semana (4 semanas) */}
-              {[...Array(4)].map((_, semanaIdx) => {
-                const numeroSemana = (unidad.semanaInicio || 1) + semanaIdx;
+              {/* Filas con el contenido - una fila por cada semana */}
+              {(unidad.semanas || []).map((semana, semanaIdx) => {
+                const numeroSemana = semana.semana;
 
                 return (
                   <View
@@ -536,78 +536,17 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                         borderRight: "1pt solid black",
                       }}
                     >
-                      {semanaIdx === 0 &&
-                        unidad.contenidosConceptuales
-                          ?.split("\n")
-                          .slice(0, 1)
-                          .map((linea, i) => (
-                            <Text
-                              key={i}
-                              style={{
-                                fontSize: 7.5,
-                                marginBottom: 1.5,
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {linea.startsWith("-")
-                                ? linea
-                                : `- ${linea.trim()}`}
-                            </Text>
-                          ))}
-                      {semanaIdx === 1 &&
-                        unidad.contenidosConceptuales
-                          ?.split("\n")
-                          .slice(1, 2)
-                          .map((linea, i) => (
-                            <Text
-                              key={i}
-                              style={{
-                                fontSize: 7.5,
-                                marginBottom: 1.5,
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {linea.startsWith("-")
-                                ? linea
-                                : `- ${linea.trim()}`}
-                            </Text>
-                          ))}
-                      {semanaIdx === 2 &&
-                        unidad.contenidosConceptuales
-                          ?.split("\n")
-                          .slice(2, 3)
-                          .map((linea, i) => (
-                            <Text
-                              key={i}
-                              style={{
-                                fontSize: 7.5,
-                                marginBottom: 1.5,
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {linea.startsWith("-")
-                                ? linea
-                                : `- ${linea.trim()}`}
-                            </Text>
-                          ))}
-                      {semanaIdx === 3 &&
-                        unidad.contenidosConceptuales
-                          ?.split("\n")
-                          .slice(3, 4)
-                          .map((linea, i) => (
-                            <Text
-                              key={i}
-                              style={{
-                                fontSize: 7.5,
-                                marginBottom: 1.5,
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {linea.startsWith("-")
-                                ? linea
-                                : `- ${linea.trim()}`}
-                            </Text>
-                          ))}
+                      {semana.contenidosConceptuales && (
+                        <Text
+                          style={{
+                            fontSize: 7.5,
+                            marginBottom: 1.5,
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {semana.contenidosConceptuales}
+                        </Text>
+                      )}
                     </View>
                     <View
                       style={{
@@ -616,78 +555,17 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
                         borderRight: "1pt solid black",
                       }}
                     >
-                      {semanaIdx === 0 &&
-                        unidad.contenidosProcedimentales
-                          ?.split("\n")
-                          .slice(0, 1)
-                          .map((linea, i) => (
-                            <Text
-                              key={i}
-                              style={{
-                                fontSize: 7.5,
-                                marginBottom: 1.5,
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {linea.startsWith("-")
-                                ? linea
-                                : `- ${linea.trim()}`}
-                            </Text>
-                          ))}
-                      {semanaIdx === 1 &&
-                        unidad.contenidosProcedimentales
-                          ?.split("\n")
-                          .slice(1, 2)
-                          .map((linea, i) => (
-                            <Text
-                              key={i}
-                              style={{
-                                fontSize: 7.5,
-                                marginBottom: 1.5,
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {linea.startsWith("-")
-                                ? linea
-                                : `- ${linea.trim()}`}
-                            </Text>
-                          ))}
-                      {semanaIdx === 2 &&
-                        unidad.contenidosProcedimentales
-                          ?.split("\n")
-                          .slice(2, 3)
-                          .map((linea, i) => (
-                            <Text
-                              key={i}
-                              style={{
-                                fontSize: 7.5,
-                                marginBottom: 1.5,
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {linea.startsWith("-")
-                                ? linea
-                                : `- ${linea.trim()}`}
-                            </Text>
-                          ))}
-                      {semanaIdx === 3 &&
-                        unidad.contenidosProcedimentales
-                          ?.split("\n")
-                          .slice(3, 4)
-                          .map((linea, i) => (
-                            <Text
-                              key={i}
-                              style={{
-                                fontSize: 7.5,
-                                marginBottom: 1.5,
-                                lineHeight: 1.3,
-                              }}
-                            >
-                              {linea.startsWith("-")
-                                ? linea
-                                : `- ${linea.trim()}`}
-                            </Text>
-                          ))}
+                      {semana.contenidosProcedimentales && (
+                        <Text
+                          style={{
+                            fontSize: 7.5,
+                            marginBottom: 1.5,
+                            lineHeight: 1.3,
+                          }}
+                        >
+                          {semana.contenidosProcedimentales}
+                        </Text>
+                      )}
                     </View>
                     <View
                       style={{
@@ -855,24 +733,58 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
       {/* Página 3: Resto de secciones */}
       <Page size="A4" style={styles.page}>
         {/* V. ESTRATEGIAS METODOLÓGICAS */}
-        {data.estrategiasMetodologicas && (
-          <View style={{ marginBottom: 12 }}>
-            <Text style={styles.sectionTitle}>
-              V. ESTRATEGIAS METODOLÓGICAS
-            </Text>
-            <Text style={styles.text}>{data.estrategiasMetodologicas}</Text>
-          </View>
-        )}
+        {data.estrategiasMetodologicas &&
+          data.estrategiasMetodologicas.length > 0 && (
+            <View style={{ marginBottom: 12 }}>
+              <Text style={styles.sectionTitle}>
+                V. ESTRATEGIAS METODOLÓGICAS
+              </Text>
+              {data.estrategiasMetodologicas.map((estrategia, idx) => (
+                <View key={idx} style={{ marginBottom: 8 }}>
+                  <Text style={{ ...styles.text, fontWeight: "bold" }}>
+                    {estrategia.nombre}
+                  </Text>
+                  <Text style={styles.text}>{estrategia.descripcion}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
         {/* VI. RECURSOS DIDÁCTICOS */}
-        {data.recursosDidacticos && data.recursosDidacticos.length > 0 && (
+        {data.recursosDidacticos && (
           <View style={{ marginBottom: 12 }}>
             <Text style={styles.sectionTitle}>VI. RECURSOS DIDÁCTICOS</Text>
-            {data.recursosDidacticos.map((recurso, idx) => (
-              <Text key={idx} style={styles.listItem}>
-                - {recurso.recursoNombre}
-              </Text>
-            ))}
+
+            {/* Notas */}
+            {data.recursosDidacticos.notas &&
+              data.recursosDidacticos.notas.length > 0 && (
+                <View style={{ marginBottom: 8 }}>
+                  <Text style={{ ...styles.text, fontWeight: "bold" }}>
+                    Notas:
+                  </Text>
+                  {data.recursosDidacticos.notas.map((nota, idx) => (
+                    <Text key={idx} style={styles.listItem}>
+                      - {nota.nombre}: {nota.descripcion}
+                    </Text>
+                  ))}
+                </View>
+              )}
+
+            {/* Recursos */}
+            {data.recursosDidacticos.recursos &&
+              data.recursosDidacticos.recursos.length > 0 && (
+                <View>
+                  <Text style={{ ...styles.text, fontWeight: "bold" }}>
+                    Recursos:
+                  </Text>
+                  {data.recursosDidacticos.recursos.map((recurso, idx) => (
+                    <Text key={idx} style={styles.listItem}>
+                      - {recurso.recursoNombre} ({recurso.destino})
+                      {recurso.observaciones && ` - ${recurso.observaciones}`}
+                    </Text>
+                  ))}
+                </View>
+              )}
           </View>
         )}
 
@@ -883,77 +795,296 @@ export function SyllabusPDFDocument({ data }: SyllabusPDFDocumentProps) {
               VII. EVALUACIÓN DEL APRENDIZAJE
             </Text>
 
-            {/* Descripción del promedio final */}
-            {data.evaluacionAprendizaje.descripcion && (
-              <Text style={[styles.text, { marginTop: 6, marginBottom: 4 }]}>
-                {data.evaluacionAprendizaje.descripcion}
-              </Text>
-            )}
+            {/* Nueva estructura con formulaEvaluacion */}
+            {data.evaluacionAprendizaje.formulaEvaluacion && (
+              <View>
+                {/* Texto introductorio */}
+                <Text style={[styles.text, { marginTop: 6, marginBottom: 8 }]}>
+                  El promedio final (PF) de la asignatura se obtiene con la
+                  siguiente fórmula:
+                </Text>
 
-            {/* Fórmula PF */}
-            {data.evaluacionAprendizaje.formulaPF && (
-              <Text
-                style={[
-                  styles.text,
+                {/* Fórmula principal */}
+                <Text
+                  style={[
+                    styles.text,
+                    {
+                      textAlign: "center",
+                      fontFamily: "Helvetica-Bold",
+                      marginBottom: 8,
+                      fontSize: 10,
+                    },
+                  ]}
+                >
                   {
-                    textAlign: "center",
-                    fontFamily: "Helvetica-Bold",
-                    marginBottom: 6,
-                  },
-                ]}
-              >
-                {data.evaluacionAprendizaje.formulaPF}
-              </Text>
+                    data.evaluacionAprendizaje.formulaEvaluacion
+                      .variableFinalCodigo
+                  }{" "}
+                  ={" "}
+                  {data.evaluacionAprendizaje.formulaEvaluacion.expresionFinal}
+                </Text>
+
+                {/* Donde: */}
+                <Text style={[styles.text, { marginBottom: 4 }]}>Donde:</Text>
+
+                {/* Variables */}
+                {data.evaluacionAprendizaje.formulaEvaluacion.variables &&
+                  data.evaluacionAprendizaje.formulaEvaluacion.variables
+                    .length > 0 && (
+                    <View style={{ marginLeft: 10, marginBottom: 8 }}>
+                      {data.evaluacionAprendizaje.formulaEvaluacion.variables.map(
+                        (variable, idx) => (
+                          <Text
+                            key={idx}
+                            style={[styles.text, { marginBottom: 2 }]}
+                          >
+                            {variable.codigo} = {variable.descripcion}
+                          </Text>
+                        ),
+                      )}
+                    </View>
+                  )}
+
+                {/* Subfórmulas */}
+                {data.evaluacionAprendizaje.formulaEvaluacion.subformulas &&
+                  data.evaluacionAprendizaje.formulaEvaluacion.subformulas
+                    .length > 0 && (
+                    <View style={{ marginLeft: 10, marginBottom: 8 }}>
+                      {data.evaluacionAprendizaje.formulaEvaluacion.subformulas.map(
+                        (subformula, idx) => (
+                          <Text
+                            key={idx}
+                            style={[styles.text, { marginBottom: 2 }]}
+                          >
+                            {subformula.variableCodigo} = {subformula.expresion}
+                          </Text>
+                        ),
+                      )}
+                    </View>
+                  )}
+
+                {/* Texto adicional para PE */}
+                <Text style={[styles.text, { marginTop: 8, marginBottom: 8 }]}>
+                  El promedio de evaluaciones (PE) se obtiene de la siguiente
+                  manera:
+                </Text>
+
+                {/* Plan de evaluación como tabla */}
+                {data.evaluacionAprendizaje.planEvaluacion &&
+                  data.evaluacionAprendizaje.planEvaluacion.length > 0 && (
+                    <View
+                      style={{
+                        border: "1pt solid black",
+                        marginTop: 8,
+                        marginBottom: 8,
+                      }}
+                    >
+                      {/* Encabezado de tabla */}
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          borderBottom: "1pt solid black",
+                          backgroundColor: "#f0f0f0",
+                        }}
+                      >
+                        <View
+                          style={{
+                            width: "25%",
+                            padding: "4pt",
+                            borderRight: "1pt solid black",
+                          }}
+                        >
+                          <Text style={[styles.textBold, { fontSize: 8 }]}>
+                            Componente
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            width: "25%",
+                            padding: "4pt",
+                            borderRight: "1pt solid black",
+                          }}
+                        >
+                          <Text style={[styles.textBold, { fontSize: 8 }]}>
+                            Instrumento
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            width: "15%",
+                            padding: "4pt",
+                            borderRight: "1pt solid black",
+                          }}
+                        >
+                          <Text style={[styles.textBold, { fontSize: 8 }]}>
+                            Semana
+                          </Text>
+                        </View>
+                        <View
+                          style={{
+                            width: "35%",
+                            padding: "4pt",
+                          }}
+                        >
+                          <Text style={[styles.textBold, { fontSize: 8 }]}>
+                            Instrucciones
+                          </Text>
+                        </View>
+                      </View>
+
+                      {/* Filas de datos */}
+                      {data.evaluacionAprendizaje.planEvaluacion.map(
+                        (item, idx) => (
+                          <View
+                            key={idx}
+                            style={{
+                              flexDirection: "row",
+                              borderBottom:
+                                idx <
+                                data.evaluacionAprendizaje.planEvaluacion!
+                                  .length -
+                                  1
+                                  ? "1pt solid black"
+                                  : "none",
+                            }}
+                          >
+                            <View
+                              style={{
+                                width: "25%",
+                                padding: "4pt",
+                                borderRight: "1pt solid black",
+                              }}
+                            >
+                              <Text style={{ fontSize: 8 }}>
+                                {item.componenteNombre}
+                              </Text>
+                            </View>
+                            <View
+                              style={{
+                                width: "25%",
+                                padding: "4pt",
+                                borderRight: "1pt solid black",
+                              }}
+                            >
+                              <Text style={{ fontSize: 8 }}>
+                                {item.instrumentoNombre}
+                              </Text>
+                            </View>
+                            <View
+                              style={{
+                                width: "15%",
+                                padding: "4pt",
+                                borderRight: "1pt solid black",
+                              }}
+                            >
+                              <Text style={{ fontSize: 8 }}>{item.semana}</Text>
+                            </View>
+                            <View
+                              style={{
+                                width: "35%",
+                                padding: "4pt",
+                              }}
+                            >
+                              <Text style={{ fontSize: 8 }}>
+                                {item.instrucciones || "-"}
+                              </Text>
+                            </View>
+                          </View>
+                        ),
+                      )}
+                    </View>
+                  )}
+              </View>
             )}
 
-            {/* Componentes PF (Donde:) */}
-            {data.evaluacionAprendizaje.componentesPF &&
-              data.evaluacionAprendizaje.componentesPF.length > 0 && (
-                <View style={{ marginBottom: 8 }}>
-                  <Text style={styles.text}>Donde:</Text>
-                  {data.evaluacionAprendizaje.componentesPF.map((comp, idx) => (
-                    <Text key={idx} style={[styles.text, { marginLeft: 10 }]}>
-                      {comp.codigo} = {comp.descripcion}
-                    </Text>
-                  ))}
-                </View>
-              )}
+            {/* Mantener compatibilidad con estructura antigua (si no hay formulaEvaluacion) */}
+            {!data.evaluacionAprendizaje.formulaEvaluacion && (
+              <View>
+                {/* Descripción del promedio final */}
+                {data.evaluacionAprendizaje.descripcion && (
+                  <Text
+                    style={[styles.text, { marginTop: 6, marginBottom: 4 }]}
+                  >
+                    {data.evaluacionAprendizaje.descripcion}
+                  </Text>
+                )}
 
-            {/* Descripción PE */}
-            {data.evaluacionAprendizaje.descripcionPE && (
-              <Text style={[styles.text, { marginBottom: 4 }]}>
-                {data.evaluacionAprendizaje.descripcionPE}
-              </Text>
+                {/* Fórmula PF */}
+                {data.evaluacionAprendizaje.formulaPF && (
+                  <Text
+                    style={[
+                      styles.text,
+                      {
+                        textAlign: "center",
+                        fontFamily: "Helvetica-Bold",
+                        marginBottom: 6,
+                      },
+                    ]}
+                  >
+                    {data.evaluacionAprendizaje.formulaPF}
+                  </Text>
+                )}
+
+                {/* Componentes PF (Donde:) */}
+                {data.evaluacionAprendizaje.componentesPF &&
+                  data.evaluacionAprendizaje.componentesPF.length > 0 && (
+                    <View style={{ marginBottom: 8 }}>
+                      <Text style={styles.text}>Donde:</Text>
+                      {data.evaluacionAprendizaje.componentesPF.map(
+                        (comp, idx) => (
+                          <Text
+                            key={idx}
+                            style={[styles.text, { marginLeft: 10 }]}
+                          >
+                            {comp.codigo} = {comp.descripcion}
+                          </Text>
+                        ),
+                      )}
+                    </View>
+                  )}
+
+                {/* Descripción PE */}
+                {data.evaluacionAprendizaje.descripcionPE && (
+                  <Text style={[styles.text, { marginBottom: 4 }]}>
+                    {data.evaluacionAprendizaje.descripcionPE}
+                  </Text>
+                )}
+
+                {/* Fórmula PE */}
+                {data.evaluacionAprendizaje.formulaPE && (
+                  <Text
+                    style={[
+                      styles.text,
+                      {
+                        textAlign: "center",
+                        fontFamily: "Helvetica-Bold",
+                        marginBottom: 6,
+                      },
+                    ]}
+                  >
+                    {data.evaluacionAprendizaje.formulaPE}
+                  </Text>
+                )}
+
+                {/* Componentes PE (Donde:) */}
+                {data.evaluacionAprendizaje.componentesPE &&
+                  data.evaluacionAprendizaje.componentesPE.length > 0 && (
+                    <View style={{ marginBottom: 4 }}>
+                      <Text style={styles.text}>Donde:</Text>
+                      {data.evaluacionAprendizaje.componentesPE.map(
+                        (comp, idx) => (
+                          <Text
+                            key={idx}
+                            style={[styles.text, { marginLeft: 10 }]}
+                          >
+                            {comp.codigo} = {comp.descripcion}
+                          </Text>
+                        ),
+                      )}
+                    </View>
+                  )}
+              </View>
             )}
-
-            {/* Fórmula PE */}
-            {data.evaluacionAprendizaje.formulaPE && (
-              <Text
-                style={[
-                  styles.text,
-                  {
-                    textAlign: "center",
-                    fontFamily: "Helvetica-Bold",
-                    marginBottom: 6,
-                  },
-                ]}
-              >
-                {data.evaluacionAprendizaje.formulaPE}
-              </Text>
-            )}
-
-            {/* Componentes PE (Donde:) */}
-            {data.evaluacionAprendizaje.componentesPE &&
-              data.evaluacionAprendizaje.componentesPE.length > 0 && (
-                <View style={{ marginBottom: 4 }}>
-                  <Text style={styles.text}>Donde:</Text>
-                  {data.evaluacionAprendizaje.componentesPE.map((comp, idx) => (
-                    <Text key={idx} style={[styles.text, { marginLeft: 10 }]}>
-                      {comp.codigo} = {comp.descripcion}
-                    </Text>
-                  ))}
-                </View>
-              )}
           </View>
         )}
 

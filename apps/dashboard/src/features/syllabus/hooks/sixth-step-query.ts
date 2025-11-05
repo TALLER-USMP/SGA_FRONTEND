@@ -1,6 +1,78 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
-// Tipos para Recursos Didácticos (Paso 6)
+// ========================================
+// TIPOS PARA FÓRMULAS DE EVALUACIÓN
+// ========================================
+export interface Variable {
+  codigo: string;
+  nombre: string;
+  tipo: "evaluacion" | "examen" | "trabajo" | "calculada" | "final";
+  descripcion?: string;
+  orden?: number;
+}
+
+export interface Subformula {
+  variableCodigo: string;
+  expresion: string;
+}
+
+export interface VariablePlanMapping {
+  variableCodigo: string;
+  planEvaluacionOfertaId: number;
+}
+
+export interface PlanEvaluacion {
+  id: number;
+  componenteNombre: string;
+  instrumentoNombre: string;
+  semana: number;
+  fecha: string;
+  instrucciones: string;
+  rubricaUrl: string | null;
+}
+
+export interface FormulaEvaluacion {
+  id: number;
+  silaboId: number;
+  nombreRegla: string;
+  variableFinalCodigo: string;
+  expresionFinal: string;
+  activo: boolean;
+  variables: Variable[];
+  subformulas: Subformula[];
+  variablePlanMappings: VariablePlanMapping[];
+  planesEvaluacion?: PlanEvaluacion[];
+}
+
+export interface FormulaEvaluacionCreate {
+  silaboId: number;
+  nombreRegla: string;
+  variableFinalCodigo: string;
+  expresionFinal: string;
+  activo: boolean;
+  variables: Variable[];
+  subformulas: Subformula[];
+  variablePlanMappings: VariablePlanMapping[];
+}
+
+export interface FormulaEvaluacionUpdate {
+  nombreRegla?: string;
+  variableFinalCodigo?: string;
+  expresionFinal?: string;
+  activo?: boolean;
+  variables?: Variable[];
+  subformulas?: Subformula[];
+  variablePlanMappings?: VariablePlanMapping[];
+}
+
+export interface FormulaResponse {
+  message: string;
+  data: FormulaEvaluacion;
+}
+
+// ========================================
+// TIPOS PARA RECURSOS DIDÁCTICOS (legacy)
+// ========================================
 export interface RecursoDidactico {
   id?: number;
   silaboId?: number;
@@ -180,6 +252,154 @@ export const useSaveRecursosDidacticos = () => {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({
         queryKey: ["syllabus", variables.syllabusId, "recursos-didacticos"],
+      });
+    },
+  });
+};
+
+// ========================================
+// MANAGER Y HOOKS PARA FÓRMULAS DE EVALUACIÓN
+// ========================================
+class SixthStepFormulaManager {
+  getApiBase(baseUrl?: string): string {
+    return (
+      baseUrl ??
+      import.meta.env.VITE_API_BASE_URL ??
+      "http://localhost:7071/api"
+    );
+  }
+
+  async fetchFormula(
+    silaboId: number,
+    baseUrl?: string,
+  ): Promise<FormulaEvaluacion | null> {
+    const apiBase = this.getApiBase(baseUrl);
+    const url = `${apiBase}/syllabus/${silaboId}/formula_evaluacion`;
+
+    const res = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (res.status === 404) {
+      return null;
+    }
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Error ${res.status}: ${text}`);
+    }
+
+    const response: FormulaResponse = await res.json();
+    return response.data;
+  }
+
+  async createFormula(
+    formula: FormulaEvaluacionCreate,
+    baseUrl?: string,
+  ): Promise<FormulaEvaluacion> {
+    const apiBase = this.getApiBase(baseUrl);
+    const url = `${apiBase}/syllabus/formula_evaluacion`;
+
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formula),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      let errorMessage = `Error ${res.status}`;
+      try {
+        const json = JSON.parse(text);
+        errorMessage = json.message || json.error || errorMessage;
+      } catch {
+        errorMessage = text || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const response: FormulaResponse = await res.json();
+    return response.data;
+  }
+
+  async updateFormula(
+    silaboId: number,
+    formula: FormulaEvaluacionUpdate,
+    baseUrl?: string,
+  ): Promise<FormulaEvaluacion> {
+    const apiBase = this.getApiBase(baseUrl);
+    const url = `${apiBase}/syllabus/${silaboId}/formula_evaluacion`;
+
+    const res = await fetch(url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(formula),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      let errorMessage = `Error ${res.status}`;
+      try {
+        const json = JSON.parse(text);
+        errorMessage = json.message || json.error || errorMessage;
+      } catch {
+        errorMessage = text || errorMessage;
+      }
+      throw new Error(errorMessage);
+    }
+
+    const response: FormulaResponse = await res.json();
+    return response.data;
+  }
+}
+
+const sixthStepFormulaManager = new SixthStepFormulaManager();
+
+export const useFormulaQuery = (silaboId: number | null) => {
+  const isValidId = silaboId !== null && silaboId > 0;
+
+  return useQuery<FormulaEvaluacion | null, Error>({
+    queryKey: ["syllabus", silaboId, "formula_evaluacion"],
+    queryFn: () => sixthStepFormulaManager.fetchFormula(silaboId!),
+    enabled: isValidId,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+};
+
+export const useCreateFormula = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<FormulaEvaluacion, Error, FormulaEvaluacionCreate>({
+    mutationFn: (formula) => sixthStepFormulaManager.createFormula(formula),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["syllabus", data.silaboId, "formula_evaluacion"],
+      });
+    },
+  });
+};
+
+export const useUpdateFormula = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    FormulaEvaluacion,
+    Error,
+    { silaboId: number; formula: FormulaEvaluacionUpdate }
+  >({
+    mutationFn: ({ silaboId, formula }) =>
+      sixthStepFormulaManager.updateFormula(silaboId, formula),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["syllabus", data.silaboId, "formula_evaluacion"],
       });
     },
   });

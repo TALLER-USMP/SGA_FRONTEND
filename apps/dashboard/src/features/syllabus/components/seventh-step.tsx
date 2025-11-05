@@ -1,64 +1,73 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
+import { useSyllabusContext } from "../contexts/syllabus-context";
 import { Plus, X } from "lucide-react";
+import { toast } from "sonner";
+import {
+  useFuentesQuery,
+  useCreateFuente,
+  useDeleteFuente,
+} from "../hooks/seventh-step-query";
 
-// Tipos
+// Tipos para la vista (manteniendo estructura original)
 interface Bibliography {
-  id: string;
+  id: number;
   authors: string;
   year: string;
   title: string;
 }
 
 interface ElectronicResource {
-  id: string;
+  id: number;
   source: string;
   year: string;
   url: string;
 }
 
-// Data mockeada
-const mockBibliographies: Bibliography[] = [
-  {
-    id: "1",
-    authors: "Chandrasekara, C., & Herath, P.",
-    year: "2021",
-    title:
-      "Hands-on GitHub Actions: Implement CI/CD with GitHub Action Workflows for Your Applications.",
-  },
-  {
-    id: "2",
-    authors:
-      "Guijarro Olivares, J., Caparrós Ramírez, J. J., & Cubero Luque, L.",
-    year: "2019",
-    title:
-      "DevOps y seguridad cloud. Editorial UOC. https://elibro.net/es/lc/bibliotecafmh/titulos/128889",
-  },
-];
-
-const mockElectronicResources: ElectronicResource[] = [
-  {
-    id: "1",
-    source: "(AWS. (2023) )(AWS Educate. Amazon Web Services, Inc.)",
-    year: "",
-    url: "https://aws.amazon.com/es/education/awseducate/",
-  },
-  {
-    id: "2",
-    source: "Microsoft. (2023a). Microsoft Azure Portal | Microsoft Azure.",
-    year: "",
-    url: "https://azure.microsoft.com/es-es/get-started/azure-portal",
-  },
-];
-
 export default function SeventhStep() {
   const { nextStep } = useSteps();
-  const [bibliographies, setBibliographies] =
-    useState<Bibliography[]>(mockBibliographies);
+  const { syllabusId } = useSyllabusContext();
+
+  // Queries y mutaciones
+  const { data: fuentesFromApi = [], isLoading } = useFuentesQuery(syllabusId);
+  const createMutation = useCreateFuente();
+  const deleteMutation = useDeleteFuente();
+
+  // Estados locales para la vista
+  const [bibliographies, setBibliographies] = useState<Bibliography[]>([]);
   const [electronicResources, setElectronicResources] = useState<
     ElectronicResource[]
-  >(mockElectronicResources);
+  >([]);
+
+  // Sincronizar datos del API con el estado local
+  useEffect(() => {
+    if (fuentesFromApi.length > 0) {
+      const biblio: Bibliography[] = [];
+      const electronic: ElectronicResource[] = [];
+
+      fuentesFromApi.forEach((fuente) => {
+        if (fuente.tipo === "LIBRO" || fuente.tipo === "ART") {
+          biblio.push({
+            id: fuente.id,
+            authors: fuente.autores,
+            year: fuente.anio.toString(),
+            title: fuente.titulo,
+          });
+        } else if (fuente.tipo === "WEB") {
+          electronic.push({
+            id: fuente.id,
+            source: fuente.autores,
+            year: fuente.anio.toString(),
+            url: fuente.doiUrl || fuente.titulo,
+          });
+        }
+      });
+
+      setBibliographies(biblio);
+      setElectronicResources(electronic);
+    }
+  }, [fuentesFromApi]);
 
   // Estados para nuevos items
   const [newBiblio, setNewBiblio] = useState<Partial<Bibliography>>({
@@ -82,39 +91,99 @@ export default function SeventhStep() {
     nextStep();
   };
 
-  const handleAddBibliography = () => {
-    if (newBiblio.authors && newBiblio.year && newBiblio.title) {
-      const newItem: Bibliography = {
-        id: Date.now().toString(),
-        authors: newBiblio.authors,
-        year: newBiblio.year,
-        title: newBiblio.title,
-      };
-      setBibliographies([...bibliographies, newItem]);
+  const handleAddBibliography = async () => {
+    if (
+      !syllabusId ||
+      !newBiblio.authors ||
+      !newBiblio.year ||
+      !newBiblio.title
+    ) {
+      toast.error("Complete todos los campos");
+      return;
+    }
+
+    try {
+      const anio = parseInt(newBiblio.year);
+      await createMutation.mutateAsync({
+        silaboId: syllabusId,
+        fuente: {
+          tipo: "LIBRO",
+          autores: newBiblio.authors,
+          anio,
+          titulo: newBiblio.title,
+        },
+      });
+
       setNewBiblio({ authors: "", year: "", title: "" });
+      toast.success("Bibliografía agregada");
+    } catch (error) {
+      toast.error("Error al agregar bibliografía");
+      console.log(error);
     }
   };
 
-  const handleRemoveBibliography = (id: string) => {
-    setBibliographies(bibliographies.filter((b) => b.id !== id));
+  const handleRemoveBibliography = async (id: number) => {
+    if (!syllabusId) return;
+
+    try {
+      await deleteMutation.mutateAsync({ silaboId: syllabusId, fuenteId: id });
+      toast.success("Bibliografía eliminada");
+    } catch (error) {
+      toast.error("Error al eliminar");
+      console.log(error);
+    }
   };
 
-  const handleAddElectronic = () => {
-    if (newElectronic.source && newElectronic.url) {
-      const newItem: ElectronicResource = {
-        id: Date.now().toString(),
-        source: newElectronic.source,
-        year: newElectronic.year || "",
-        url: newElectronic.url,
-      };
-      setElectronicResources([...electronicResources, newItem]);
+  const handleAddElectronic = async () => {
+    if (!syllabusId || !newElectronic.source || !newElectronic.url) {
+      toast.error("Complete los campos obligatorios");
+      return;
+    }
+
+    try {
+      const anio = newElectronic.year
+        ? parseInt(newElectronic.year)
+        : new Date().getFullYear();
+      await createMutation.mutateAsync({
+        silaboId: syllabusId,
+        fuente: {
+          tipo: "WEB",
+          autores: newElectronic.source,
+          anio,
+          titulo: newElectronic.url,
+          doiUrl: newElectronic.url,
+        },
+      });
+
       setNewElectronic({ source: "", year: "", url: "" });
+      toast.success("Recurso electrónico agregado");
+    } catch (error) {
+      console.log(error);
+      toast.error("Error al agregar recurso");
     }
   };
 
-  const handleRemoveElectronic = (id: string) => {
-    setElectronicResources(electronicResources.filter((e) => e.id !== id));
+  const handleRemoveElectronic = async (id: number) => {
+    if (!syllabusId) return;
+
+    try {
+      await deleteMutation.mutateAsync({ silaboId: syllabusId, fuenteId: id });
+      toast.success("Recurso eliminado");
+    } catch (error) {
+      toast.error("Error al eliminar");
+      console.log(error);
+    }
   };
+
+  if (isLoading) {
+    return (
+      <Step step={7} onNextStep={handleNextStep}>
+        <div className="w-full max-w-6xl mx-auto p-6">
+          <p className="text-center">Cargando datos...</p>
+        </div>
+      </Step>
+    );
+  }
 
   return (
     <Step step={7} onNextStep={handleNextStep}>
@@ -140,6 +209,7 @@ export default function SeventhStep() {
                   <button
                     onClick={() => handleRemoveBibliography(biblio.id)}
                     className="p-2 hover:bg-red-100 rounded-lg flex-shrink-0"
+                    disabled={deleteMutation.isPending}
                   >
                     <X className="w-5 h-5 text-red-600" />
                   </button>
@@ -179,6 +249,7 @@ export default function SeventhStep() {
               <button
                 onClick={handleAddBibliography}
                 className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg flex-shrink-0"
+                disabled={createMutation.isPending}
               >
                 <Plus className="w-5 h-5" />
               </button>
@@ -188,6 +259,7 @@ export default function SeventhStep() {
             <button
               onClick={handleAddBibliography}
               className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors"
+              disabled={createMutation.isPending}
             >
               <Plus className="w-5 h-5" />
               <span>Agregar bibliografía</span>
@@ -213,6 +285,7 @@ export default function SeventhStep() {
                   <button
                     onClick={() => handleRemoveElectronic(resource.id)}
                     className="p-2 hover:bg-red-100 rounded-lg flex-shrink-0"
+                    disabled={deleteMutation.isPending}
                   >
                     <X className="w-5 h-5 text-red-600" />
                   </button>
@@ -243,6 +316,7 @@ export default function SeventhStep() {
               <button
                 onClick={handleAddElectronic}
                 className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-lg flex-shrink-0"
+                disabled={createMutation.isPending}
               >
                 <Plus className="w-5 h-5" />
               </button>
@@ -252,6 +326,7 @@ export default function SeventhStep() {
             <button
               onClick={handleAddElectronic}
               className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors"
+              disabled={createMutation.isPending}
             >
               <Plus className="w-5 h-5" />
               <span>Agregar recurso electrónico</span>

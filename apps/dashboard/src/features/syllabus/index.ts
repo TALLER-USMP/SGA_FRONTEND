@@ -8,6 +8,7 @@ export { SyllabusPDFDocument } from "./components/SyllabusPDFDocument";
 
 // Hooks
 export { useSyllabusPDF } from "./hooks/use-syllabus-pdf";
+export { usePermissionsContext } from "./hooks/use-permissions-context";
 
 // Services
 export { syllabusPDFService } from "./services/syllabus-pdf-service";
@@ -23,8 +24,12 @@ export type {
   ComponenteCompetencia,
   ResultadoAprendizaje,
   UnidadDidactica,
+  SemanaUnidad,
   RecursoDidactico,
-  PlanEvaluacion,
+  RecursosDidacticos,
+  EstrategiaMetodologica,
+  PlanEvaluacionItem,
+  FormulaEvaluacion,
   FuenteInformacion,
   AporteResultadoPrograma,
 } from "./types/complete-syllabus";

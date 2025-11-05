@@ -4,10 +4,22 @@ import { cn } from "../../../common/lib/utils";
 import { StepsContext } from "./steps-context-provider";
 
 const StepsProvider: React.FC<
-  React.PropsWithChildren<{ totalSteps: number }>
-> = ({ children, totalSteps }) => {
-  const stepper = useStepper({ totalSteps });
-  const steps = Array.from({ length: totalSteps }, (_, i) => i + 1);
+  React.PropsWithChildren<{
+    totalSteps: number;
+    allowedSteps?: number[]; // Steps permitidos según permisos
+  }>
+> = ({ children, totalSteps, allowedSteps }) => {
+  const stepper = useStepper({
+    totalSteps,
+    allowedSteps, // Pasar allowedSteps al hook para navegación correcta
+  });
+
+  // Si no hay allowedSteps, mostrar todos
+  const visibleSteps =
+    allowedSteps && allowedSteps.length > 0
+      ? allowedSteps
+      : Array.from({ length: totalSteps }, (_, i) => i + 1);
+
   const renderedSteps = React.Children.toArray(children).filter((child) => {
     if (!React.isValidElement(child)) return false;
     const childType = child.type as { name?: string };
@@ -15,10 +27,10 @@ const StepsProvider: React.FC<
   });
 
   return (
-    <StepsContext.Provider value={{ ...stepper }}>
+    <StepsContext.Provider value={{ ...stepper, allowedSteps: visibleSteps }}>
       <div className="flex flex-col items-center w-full h-full">
         <div className="flex items-center justify-center mb-8">
-          {steps.map((step, index) => (
+          {visibleSteps.map((step, index) => (
             <div key={step} className="flex items-center">
               <div
                 className={cn(
@@ -33,7 +45,7 @@ const StepsProvider: React.FC<
               >
                 {step}
               </div>
-              {index < steps.length - 1 && (
+              {index < visibleSteps.length - 1 && (
                 <div
                   className={cn(
                     "w-8 h-1 mx-2",

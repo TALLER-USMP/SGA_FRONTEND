@@ -120,75 +120,167 @@ class SyllabusPDFService {
 
     // Resultados de Aprendizaje
     const resultadosHtml = data.resultadosAprendizaje
-      .map((ra) => `<li>${ra.codigo}. ${ra.descripcion}</li>`)
+      .map((ra, index) => `<li>RA${index + 1}. ${ra.descripcion}</li>`)
       .join("\n");
     filledHtml = filledHtml.replace(
       /{{resultadosAprendizaje}}/g,
       resultadosHtml,
     );
 
-    // Unidades Didácticas (tabla)
+    // Unidades Didácticas (tabla con semanas)
     const unidadesHtml = data.unidadesDidacticas
-      .map(
-        (unidad) => `
+      .map((unidad) => {
+        // Calcular rango de semanas basado en el array de semanas
+        const semanas = unidad.semanas || [];
+        const semanaMin =
+          semanas.length > 0 ? Math.min(...semanas.map((s) => s.semana)) : 0;
+        const semanaMax =
+          semanas.length > 0 ? Math.max(...semanas.map((s) => s.semana)) : 0;
+        const rangoSemanas =
+          semanas.length > 0 ? `${semanaMin} - ${semanaMax}` : "";
+
+        return `
         <tr>
           <td>${unidad.numero}</td>
           <td>${unidad.titulo}</td>
-          <td>${unidad.semanaInicio} - ${unidad.semanaFin}</td>
+          <td>${rangoSemanas}</td>
           <td>${unidad.contenidosConceptuales || ""}</td>
           <td>${unidad.contenidosProcedimentales || ""}</td>
           <td>${unidad.actividadesAprendizaje || ""}</td>
           <td>${unidad.horasLectivasTeoria || 0}</td>
           <td>${unidad.horasLectivasPractica || 0}</td>
         </tr>
-      `,
-      )
+      `;
+      })
       .join("\n");
     filledHtml = filledHtml.replace(/{{unidadesDidacticas}}/g, unidadesHtml);
 
-    // Estrategias Metodológicas
+    // Estrategias Metodológicas (ahora es un array de objetos)
+    const estrategiasHtml = (data.estrategiasMetodologicas || [])
+      .map(
+        (est) => `
+        <div class="estrategia">
+          <h4>${est.nombre}</h4>
+          <p>${est.descripcion}</p>
+        </div>
+      `,
+      )
+      .join("\n");
     filledHtml = filledHtml.replace(
       /{{estrategiasMetodologicas}}/g,
-      data.estrategiasMetodologicas || "",
+      estrategiasHtml || "No se han definido estrategias metodológicas",
     );
 
-    // Recursos Didácticos
-    const recursosHtml = data.recursosDidacticos
-      .map((rec) => `<li>${rec.recursoNombre} - ${rec.destino}</li>`)
+    // Recursos Didácticos (nueva estructura con notas y recursos)
+    const notasHtml = (data.recursosDidacticos.notas || [])
+      .map(
+        (nota) =>
+          `<li><strong>${nota.nombre}:</strong> ${nota.descripcion}</li>`,
+      )
       .join("\n");
-    filledHtml = filledHtml.replace(/{{recursosDidacticos}}/g, recursosHtml);
 
-    // Evaluación del Aprendizaje - Descripción PF
+    const recursosHtml = (data.recursosDidacticos.recursos || [])
+      .map(
+        (rec) =>
+          `<li>${rec.recursoNombre} - ${rec.destino}${rec.observaciones ? ` (${rec.observaciones})` : ""}</li>`,
+      )
+      .join("\n");
+
+    const todosRecursosHtml = `
+      ${notasHtml ? `<h4>Notas:</h4><ul>${notasHtml}</ul>` : ""}
+      ${recursosHtml ? `<h4>Recursos:</h4><ul>${recursosHtml}</ul>` : ""}
+    `;
+
+    filledHtml = filledHtml.replace(
+      /{{recursosDidacticos}}/g,
+      todosRecursosHtml || "No se han definido recursos",
+    );
+
+    // Evaluación del Aprendizaje - Nueva estructura
+    // Plan de Evaluación (tabla)
+    const planEvaluacionHtml = (data.evaluacionAprendizaje.planEvaluacion || [])
+      .map(
+        (item) => `
+        <tr>
+          <td>${item.componenteNombre}</td>
+          <td>${item.instrumentoNombre}</td>
+          <td>Semana ${item.semana}</td>
+          <td>${item.instrucciones || ""}</td>
+        </tr>
+      `,
+      )
+      .join("\n");
+    filledHtml = filledHtml.replace(
+      /{{planEvaluacion}}/g,
+      planEvaluacionHtml || "<tr><td colspan='4'>No definido</td></tr>",
+    );
+
+    // Fórmula de Evaluación
+    const formula = data.evaluacionAprendizaje.formulaEvaluacion;
+    if (formula) {
+      filledHtml = filledHtml.replace(
+        /{{nombreReglaEvaluacion}}/g,
+        formula.nombreRegla || "",
+      );
+      filledHtml = filledHtml.replace(
+        /{{expresionFinal}}/g,
+        `${formula.variableFinalCodigo} = ${formula.expresionFinal}`,
+      );
+
+      // Variables de la fórmula
+      const variablesHtml = (formula.variables || [])
+        .map((v) => `<li><strong>${v.codigo}:</strong> ${v.descripcion}</li>`)
+        .join("\n");
+      filledHtml = filledHtml.replace(
+        /{{variablesFormula}}/g,
+        variablesHtml || "",
+      );
+
+      // Subfórmulas
+      const subformulasHtml = (formula.subformulas || [])
+        .map((sf) => `<li>${sf.variableCodigo} = ${sf.expresion}</li>`)
+        .join("\n");
+      filledHtml = filledHtml.replace(
+        /{{subformulas}}/g,
+        subformulasHtml || "",
+      );
+    } else {
+      // Usar estructura antigua si no hay nueva
+      filledHtml = filledHtml.replace(/{{nombreReglaEvaluacion}}/g, "");
+      filledHtml = filledHtml.replace(
+        /{{expresionFinal}}/g,
+        data.evaluacionAprendizaje.formulaPF || "",
+      );
+      filledHtml = filledHtml.replace(/{{variablesFormula}}/g, "");
+      filledHtml = filledHtml.replace(/{{subformulas}}/g, "");
+    }
+
+    // Mantener compatibilidad con campos antiguos (si existen en la plantilla)
     filledHtml = filledHtml.replace(
       /{{descripcionPF}}/g,
       data.evaluacionAprendizaje.descripcion || "",
     );
 
-    // Fórmula PF
     filledHtml = filledHtml.replace(
       /{{formulaPF}}/g,
       data.evaluacionAprendizaje.formulaPF || "",
     );
 
-    // Componentes PF
     const componentesPFHtml = (data.evaluacionAprendizaje.componentesPF || [])
       .map((comp) => `<li>${comp.codigo} = ${comp.descripcion}</li>`)
       .join("\n");
     filledHtml = filledHtml.replace(/{{componentesPF}}/g, componentesPFHtml);
 
-    // Evaluación del Aprendizaje - Descripción PE
     filledHtml = filledHtml.replace(
       /{{descripcionPE}}/g,
       data.evaluacionAprendizaje.descripcionPE || "",
     );
 
-    // Fórmula PE
     filledHtml = filledHtml.replace(
       /{{formulaPE}}/g,
       data.evaluacionAprendizaje.formulaPE || "",
     );
 
-    // Componentes PE
     const componentesPEHtml = (data.evaluacionAprendizaje.componentesPE || [])
       .map((comp) => `<li>${comp.codigo} = ${comp.descripcion}</li>`)
       .join("\n");
