@@ -5,7 +5,7 @@ const StepControls: React.FC<{
   onNextStep: () => void;
   hideControls?: boolean;
 }> = ({ onNextStep, hideControls = false }) => {
-  const { prevStep, isFirst, isLast } = useSteps();
+  const { prevStep, isFirst } = useSteps();
 
   // Don't show controls if hideControls is true
   if (hideControls) {
@@ -25,7 +25,6 @@ const StepControls: React.FC<{
         onClick={() => {
           onNextStep();
         }}
-        disabled={isLast}
         className="px-4 py-2 bg-blue-500 text-white rounded disabled:opacity-50"
       >
         Siguiente
