@@ -1,16 +1,23 @@
-import { useState } from "react";
+// src/features/syllabus/components/fifth-step.tsx
+import {
+  useMethodologicalStrategiesQuery,
+  useDidacticResourcesQuery,
+  useSaveMethodologicalStrategies,
+  useSaveDidacticResources,
+} from "../hooks/fifth-step-query";
+
+import type {
+  MethodologicalStrategy,
+  DidacticResource,
+} from "../hooks/fifth-step-query";
+
+import { useEffect, useState } from "react";
 import { Step } from "./step";
 import { useSteps } from "../contexts/steps-context-provider";
+import { useSyllabusContext } from "../contexts/syllabus-context";
 import { X, Plus } from "lucide-react";
 
-// Tipos
-interface MethodologicalStrategy {
-  id: string;
-  title: string;
-  description: string;
-}
-
-// Data inicial
+/* -- Data inicial -- */
 const initialStrategies: MethodologicalStrategy[] = [
   {
     id: "1",
@@ -32,14 +39,6 @@ const initialStrategies: MethodologicalStrategy[] = [
   },
 ];
 
-// Tipos para recursos didácticos
-interface DidacticResource {
-  id: string;
-  title: string;
-  description: string;
-}
-
-// Data inicial de recursos didácticos
 const initialDidacticResources: DidacticResource[] = [
   {
     id: "1",
@@ -59,79 +58,153 @@ const initialDidacticResources: DidacticResource[] = [
   },
 ];
 
+/** Extrae mensaje de error de unknown */
+const extractErrorMessage = (err: unknown): string | undefined => {
+  if (!err) return undefined;
+  if (err instanceof Error) return err.message;
+  if (typeof err === "string") return err;
+  try {
+    // intentar serializar objeto
+    const s = JSON.stringify(err);
+    return s === "{}" ? undefined : s;
+  } catch {
+    return undefined;
+  }
+};
+
 export default function FifthStep() {
   const { nextStep } = useSteps();
+  const { syllabusId } = useSyllabusContext();
+
   const [methodologicalStrategies, setMethodologicalStrategies] =
     useState<MethodologicalStrategy[]>(initialStrategies);
   const [didacticResources, setDidacticResources] = useState<
     DidacticResource[]
   >(initialDidacticResources);
 
-  const handleNextStep = () => {
+  /* GET hooks */
+  const {
+    data: serverStrategies,
+    isLoading: loadingStrategies,
+    isError: isErrorStrategies,
+    error: errorStrategies,
+    refetch: refetchStrategies,
+  } = useMethodologicalStrategiesQuery(syllabusId ?? null);
+
+  const {
+    data: serverResources,
+    isLoading: loadingResources,
+    isError: isErrorResources,
+    error: errorResources,
+    refetch: refetchResources,
+  } = useDidacticResourcesQuery(syllabusId ?? null);
+
+  /* Mutations */
+  const saveStrategiesMutation = useSaveMethodologicalStrategies();
+  const saveResourcesMutation = useSaveDidacticResources();
+
+  // Status: 'idle' | 'pending' | 'success' | 'error' (react-query v5)
+  const saveStrategiesStatus = saveStrategiesMutation.status;
+  const saveResourcesStatus = saveResourcesMutation.status;
+
+  // Extraer mensajes sin usar `any`
+  const saveStrategiesErrorMessage = extractErrorMessage(
+    // mutation.error es tipado, pero lo tratamos como unknown por seguridad
+    (saveStrategiesMutation as unknown as { error?: unknown }).error,
+  );
+  const saveResourcesErrorMessage = extractErrorMessage(
+    (saveResourcesMutation as unknown as { error?: unknown }).error,
+  );
+
+  /* Sink server data into local state when available (only if non-empty) */
+  useEffect(() => {
+    if (Array.isArray(serverStrategies) && serverStrategies.length > 0) {
+      setMethodologicalStrategies(serverStrategies);
+    }
+  }, [serverStrategies]);
+
+  useEffect(() => {
+    if (Array.isArray(serverResources) && serverResources.length > 0) {
+      setDidacticResources(serverResources);
+    }
+  }, [serverResources]);
+
+  /* Local CRUD helpers */
+  const addStrategy = () => {
+    setMethodologicalStrategies((s) => [
+      ...s,
+      { id: Date.now().toString(), title: "", description: "" },
+    ]);
+  };
+  const removeStrategy = (id: string) =>
+    setMethodologicalStrategies((s) => s.filter((st) => st.id !== id));
+  const updateStrategy = (
+    id: string,
+    field: "title" | "description",
+    value: string,
+  ) =>
+    setMethodologicalStrategies((s) =>
+      s.map((st) => (st.id === id ? { ...st, [field]: value } : st)),
+    );
+
+  const addResource = () =>
+    setDidacticResources((r) => [
+      ...r,
+      { id: Date.now().toString(), title: "", description: "" },
+    ]);
+  const removeResource = (id: string) =>
+    setDidacticResources((r) => r.filter((res) => res.id !== id));
+  const updateResource = (
+    id: string,
+    field: "title" | "description",
+    value: string,
+  ) =>
+    setDidacticResources((r) =>
+      r.map((res) => (res.id === id ? { ...res, [field]: value } : res)),
+    );
+
+  /* handleNextStep: guarda ambos endpoints (estrategias + recursos) y avanza sólo si OK */
+  const handleNextStep = async () => {
     console.log(
       "Guardando estrategias metodológicas...",
       methodologicalStrategies,
     );
     console.log("Guardando recursos didácticos...", didacticResources);
-    nextStep();
+
+    const normalizedId = (syllabusId ?? "").trim();
+    const isValidId = normalizedId !== "" && /^\d+$/.test(normalizedId);
+
+    if (!isValidId) {
+      console.warn("No syllabusId válido: no se realizará POST al backend.");
+      nextStep();
+      return;
+    }
+
+    try {
+      // hacemos las dos mutaciones en paralelo
+      await Promise.all([
+        saveStrategiesMutation.mutateAsync({
+          syllabusId: normalizedId,
+          estrategias: methodologicalStrategies,
+        }),
+        saveResourcesMutation.mutateAsync({
+          syllabusId: normalizedId,
+          recursos: didacticResources,
+        }),
+      ]);
+
+      // opcional: refrescar desde servidor
+      await Promise.all([refetchStrategies(), refetchResources()]);
+
+      nextStep();
+    } catch (err) {
+      const msg = extractErrorMessage(err);
+      console.error("Error guardando datos del paso 5:", msg ?? err);
+      // Política actual: no avanzamos si hay error.
+    }
   };
 
-  // Funciones para estrategias metodológicas
-  const addStrategy = () => {
-    const newStrategy: MethodologicalStrategy = {
-      id: Date.now().toString(),
-      title: "",
-      description: "",
-    };
-    setMethodologicalStrategies([...methodologicalStrategies, newStrategy]);
-  };
-
-  const removeStrategy = (id: string) => {
-    setMethodologicalStrategies(
-      methodologicalStrategies.filter((strategy) => strategy.id !== id),
-    );
-  };
-
-  const updateStrategy = (
-    id: string,
-    field: "title" | "description",
-    value: string,
-  ) => {
-    setMethodologicalStrategies(
-      methodologicalStrategies.map((strategy) =>
-        strategy.id === id ? { ...strategy, [field]: value } : strategy,
-      ),
-    );
-  };
-
-  // Funciones para recursos didácticos
-  const addResource = () => {
-    const newResource: DidacticResource = {
-      id: Date.now().toString(),
-      title: "",
-      description: "",
-    };
-    setDidacticResources([...didacticResources, newResource]);
-  };
-
-  const removeResource = (id: string) => {
-    setDidacticResources(
-      didacticResources.filter((resource) => resource.id !== id),
-    );
-  };
-
-  const updateResource = (
-    id: string,
-    field: "title" | "description",
-    value: string,
-  ) => {
-    setDidacticResources(
-      didacticResources.map((resource) =>
-        resource.id === id ? { ...resource, [field]: value } : resource,
-      ),
-    );
-  };
-
+  /* Render */
   return (
     <Step step={5} onNextStep={handleNextStep}>
       <div className="w-full p-6 space-y-8">
@@ -144,6 +217,16 @@ export default function FifthStep() {
             </h2>
           </div>
           <div className="bg-white border border-gray-300 rounded-lg p-6">
+            {loadingStrategies && (
+              <div className="mb-4 text-sm text-gray-700">
+                Cargando estrategias desde servidor...
+              </div>
+            )}
+            {isErrorStrategies && (
+              <div className="mb-4 text-sm text-red-600">
+                Error cargando estrategias: {errorStrategies?.message}
+              </div>
+            )}
             <div className="space-y-4">
               {methodologicalStrategies.map((strategy) => (
                 <div
@@ -203,6 +286,14 @@ export default function FifthStep() {
                 <span>Agregar estrategia metodológica</span>
               </button>
             </div>
+            {saveStrategiesStatus === "pending" && (
+              <div className="mt-3">Guardando estrategias...</div>
+            )}
+            {saveStrategiesStatus === "error" && (
+              <div className="mt-3 text-red-500">
+                Error: {saveStrategiesErrorMessage}
+              </div>
+            )}
           </div>
         </div>
 
@@ -215,6 +306,16 @@ export default function FifthStep() {
             </h2>
           </div>
           <div className="bg-white border border-gray-300 rounded-lg p-6">
+            {loadingResources && (
+              <div className="mb-4 text-sm text-gray-700">
+                Cargando recursos desde servidor...
+              </div>
+            )}
+            {isErrorResources && (
+              <div className="mb-4 text-sm text-red-600">
+                Error cargando recursos: {errorResources?.message}
+              </div>
+            )}
             <div className="space-y-4">
               {didacticResources.map((resource) => (
                 <div
@@ -274,6 +375,14 @@ export default function FifthStep() {
                 <span>Agregar recurso didáctico</span>
               </button>
             </div>
+            {saveResourcesStatus === "pending" && (
+              <div className="mt-3">Guardando recursos...</div>
+            )}
+            {saveResourcesStatus === "error" && (
+              <div className="mt-3 text-red-500">
+                Error: {saveResourcesErrorMessage}
+              </div>
+            )}
           </div>
         </div>
       </div>
