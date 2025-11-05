@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import usmpLogo from "../../assets/Logo_FIA.png";
 import { getRoleName } from "../constants/roles";
 import { sidebarMenusByRole, type RoleKey } from "../constants/siderbar";
@@ -19,9 +20,12 @@ export default function Sidebar({ user }: HeaderProps) {
         <ul className="space-y-3">
           {menuItems.map((item) => (
             <li key={item.to}>
-              <a href={item.to} className="block p-2 hover:bg-gray-700 rounded">
+              <Link
+                to={item.to}
+                className="block p-2 hover:bg-gray-700 rounded"
+              >
                 {item.label}
-              </a>
+              </Link>
             </li>
           ))}
         </ul>
