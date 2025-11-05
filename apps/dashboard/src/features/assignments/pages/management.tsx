@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { getCurrentAcademicPeriod } from "../../../common/utils/academic-period";
 import { useToast } from "../../../common/hooks/use-toast";
-import TeacherSelect, { type Teacher } from "../components/teacher-select";
-import CourseSelect, { type Course } from "../components/course-select";
+import { useSendAssignmentEmail } from "../hooks/use-send-assignment-email";
+import { useTeachers, type Teacher } from "../hooks/use-teachers";
+import { useCourses, type Course } from "../hooks/use-courses";
+import { useCreateAssignment } from "../hooks/use-create-assignment";
+import TeacherSelect from "../components/teacher-select";
+import CourseSelect from "../components/course-select";
 import CourseCodeInput from "../components/course-code-input";
 import AcademicPeriodInput from "../components/academic-period-input";
 import MessageTextarea from "../components/message-textarea";
@@ -27,40 +31,51 @@ export default function Management() {
   const [courseSearch, setCourseSearch] = useState<string>("");
   const [showCourseDropdown, setShowCourseDropdown] = useState<boolean>(false);
 
-  // Mock data - reemplazar con datos reales del backend
-  const mockTeachers: Teacher[] = [
-    {
-      id: "1",
-      name: "Huapalla García Juan Manuel",
-      email: "jhuapalla@usmp.pe",
-    },
-    { id: "2", name: "García López María Elena", email: "mgarcia@usmp.pe" },
-    {
-      id: "3",
-      name: "Rodríguez Pérez Carlos Alberto",
-      email: "crodriguez@usmp.pe",
-    },
-    {
-      id: "4",
-      name: "Fernández Torres Ana Lucía",
-      email: "afernandez@usmp.pe",
-    },
-  ];
+  // Cargar docentes y cursos desde el backend
+  const {
+    data: teachers = [],
+    isError: isErrorTeachers,
+    error: teachersError,
+  } = useTeachers();
 
-  const mockCourses: Course[] = [
-    { id: "1", name: "Taller de Proyectos", code: "09072108042" },
-    { id: "2", name: "Programación Orientada a Objetos", code: "09072108043" },
-    { id: "3", name: "Base de Datos", code: "09072108044" },
-    { id: "4", name: "Ingeniería de Software", code: "09072108045" },
-  ];
+  const {
+    data: courses = [],
+    isError: isErrorCourses,
+    error: coursesError,
+  } = useCourses();
 
-  // Filtrar docentes
-  const filteredTeachers = mockTeachers.filter((teacher) =>
-    teacher.name.toLowerCase().includes(teacherSearch.toLowerCase()),
-  );
+  const createAssignment = useCreateAssignment();
+  const { sendEmail } = useSendAssignmentEmail();
+
+  // Mostrar errores de carga
+  useEffect(() => {
+    if (isErrorTeachers) {
+      toast.error(
+        "Error al cargar docentes",
+        teachersError?.message || "No se pudieron cargar los docentes",
+      );
+    }
+  }, [isErrorTeachers, teachersError, toast]);
+
+  useEffect(() => {
+    if (isErrorCourses) {
+      toast.error(
+        "Error al cargar cursos",
+        coursesError?.message || "No se pudieron cargar los cursos",
+      );
+    }
+  }, [isErrorCourses, coursesError, toast]);
+
+  // Filtrar docentes por nombre o correo
+  const filteredTeachers = teachers.filter((teacher) => {
+    const searchLower = teacherSearch.toLowerCase();
+    const matchesName = teacher.name.toLowerCase().includes(searchLower);
+    const matchesEmail = teacher.email.toLowerCase().includes(searchLower);
+    return matchesName || matchesEmail;
+  });
 
   // Filtrar cursos
-  const filteredCourses = mockCourses.filter((course) =>
+  const filteredCourses = courses.filter((course) =>
     course.name.toLowerCase().includes(courseSearch.toLowerCase()),
   );
 
@@ -120,30 +135,96 @@ export default function Management() {
       return;
     }
 
-    if (!message.trim()) {
-      toast.warning(
-        "Mensaje vacío",
-        "Se recomienda agregar un mensaje para el docente",
+    // Validar IDs antes de continuar
+    const teacherId = parseInt(selectedTeacher.id);
+    const syllabusId = parseInt(selectedCourse.id);
+
+    if (isNaN(teacherId)) {
+      toast.error(
+        "ID de docente inválido",
+        "El ID del docente seleccionado no es válido",
       );
+      return;
+    }
+
+    if (isNaN(syllabusId)) {
+      toast.error(
+        "ID de curso inválido",
+        "El ID del curso seleccionado no es válido",
+      );
+      return;
+    }
+
+    const mailToken = sessionStorage.getItem("mailToken");
+    if (!mailToken) {
+      toast.error(
+        "Token de correo no disponible",
+        "No se puede enviar el correo de notificación. Por favor, cierra sesión y vuelve a iniciar sesión.",
+      );
+      return;
     }
 
     try {
-      const assignmentData = {
-        teacher: selectedTeacher,
-        course: selectedCourse,
-        courseCode,
-        academicPeriod,
-        message,
+      // PASO 1: Crear la asignación primero
+      const assignmentData: {
+        teacherId: number;
+        syllabusId: number;
+        courseCode: string;
+        academicPeriod: string;
+        message?: string;
+      } = {
+        teacherId,
+        syllabusId,
+        courseCode: courseCode.trim(),
+        academicPeriod: academicPeriod.trim(),
       };
 
-      console.log("Asignación creada:", assignmentData);
+      // Solo agregar message si tiene contenido
+      if (message.trim()) {
+        assignmentData.message = message.trim();
+      }
 
-      // Simular llamada al backend
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      toast.success(
-        "¡Asignación exitosa!",
-        `Se asignó ${selectedCourse.name} a ${selectedTeacher.name} para el periodo ${academicPeriod}`,
-      );
+      await createAssignment.mutateAsync(assignmentData);
+
+      // PASO 2: Si la asignación fue exitosa, enviar el correo
+      try {
+        const emailData: {
+          teacherName: string;
+          teacherEmail: string;
+          courseName: string;
+          courseCode: string;
+          academicPeriod: string;
+          additionalMessage?: string;
+        } = {
+          teacherName: selectedTeacher.name,
+          teacherEmail: selectedTeacher.email,
+          courseName: selectedCourse.name,
+          courseCode: courseCode.trim(),
+          academicPeriod: academicPeriod.trim(),
+        };
+
+        // Solo agregar additionalMessage si tiene contenido
+        if (message.trim()) {
+          emailData.additionalMessage = message.trim();
+        }
+
+        await sendEmail(emailData);
+
+        // Éxito completo
+        toast.success(
+          "¡Asignación exitosa!",
+          `Se asignó ${selectedCourse.name} a ${selectedTeacher.name} para el periodo ${academicPeriod}. Correo enviado correctamente.`,
+        );
+      } catch (emailError) {
+        // Si falla el email, mostrar advertencia pero la asignación ya se guardó
+        const emailErrorMsg =
+          emailError instanceof Error ? emailError.message : String(emailError);
+
+        toast.warning(
+          "Asignación guardada",
+          `La asignación se guardó correctamente, pero no se pudo enviar el correo: ${emailErrorMsg}`,
+        );
+      }
 
       // Limpiar formulario después de éxito
       setTimeout(() => {
@@ -156,11 +237,107 @@ export default function Management() {
         setCharCount(0);
       }, 1500);
     } catch (error) {
-      console.error("Error al crear asignación:", error);
-      toast.error(
-        "Error al asignar docente",
-        "Ocurrió un error al procesar la asignación. Por favor intenta nuevamente.",
-      );
+      console.error("❌ Error en asignación:", error);
+
+      // Extraer mensaje de error del backend
+      let errorMessage = "Error al procesar la asignación";
+      let isDuplicateError = false;
+
+      if (error instanceof Error) {
+        // Primero verificar si el error completo contiene indicios de duplicado
+        const fullErrorText = error.message.toLowerCase();
+
+        // Detectar error de constraint unique/duplicate key en el mensaje completo
+        if (
+          fullErrorText.includes("duplicate key") ||
+          fullErrorText.includes("unique constraint") ||
+          fullErrorText.includes("violates unique constraint") ||
+          fullErrorText.includes("already exists") ||
+          fullErrorText.includes("failed query: insert")
+        ) {
+          isDuplicateError = true;
+          errorMessage = "Ya existe una asignación para este docente y curso";
+        } else {
+          try {
+            // Intentar parsear si el mensaje es JSON limpio
+            const errorObj = JSON.parse(error.message);
+            errorMessage = errorObj.message || errorObj.error || error.message;
+
+            // Verificar también en el mensaje parseado
+            const parsedMsgLower = errorMessage.toLowerCase();
+            if (
+              parsedMsgLower.includes("duplicate key") ||
+              parsedMsgLower.includes("unique constraint") ||
+              parsedMsgLower.includes("ya está asignado")
+            ) {
+              isDuplicateError = true;
+            }
+          } catch {
+            // Si no es JSON, usar el mensaje tal cual
+            errorMessage = error.message;
+
+            // Limpiar mensaje si contiene el query completo
+            if (errorMessage.includes("Failed query:")) {
+              errorMessage =
+                "Ya existe una asignación para este docente y curso";
+              isDuplicateError = true;
+            }
+          }
+        }
+      }
+
+      // Manejar casos específicos según el mensaje del backend
+      if (isDuplicateError) {
+        toast.error(
+          "Asignación duplicada",
+          `El docente ${selectedTeacher?.name} ya está asignado al curso ${selectedCourse?.name} para el periodo ${academicPeriod}.`,
+        );
+      } else if (
+        errorMessage.includes("Conflicto de asignación") ||
+        errorMessage.includes("no puede asignarse a sí mismo")
+      ) {
+        toast.error(
+          "Conflicto de asignación",
+          "El docente no puede asignarse a sí mismo este curso.",
+        );
+      } else if (errorMessage.includes("Docente no encontrado")) {
+        toast.error(
+          "Docente no encontrado",
+          "El docente seleccionado no existe en el sistema.",
+        );
+      } else if (errorMessage.includes("Sílabo no encontrado")) {
+        toast.error(
+          "Curso no encontrado",
+          "El curso seleccionado no existe en el sistema.",
+        );
+      } else if (
+        errorMessage.includes("Error de validación") ||
+        errorMessage.includes("Invalid input")
+      ) {
+        // Extraer y traducir mensaje de validación
+        let cleanMessage = errorMessage;
+
+        // Limpiar prefijos
+        cleanMessage = cleanMessage.replace("Error de validación: ", "");
+
+        // Traducir errores comunes de Zod
+        if (
+          cleanMessage.includes(
+            "Invalid input: expected string, received undefined",
+          )
+        ) {
+          cleanMessage = "Todos los campos requeridos deben estar completos";
+        } else if (cleanMessage.includes("expected string, received null")) {
+          cleanMessage = "Todos los campos requeridos deben estar completos";
+        } else if (cleanMessage.includes("Invalid input")) {
+          cleanMessage = "Los datos proporcionados no son válidos";
+        }
+
+        toast.error("Datos incompletos", cleanMessage);
+      } else {
+        // Error genérico
+        toast.error("Error al crear asignación", errorMessage);
+      }
     }
   };
 

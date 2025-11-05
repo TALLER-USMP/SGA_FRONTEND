@@ -31,6 +31,7 @@ export default function Profile() {
     lastName: "",
     profession: "",
     email: "",
+    phone: "",
     photo: null,
   });
 
@@ -64,7 +65,17 @@ export default function Profile() {
       },
       onError: (error: Error) => {
         console.error("❌ Error al guardar perfil:", error);
-        toast.error("Error", "No se pudo actualizar el perfil ⚠️");
+
+        // Mostrar mensaje específico si no hay cambios
+        if (error.message.includes("No hay cambios")) {
+          toast.info("Sin cambios", "No se detectaron cambios para guardar");
+          setIsEditing(false);
+        } else {
+          toast.error(
+            "Error",
+            error.message || "No se pudo actualizar el perfil ⚠️",
+          );
+        }
       },
     });
   };
@@ -111,24 +122,40 @@ export default function Profile() {
 
             {/* Datos */}
             <div className="flex-1">
+              {isEditing && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-800">
+                    Solo modifica los campos que deseas actualizar. No es
+                    necesario llenar todos los campos.
+                  </p>
+                </div>
+              )}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
                   { label: "Nombre", field: "firstName" as const },
                   { label: "Apellidos", field: "lastName" as const },
                   { label: "Profesión", field: "profession" as const },
                   { label: "Correo", field: "email" as const },
+                  { label: "Teléfono", field: "phone" as const },
                 ].map(({ label, field }) => (
                   <div key={field}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {label}
                     </label>
                     <input
-                      type={field === "email" ? "email" : "text"}
+                      type={
+                        field === "email"
+                          ? "email"
+                          : field === "phone"
+                            ? "tel"
+                            : "text"
+                      }
                       value={profileData[field] || ""}
                       onChange={(e) => handleInputChange(field, e.target.value)}
                       disabled={field === "email" ? true : !isEditing}
+                      placeholder={field === "phone" ? "999999999" : ""}
                       className={`w-full p-3 border border-gray-300 rounded-lg ${
-                        isEditing
+                        isEditing && field !== "email"
                           ? "bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                           : "bg-gray-100"
                       }`}

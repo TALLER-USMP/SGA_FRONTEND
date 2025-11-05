@@ -7,6 +7,7 @@ import {
 import { Toaster } from "sonner";
 import MyAssignmentsPage from "./features/assignments/pages/my-assignments";
 import ManagementPage from "./features/assignments/pages/management";
+import ApprovedSyllabiPage from "./features/assignments/pages/approved-syllabus";
 import SyllabusProcessPage from "./features/syllabus/pages/syllabus-process";
 import { SessionProvider } from "./features/auth/contexts/session-provider";
 import { CoordinatorProvider } from "./features/coordinator/contexts/coordinator-context";
@@ -21,7 +22,7 @@ import PermissionsManage from "./features/coordinator/pages/permissions-manage";
 import SendEmail from "./features/coordinator/pages/send-email";
 import ReviewSyllabusList from "./features/coordinator/pages/review-syllabus-list";
 import ReviewSyllabusDetail from "./features/coordinator/pages/review-syllabus-detail";
-import ReviewSummary from "./features/coordinator/pages/review-summary";
+import ReviewSyllabusSummary from "./features/coordinator/pages/review-syllabus-summary";
 import SyllabusCatalog from "./features/coordinator/pages/syllabus-catalog";
 
 const queryClient = new QueryClient();
@@ -71,6 +72,22 @@ export default function App() {
                 element={
                   <MainLayout title="Asignar Docente">
                     <ManagementPage />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/approved-syllabus"
+                element={
+                  <MainLayout title="Sílabos Aprobados">
+                    <ApprovedSyllabiPage />
+                  </MainLayout>
+                }
+              />
+              <Route
+                path="/silabus"
+                element={
+                  <MainLayout title="Sílabo Aprobados">
+                    <ApprovedSyllabiPage />
                   </MainLayout>
                 }
               />
@@ -128,7 +145,7 @@ export default function App() {
                 path="/coordinator/review-syllabus/:id/summary"
                 element={
                   <MainLayout title="Resumen de Revisión">
-                    <ReviewSummary />
+                    <ReviewSyllabusSummary />
                   </MainLayout>
                 }
               />

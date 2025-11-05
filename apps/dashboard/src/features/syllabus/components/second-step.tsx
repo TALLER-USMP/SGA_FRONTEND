@@ -2,26 +2,58 @@ import { useState, useEffect } from "react";
 import { useSaveSumilla, useSumilla } from "../hooks/second-step-query";
 import { useSteps } from "../contexts/steps-context-provider";
 import { useSyllabusContext } from "../contexts/syllabus-context";
+import { useReviewMode } from "../../coordinator/contexts/review-mode-context";
 import { Step } from "./step";
-import { ReviewFieldWrapper } from "../../coordinator/components/review-field-wrapper";
+import { toast } from "sonner";
+import type { SumillaResponse } from "../../coordinator/hooks/syllabus-section-data-query";
 
 /**
- * Paso 2: formulario con validaciones básicas (no vacíos)
+ * Paso 2: Formulario de Sumilla con validaciones básicas
+ *
+ * Lógica de modo:
+ * - mode="edit": Consume GET para cargar sumilla existente
+ *   - Si GET retorna data: usa PUT para actualizar
+ *   - Si GET retorna null (404): usa POST para crear
+ * - mode="create": Valida si existe data
+ *   - Si GET retorna data: usa PUT para actualizar
+ *   - Si GET retorna null: usa POST para crear nuevo registro
+ * - mode="review": Carga datos del contexto de revisión (solo lectura con posibilidad de comentarios)
  */
 export default function SecondStep() {
   const { nextStep } = useSteps();
-  const { syllabusId, courseName } = useSyllabusContext();
+  const { syllabusId, mode, courseName } = useSyllabusContext();
+  const { isReviewMode, sectionData } = useReviewMode();
   const [summary, setSummary] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [apiError, setApiError] = useState("");
 
-  // Load existing sumilla via query
-  const { data, isLoading, isError, error } = useSumilla(syllabusId);
+  // Load existing sumilla via query (solo en modo normal, no en revisión)
+  const { data, isLoading, isError, error } = useSumilla(
+    isReviewMode ? null : syllabusId,
+  );
   const saveSumilla = useSaveSumilla();
 
+  // Determina si debe crear (POST) o actualizar (PUT)
+  // - En mode="edit": siempre consumir GET primero
+  //   - Si GET retorna data: usar PUT
+  //   - Si GET retorna null (404): usar POST
+  // - En mode="create":
+  //   - Si GET retorna data (ya existe): usar PUT
+  //   - Si GET retorna null: usar POST
+  const isCreating = mode === "edit" ? !data : !data;
+
+  // Efecto para cargar datos desde el API (modo normal)
   useEffect(() => {
+    if (isReviewMode) return; // No cargar desde API en modo revisión
+
     if (isError) {
-      setApiError(error?.message ?? "Error cargando sumilla");
+      const errorMsg = error?.message ?? "Error cargando sumilla";
+      // 404 es esperado cuando no existe sumilla aún, no mostrar error
+      if (!errorMsg.includes("404")) {
+        toast.error("Error al cargar sumilla", {
+          description: errorMsg,
+        });
+      }
       return;
     }
     if (!data) return;
@@ -33,9 +65,17 @@ export default function SecondStep() {
         /* ignore */
       }
     }
-  }, [data, isError, error]);
+  }, [data, isError, error, isReviewMode]);
 
-  // No need to define a raw mutation here, useSaveSumilla above
+  // Efecto para cargar datos desde el contexto de revisión
+  useEffect(() => {
+    if (!isReviewMode || !sectionData) return;
+
+    const reviewData = sectionData as SumillaResponse;
+    if (reviewData.content && reviewData.content.length > 0) {
+      setSummary(reviewData.content[0].sumilla);
+    }
+  }, [isReviewMode, sectionData]);
 
   const validateAndNext = async () => {
     const newErrors: Record<string, string> = {};
@@ -45,18 +85,58 @@ export default function SecondStep() {
       setApiError("");
       const id = syllabusId;
       if (!id) {
-        setApiError(
-          "Id del sílabo no encontrado. Completa el primer paso antes de continuar.",
-        );
+        toast.error("Error", {
+          description:
+            "Id del sílabo no encontrado. Completa el primer paso antes de continuar.",
+        });
         return;
       }
       try {
-        await saveSumilla.mutateAsync({ id, sumilla: summary });
+        await saveSumilla.mutateAsync({
+          syllabusId: id,
+          data: { sumilla: summary },
+          isCreating,
+        });
+
+        // Mensaje diferenciado según la operación realizada
+        const successMessage = isCreating
+          ? "Sumilla creada exitosamente"
+          : "Sumilla actualizada exitosamente";
+
+        toast.success(successMessage);
         nextStep();
       } catch (err: unknown) {
-        if (err instanceof Error)
-          setApiError(`Error al guardar la sumilla: ${err.message}`);
-        else setApiError(String(err));
+        // Parsear error estructurado del backend
+        if (err instanceof Error) {
+          try {
+            // Intentar parsear el mensaje como JSON
+            const errorData = JSON.parse(err.message);
+
+            if (errorData.data && Array.isArray(errorData.data)) {
+              // Mostrar cada error de validación
+              errorData.data.forEach(
+                (validationError: { path: string[]; message: string }) => {
+                  toast.error("Error de validación", {
+                    description: validationError.message,
+                  });
+                },
+              );
+            } else {
+              toast.error("Error al guardar", {
+                description: errorData.message || err.message,
+              });
+            }
+          } catch {
+            // Si no es JSON, mostrar el mensaje directamente
+            toast.error("Error al guardar la sumilla", {
+              description: err.message,
+            });
+          }
+        } else {
+          toast.error("Error desconocido", {
+            description: String(err),
+          });
+        }
       }
     } else {
       // enfocar primer campo con error
@@ -99,22 +179,20 @@ export default function SecondStep() {
           </div>
         </div>
 
-        <ReviewFieldWrapper fieldId="sumilla" orientation="vertical">
-          <div>
-            <textarea
-              name="summary"
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="Escribe la sumilla aquí..."
-              rows={8}
-              disabled={isLoading}
-              className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-white border resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.summary ? "border-red-500" : "border-gray-300"} ${isLoading ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`}
-            />
-            {errors.summary && (
-              <div className="text-red-600 text-sm mt-1">{errors.summary}</div>
-            )}
-          </div>
-        </ReviewFieldWrapper>
+        <div>
+          <textarea
+            name="summary"
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="Escribe la sumilla aquí..."
+            rows={8}
+            disabled={isLoading}
+            className={`w-full min-h-[160px] rounded-lg px-4 py-4 bg-white border resize-vertical focus:outline-none focus:ring-2 focus:ring-blue-500 ${errors.summary ? "border-red-500" : "border-gray-300"} ${isLoading ? "opacity-50 cursor-not-allowed bg-gray-100" : ""}`}
+          />
+          {errors.summary && (
+            <div className="text-red-600 text-sm mt-1">{errors.summary}</div>
+          )}
+        </div>
 
         {apiError && (
           <div className="text-red-600 text-sm mt-3">{apiError}</div>

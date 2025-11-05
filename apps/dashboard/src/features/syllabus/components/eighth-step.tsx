@@ -111,62 +111,64 @@ export default function EighthStep() {
         </div>
 
         {/* Tabla de Student Outcomes */}
-        <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-300">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold w-12">
-                  #
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">
-                  Descripción
-                </th>
-                <th className="px-4 py-3 text-center text-sm font-semibold w-32">
-                  Nivel
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {outcomes.map((outcome, index) => (
-                <tr
-                  key={outcome.id}
-                  className={`border-b border-gray-200 ${
-                    index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                  }`}
-                >
-                  <td className="px-4 py-3 text-sm text-gray-600">
-                    {outcome.id}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-gray-700">
-                    {outcome.description}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-center">
-                      <div className="relative">
-                        <select
-                          value={outcome.level}
-                          onChange={(e) =>
-                            handleLevelChange(
-                              outcome.id,
-                              e.target.value as "K" | "R" | "",
-                            )
-                          }
-                          className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 text-sm cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">-</option>
-                          <option value="K">K</option>
-                          <option value="R">R</option>
-                        </select>
-                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                          <ChevronDown className="w-4 h-4 text-gray-400" />
+        <div className="space-y-6">
+          <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b border-gray-300">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold w-12">
+                    #
+                  </th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">
+                    Descripción
+                  </th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold w-32">
+                    Nivel
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {outcomes.map((outcome, index) => (
+                  <tr
+                    key={outcome.id}
+                    className={`border-b border-gray-200 ${
+                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    }`}
+                  >
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {outcome.id}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {outcome.description}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-center">
+                        <div className="relative">
+                          <select
+                            value={outcome.level}
+                            onChange={(e) =>
+                              handleLevelChange(
+                                outcome.id,
+                                e.target.value as "K" | "R" | "",
+                              )
+                            }
+                            className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-10 text-sm cursor-pointer hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">-</option>
+                            <option value="K">K</option>
+                            <option value="R">R</option>
+                          </select>
+                          <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
+                            <ChevronDown className="w-4 h-4 text-gray-400" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Información adicional */}

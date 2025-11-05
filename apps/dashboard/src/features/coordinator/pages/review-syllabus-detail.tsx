@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import {
   Select,
@@ -14,6 +14,10 @@ import { SyllabusProvider } from "../../syllabus/contexts/syllabus-context";
 import { StepsContext } from "../../syllabus/contexts/steps-context-provider";
 import { ReviewModeProvider } from "../contexts/review-mode-context";
 
+// Import hooks
+import { useSyllabusSections } from "../hooks/syllabus-sections-query";
+import { useSyllabusSectionData } from "../hooks/syllabus-section-data-query";
+
 // Import step components
 import FirstStep from "../../syllabus/components/first-step";
 import SecondStep from "../../syllabus/components/second-step";
@@ -24,38 +28,117 @@ import SixthStep from "../../syllabus/components/sixth-step";
 import SeventhStep from "../../syllabus/components/seventh-step";
 import EighthStep from "../../syllabus/components/eighth-step";
 
-interface Section {
-  id: string;
-  name: string;
-  component: React.ReactNode;
-}
-
 export default function ReviewSyllabusDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [selectedSection, setSelectedSection] = useState("1");
   const [reviewData, setReviewData] = useState<
     Record<string, { status: "approved" | "rejected" | null; comment: string }>
   >({});
 
-  // Mock data - reemplazar con datos del backend
-  const syllabusData = {
-    courseName: "Taller de Proyectos",
-    courseCode: "09072108042",
-    teacherName: "Norma Birginia Leon Lescano",
-  };
+  // Cargar datos de revisión guardados al iniciar
+  useEffect(() => {
+    const savedData = sessionStorage.getItem(`reviewData_${id}`);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setReviewData(parsed);
+      } catch (error) {
+        console.error("Error al cargar datos de revisión:", error);
+      }
+    }
+  }, [id]);
+
+  // Guardar datos de revisión automáticamente cuando cambien
+  useEffect(() => {
+    if (Object.keys(reviewData).length > 0) {
+      try {
+        sessionStorage.setItem(`reviewData_${id}`, JSON.stringify(reviewData));
+      } catch (error) {
+        console.error("Error al guardar datos de revisión:", error);
+        // Notificar al usuario si el storage está lleno
+        if (
+          error instanceof DOMException &&
+          error.name === "QuotaExceededError"
+        ) {
+          alert(
+            "No se pueden guardar más cambios. El almacenamiento local está lleno.",
+          );
+        }
+      }
+    }
+  }, [reviewData, id]);
+
+  // Obtener parámetros de la URL
+  const courseName = searchParams.get("courseName") || "Curso sin nombre";
+  const courseCode = searchParams.get("courseCode") || "Código no disponible";
+  const teacherName =
+    searchParams.get("teacherName") || "Docente no disponible";
+  const syllabusId = searchParams.get("syllabusId");
+  const docenteIdParam = searchParams.get("docenteId");
+
+  // Obtener secciones disponibles del backend
+  const {
+    data: syllabusSections = [],
+    isLoading: sectionsLoading,
+    isError: sectionsError,
+  } = useSyllabusSections(
+    syllabusId ? parseInt(syllabusId) : null,
+    docenteIdParam ? parseInt(docenteIdParam) : null,
+  );
+
+  // Obtener los datos de la sección seleccionada
+  const {
+    data: sectionData,
+    isLoading: sectionDataLoading,
+    isError: sectionDataError,
+  } = useSyllabusSectionData(
+    syllabusId ? parseInt(syllabusId) : null,
+    selectedSection,
+  );
+
+  // Información de secciones disponible para UI
+
+  // Actualizar selectedSection cuando se carguen las secciones
+  useEffect(() => {
+    if (
+      Array.isArray(syllabusSections) &&
+      syllabusSections.length > 0 &&
+      !selectedSection
+    ) {
+      // Seleccionar la primera sección disponible
+      setSelectedSection(syllabusSections[0].seccion.toString());
+    }
+  }, [syllabusSections, selectedSection]);
 
   // Create a mock stepper context value
+  // Mock de stepperValue para simular el contexto
+  // Ajustamos el currentStep para que coincida con los step={} de los componentes
   const stepperValue = useMemo(() => {
-    const currentStep = parseInt(selectedSection);
+    // Mapeo de sección ID a step number del componente
+    const sectionToStepMap: Record<string, number> = {
+      "1": 1,
+      "2": 2,
+      "3": 3,
+      "4": 4,
+      "5": 5,
+      "6": 5, // FifthStep (step=5) se usa para ambas secciones 5 y 6
+      "7": 6, // SixthStep (step=6)
+      "8": 7, // SeventhStep (step=7)
+      "9": 8, // EighthStep (step=8)
+    };
+
+    const currentStep = sectionToStepMap[selectedSection] || 1;
+
     return {
       currentStep,
       isFirst: currentStep === 1,
       isLast: currentStep === 8,
       nextStep: () => {},
       prevStep: () => {},
-      goToStep: (step: number) => setSelectedSection(step.toString()),
-      reset: () => setSelectedSection("1"),
+      goToStep: () => {},
+      reset: () => {},
     };
   }, [selectedSection]);
 
@@ -72,7 +155,11 @@ export default function ReviewSyllabusDetail() {
   const handleFieldComment = (fieldId: string, comment: string) => {
     setReviewData((prev) => ({
       ...prev,
-      [fieldId]: { ...prev[fieldId], comment },
+      [fieldId]: {
+        ...prev[fieldId],
+        comment,
+        status: prev[fieldId]?.status || null,
+      },
     }));
   };
 
@@ -80,29 +167,101 @@ export default function ReviewSyllabusDetail() {
     navigate("/coordinator/review-syllabus");
   };
 
+  // Calcular estadísticas de revisión
+  const reviewStats = useMemo(() => {
+    const fields = Object.values(reviewData);
+    const approved = fields.filter((f) => f.status === "approved").length;
+    const rejected = fields.filter((f) => f.status === "rejected").length;
+    const withComments = fields.filter((f) => f.comment?.trim()).length;
+    const total = fields.length;
+
+    return { approved, rejected, withComments, total };
+  }, [reviewData]);
+
   const handleFinalize = () => {
-    // Aquí se podría guardar reviewData al backend
-    console.log("Review data:", reviewData);
-    navigate(`/coordinator/review-syllabus/${id}/summary`);
+    // Guardar reviewData en sessionStorage para usarlo en el resumen
+    sessionStorage.setItem(`reviewData_${id}`, JSON.stringify(reviewData));
+
+    // Navegar al resumen con los parámetros
+    navigate(
+      `/coordinator/review-syllabus/${id}/summary?courseName=${encodeURIComponent(courseName)}&courseCode=${encodeURIComponent(courseCode)}&teacherName=${encodeURIComponent(teacherName)}&syllabusId=${syllabusId}`,
+    );
   };
 
-  const sections: Section[] = [
-    { id: "1", name: "Datos Generales", component: <FirstStep /> },
-    { id: "2", name: "Sumilla", component: <SecondStep /> },
-    { id: "3", name: "Competencias y Componentes", component: <ThirdStep /> },
-    { id: "4", name: "Unidades", component: <FourthStep /> },
-    { id: "5", name: "Estrategias Metodológicas", component: <FifthStep /> },
-    { id: "6", name: "Recursos Didácticos", component: <FifthStep /> },
-    { id: "7", name: "Evaluación del Aprendizaje", component: <SixthStep /> },
-    { id: "8", name: "Fuentes de Consulta", component: <SeventhStep /> },
-    {
-      id: "9",
-      name: "Aporte de la Asignatura al logro de resultados",
-      component: <EighthStep />,
-    },
-  ];
+  // Definir IDs y nombres de secciones (sin componentes)
+  const sectionDefinitions = useMemo(
+    () => [
+      { id: "1", name: "Datos generales" },
+      { id: "2", name: "Sumilla" },
+      { id: "3", name: "Competencias y componentes" },
+      { id: "4", name: "Programación del contenido" },
+      { id: "5", name: "Estrategias metodológicas" },
+      { id: "6", name: "Recursos didácticos" },
+      { id: "7", name: "Evaluación de aprendizaje" },
+      { id: "8", name: "Fuentes de consulta" },
+      { id: "9", name: "Resultados (outcomes)" },
+    ],
+    [],
+  );
 
-  const currentSection = sections.find((s) => s.id === selectedSection);
+  // Mapeo de componentes por ID (no memoizado)
+  // La sección 5 y 6 comparten el mismo componente (FifthStep)
+  const getComponentById = (id: string): React.ReactNode => {
+    const componentMap: Record<string, React.ReactNode> = {
+      "1": <FirstStep />,
+      "2": <SecondStep />,
+      "3": <ThirdStep />,
+      "4": <FourthStep />,
+      "5": <FifthStep />,
+      "6": <FifthStep />, // Comparte con sección 5
+      "7": <SixthStep />,
+      "8": <SeventhStep />,
+      "9": <EighthStep />,
+    };
+    return componentMap[id];
+  };
+
+  // Filtrar secciones disponibles según lo que devuelve el backend
+  const availableSections = useMemo(() => {
+    // Si está cargando, no mostrar secciones aún
+    if (sectionsLoading) {
+      return [];
+    }
+
+    // Si hay error o no hay secciones, mostrar mensaje
+    if (
+      sectionsError ||
+      !syllabusSections ||
+      !Array.isArray(syllabusSections) ||
+      syllabusSections.length === 0
+    ) {
+      return [];
+    }
+
+    // Filtrar sectionDefinitions para incluir solo las secciones permitidas
+    const allowedSectionNumbers = syllabusSections.map((s) =>
+      s.seccion.toString(),
+    );
+
+    return sectionDefinitions.filter((section) =>
+      allowedSectionNumbers.includes(section.id),
+    );
+  }, [syllabusSections, sectionsLoading, sectionsError, sectionDefinitions]);
+
+  // Actualizar la sección seleccionada cuando se carguen las secciones desde la API
+  useEffect(() => {
+    if (!sectionsLoading && !sectionsError && availableSections.length > 0) {
+      // Si la sección actual no está en las disponibles, seleccionar la primera disponible
+      const availableSectionIds = availableSections.map((s) => s.id);
+      if (!availableSectionIds.includes(selectedSection)) {
+        setSelectedSection(availableSections[0].id);
+      }
+    }
+  }, [availableSections, sectionsLoading, sectionsError, selectedSection]);
+
+  const currentSection = availableSections.find(
+    (s) => s.id === selectedSection,
+  );
 
   return (
     <SyllabusProvider>
@@ -110,24 +269,61 @@ export default function ReviewSyllabusDetail() {
         isReviewMode={true}
         onFieldReview={handleFieldReview}
         onFieldComment={handleFieldComment}
+        reviewData={reviewData}
+        sectionData={sectionData}
+        sectionDataLoading={sectionDataLoading}
+        sectionDataError={sectionDataError}
       >
         <StepsContext.Provider value={stepperValue}>
-          <div className="p-6 max-w-6xl mx-auto">
-            <div className="bg-white border border-gray-300 rounded-lg p-8">
+          <div className="p-6 w-full mx-auto" style={{ maxWidth: "1600px" }}>
+            <div
+              className="bg-white border border-gray-300 rounded-lg p-8"
+              translate="no"
+            >
               {/* Header */}
               <div className="mb-6">
-                <h1 className="text-2xl font-bold text-black mb-2">
-                  Revisión de Sílabo
-                </h1>
-                <h2 className="text-xl font-semibold text-black mb-1">
-                  {syllabusData.courseName}
-                </h2>
-                <p className="text-sm text-gray-600 mb-1">
-                  Código: {syllabusData.courseCode}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Docente: {syllabusData.teacherName}
-                </p>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex-1">
+                    <h1 className="text-2xl font-bold text-black mb-2">
+                      Revisión de Sílabo
+                    </h1>
+                    <h2 className="text-xl font-semibold text-black mb-1">
+                      {courseName}
+                    </h2>
+                    <p className="text-sm text-gray-600 mb-1">
+                      Código: {courseCode}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      Docente: {teacherName}
+                    </p>
+                  </div>
+
+                  {/* Estadísticas */}
+                  <div className="flex flex-col items-end gap-3">
+                    {reviewStats.total > 0 && (
+                      <div className="flex items-center gap-4 text-sm bg-gray-50 px-4 py-2 rounded-lg">
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-green-600">
+                            ✓ {reviewStats.approved}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-red-600">
+                            ✗ {reviewStats.rejected}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <span className="font-medium text-blue-600">
+                            💬 {reviewStats.withComments}
+                          </span>
+                        </div>
+                        <div className="text-gray-500">
+                          Total: {reviewStats.total}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
 
               {/* Section Selector */}
@@ -135,28 +331,60 @@ export default function ReviewSyllabusDetail() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Seleccionar Sección
                 </label>
-                <Select
-                  value={selectedSection}
-                  onValueChange={setSelectedSection}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Seleccione una sección" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sections.map((section) => (
-                      <SelectItem key={section.id} value={section.id}>
-                        {section.id}. {section.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {sectionsLoading ? (
+                  <div className="text-gray-500 text-sm">
+                    Cargando secciones disponibles...
+                  </div>
+                ) : sectionsError ? (
+                  <div className="text-red-500 text-sm">
+                    Error al cargar las secciones del sílabo
+                  </div>
+                ) : availableSections.length === 0 ? (
+                  <div className="text-yellow-600 text-sm bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                    Este curso no tiene permisos para revisar ninguna sección
+                    del sílabo.
+                  </div>
+                ) : (
+                  <Select
+                    value={selectedSection}
+                    onValueChange={setSelectedSection}
+                  >
+                    <SelectTrigger
+                      className="w-full"
+                      translate="no"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <SelectValue placeholder="Seleccione una sección" />
+                    </SelectTrigger>
+                    <SelectContent
+                      translate="no"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {availableSections.map((section) => (
+                        <SelectItem
+                          key={section.id}
+                          value={section.id}
+                          translate="no"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                          }}
+                        >
+                          <span translate="no">
+                            {section.id}. {section.name}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
 
               {/* Current Section Content */}
               <div className="mb-8">
                 {currentSection && (
                   <div className="syllabus-review-readonly">
-                    {currentSection.component}
+                    {getComponentById(currentSection.id)}
                   </div>
                 )}
               </div>
@@ -164,6 +392,7 @@ export default function ReviewSyllabusDetail() {
               {/* Actions */}
               <div className="flex items-center justify-between pt-6 border-t border-gray-200">
                 <button
+                  type="button"
                   data-review-button="true"
                   onClick={handleGoBack}
                   className="flex items-center gap-2 px-6 py-2.5 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
@@ -172,6 +401,7 @@ export default function ReviewSyllabusDetail() {
                   <span>Volver</span>
                 </button>
                 <button
+                  type="button"
                   data-review-button="true"
                   onClick={handleFinalize}
                   className="px-8 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"

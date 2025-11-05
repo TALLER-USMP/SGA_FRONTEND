@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Upload, X } from "lucide-react";
 import {
   useSendMail,
@@ -10,6 +10,12 @@ import { toast } from "sonner";
 
 export default function SendEmail() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  // Obtener datos de la URL
+  const teacherEmailParam = searchParams.get("teacherEmail") || "";
+  const courseCodeParam = searchParams.get("courseCode") || "";
+
   const [recipient, setRecipient] = useState("");
   const [courseCode, setCourseCode] = useState("");
   const [message, setMessage] = useState("");
@@ -18,6 +24,16 @@ export default function SendEmail() {
   const maxChars = 400;
 
   const { sendMail, isSending } = useSendMail();
+
+  // Pre-llenar los campos cuando se carga el componente
+  useEffect(() => {
+    if (teacherEmailParam) {
+      setRecipient(teacherEmailParam);
+    }
+    if (courseCodeParam) {
+      setCourseCode(courseCodeParam);
+    }
+  }, [teacherEmailParam, courseCodeParam]);
 
   const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
@@ -99,7 +115,7 @@ export default function SendEmail() {
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
             className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="Nombre del destinatario"
+            placeholder="Correo del destinatario"
           />
         </div>
 

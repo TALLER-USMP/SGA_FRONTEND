@@ -1,4 +1,10 @@
 import React, { createContext, useContext } from "react";
+import type { SectionData } from "../hooks/syllabus-section-data-query";
+
+interface ReviewItem {
+  status: "approved" | "rejected" | null;
+  comment: string;
+}
 
 interface ReviewModeContextType {
   isReviewMode: boolean;
@@ -7,6 +13,10 @@ interface ReviewModeContextType {
     status: "approved" | "rejected" | null,
   ) => void;
   onFieldComment?: (fieldId: string, comment: string) => void;
+  reviewData?: Record<string, ReviewItem>;
+  sectionData?: SectionData | null;
+  sectionDataLoading?: boolean;
+  sectionDataError?: boolean;
 }
 
 const ReviewModeContext = createContext<ReviewModeContextType>({
@@ -24,6 +34,10 @@ interface ReviewModeProviderProps {
     status: "approved" | "rejected" | null,
   ) => void;
   onFieldComment?: (fieldId: string, comment: string) => void;
+  reviewData?: Record<string, ReviewItem>;
+  sectionData?: SectionData | null;
+  sectionDataLoading?: boolean;
+  sectionDataError?: boolean;
 }
 
 export const ReviewModeProvider: React.FC<ReviewModeProviderProps> = ({
@@ -31,6 +45,10 @@ export const ReviewModeProvider: React.FC<ReviewModeProviderProps> = ({
   isReviewMode = false,
   onFieldReview,
   onFieldComment,
+  reviewData,
+  sectionData,
+  sectionDataLoading,
+  sectionDataError,
 }) => {
   return (
     <ReviewModeContext.Provider
@@ -38,6 +56,10 @@ export const ReviewModeProvider: React.FC<ReviewModeProviderProps> = ({
         isReviewMode,
         onFieldReview,
         onFieldComment,
+        reviewData,
+        sectionData,
+        sectionDataLoading,
+        sectionDataError,
       }}
     >
       {children}

@@ -213,52 +213,55 @@ export default function FifthStep() {
             )}
             <div className="space-y-4">
               {methodologicalStrategies.map((strategy) => (
-                <div
-                  key={strategy.id}
-                  className="p-4 border border-gray-200 rounded-lg space-y-3"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Título
-                        </label>
-                        <input
-                          type="text"
-                          value={strategy.title}
-                          onChange={(e) =>
-                            updateStrategy(strategy.id, "title", e.target.value)
-                          }
-                          placeholder="Ingrese el título de la estrategia..."
-                          className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                <div key={strategy.id}>
+                  <div className="p-4 border border-gray-200 rounded-lg space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Título
+                          </label>
+                          <input
+                            type="text"
+                            value={strategy.title}
+                            onChange={(e) =>
+                              updateStrategy(
+                                strategy.id,
+                                "title",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Ingrese el título de la estrategia..."
+                            className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Descripción
+                          </label>
+                          <textarea
+                            value={strategy.description}
+                            onChange={(e) =>
+                              updateStrategy(
+                                strategy.id,
+                                "description",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Ingrese la descripción de la estrategia..."
+                            rows={3}
+                            className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Descripción
-                        </label>
-                        <textarea
-                          value={strategy.description}
-                          onChange={(e) =>
-                            updateStrategy(
-                              strategy.id,
-                              "description",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="Ingrese la descripción de la estrategia..."
-                          rows={3}
-                          className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
+                      <button
+                        onClick={() => removeStrategy(strategy.id)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                        disabled={methodologicalStrategies.length <= 1}
+                      >
+                        <X size={20} />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => removeStrategy(strategy.id)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                      disabled={methodologicalStrategies.length <= 1}
-                    >
-                      <X size={20} />
-                    </button>
                   </div>
                 </div>
               ))}
@@ -302,52 +305,55 @@ export default function FifthStep() {
             )}
             <div className="space-y-4">
               {didacticResources.map((resource) => (
-                <div
-                  key={resource.id}
-                  className="p-4 border border-gray-200 rounded-lg space-y-3"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="flex-1 space-y-3">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Título
-                        </label>
-                        <input
-                          type="text"
-                          value={resource.title}
-                          onChange={(e) =>
-                            updateResource(resource.id, "title", e.target.value)
-                          }
-                          placeholder="Ingrese el título del recurso..."
-                          className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
+                <div key={resource.id}>
+                  <div className="p-4 border border-gray-200 rounded-lg space-y-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Título
+                          </label>
+                          <input
+                            type="text"
+                            value={resource.title}
+                            onChange={(e) =>
+                              updateResource(
+                                resource.id,
+                                "title",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Ingrese el título del recurso..."
+                            className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Descripción
+                          </label>
+                          <textarea
+                            value={resource.description}
+                            onChange={(e) =>
+                              updateResource(
+                                resource.id,
+                                "description",
+                                e.target.value,
+                              )
+                            }
+                            placeholder="Ingrese la descripción del recurso..."
+                            rows={3}
+                            className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Descripción
-                        </label>
-                        <textarea
-                          value={resource.description}
-                          onChange={(e) =>
-                            updateResource(
-                              resource.id,
-                              "description",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="Ingrese la descripción del recurso..."
-                          rows={3}
-                          className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                      </div>
+                      <button
+                        onClick={() => removeResource(resource.id)}
+                        className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                        disabled={didacticResources.length <= 1}
+                      >
+                        <X size={20} />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => removeResource(resource.id)}
-                      className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-colors"
-                      disabled={didacticResources.length <= 1}
-                    >
-                      <X size={20} />
-                    </button>
                   </div>
                 </div>
               ))}
